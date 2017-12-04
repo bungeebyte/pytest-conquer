@@ -1,0 +1,6 @@
+[run]
+omit =
+  .tox/*
+  tests/*
+  setup.py
+  maketestsgofaster/cloud/vendor/*
