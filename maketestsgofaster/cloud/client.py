@@ -12,13 +12,13 @@ class Client():
         self.api_key = settings.api_key
         self.api_retries = settings.api_retries
         self.api_timeout = settings.api_timeout
-        self.api_url = settings.api_url
+        self.api_urls = settings.api_urls
         self.build_id = settings.build_id
         self.build_worker = settings.build_worker
         self.user_agent = settings.client_name + '/' + settings.client_version
 
     def send(self, path, data):
-        url = self.api_url + path
+        url = self.api_urls[0] + path
         body = zlib.compress(json.dumps(data).encode('utf8'))
         headers = {
             'Accept': 'application/json',

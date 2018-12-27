@@ -14,7 +14,9 @@ class Settings():
         self.api_key = self.__parse('api_key')
         self.api_retries = int(self.__parse('api_retries', 5))
         self.api_timeout = int(self.__parse('api_timeout', 60))
-        self.api_url = self.__parse('api_url', 'https://scheduler.maketestsgofaster.com')
+        self.api_urls = self.__parse('api_url', ['https://scheduler.maketestsgofaster.com', 'https://scheduler.maketestsgofaster.co'])
+        if not isinstance(self.api_urls, list):
+            self.api_urls = [self.api_urls]
 
         self.build_dir = self.__parse('build_dir', os.getcwd())
         self.build_id = self.__parse('build_id')
