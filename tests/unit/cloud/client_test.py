@@ -29,10 +29,10 @@ class TestClient():
 
     def test_give_up_when_persistent_server_error(self):
         client = MockClient([
-            (MockResponse(502), MOCK_CONTENT),
-            (MockResponse(502), MOCK_CONTENT),
-            (MockResponse(502), MOCK_CONTENT),
-            (MockResponse(502), MOCK_CONTENT),
+            (MockResponse(500), MOCK_CONTENT),
+            (MockResponse(500), MOCK_CONTENT),
+            (MockResponse(500), MOCK_CONTENT),
+            (MockResponse(500), MOCK_CONTENT),
         ])
 
         with pytest.raises(RuntimeError, match='server communication error - status code: 500, request id: REQ_ID'):
@@ -53,7 +53,7 @@ class TestClient():
 class MockClient(Client):
     def __init__(self, responses, settings=Settings(Env.create({
         'api_retries': '3',
-        'api_timeout': '2',
+        'api_timeout': '1',
     }))):
         super().__init__(settings)
         self.responses = responses

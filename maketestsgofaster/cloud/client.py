@@ -33,7 +33,7 @@ class Client():
         result = None
         last_err = None
         wait_before_retry = 0
-        while result is None and attempts < self.api_retries:
+        while result is None and attempts < self.api_retries + 1:
             url = self.api_urls[0] + path
 
             if wait_before_retry >= 1:
