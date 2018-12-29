@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import OrderedDict
 
 from maketestsgofaster import logger
 from maketestsgofaster.cloud.client import Client
@@ -24,8 +24,9 @@ class Bridge:
         return self.__parse_schedule(schedule_data)
 
     def __parse_schedule(self, data):
-        tests_by_file = defaultdict(list)
+        tests_by_file = OrderedDict()
         for item in data['items']:
+            tests_by_file.setdefault(item['file'], [])
             tests_by_file[item['file']].append(item['name'])
         items = [ScheduleItem(f) for f in tests_by_file.keys()]
         logger.debug('received schedule with %s item(s)', len(items))
