@@ -3,11 +3,17 @@ import platform
 
 import psutil
 
+from enum import Enum
 from maketestsgofaster import __version__
 
 
-class Settings():
+class Capability(Enum):
+    Fixtures = 'fixtures'
+    LifecycleTimings = 'lifecycle_timings'
+    SplitByFile = 'split_by_file'
 
+
+class Settings():
     def __init__(self, env):
         self.env = env
 
@@ -25,6 +31,7 @@ class Settings():
         self.build_url = self.__parse('build_url')
         self.build_worker = self.__parse('build_worker')
 
+        self.client_capabilities = []
         self.client_name = 'python-official'
         self.client_version = __version__
 
