@@ -198,44 +198,6 @@ def test_give_up_when_server_unreachable(config):
 
 
 @pytest.mark.e2e
-def test_give_up_when_server_returns_errors(config, server):
-    with pytest.raises(RuntimeError, match='server communication error - status code: 500, request id: <unique-request-id>'):
-        settings = Settings(Env.create({
-            'api_key': 'error',
-            'api_timeout': '2',
-            'api_retries': '1',
-            'api_url': server.url,
-            'build_id': '4242',
-            'vcs_branch': 'master',
-            'vcs_revision': 'asd43da',
-        }))
-        scheduler = Scheduler(settings)
-
-        server.next_response(500, {})
-
-        scheduler.next_file()
-
-
-@pytest.mark.e2e
-def test_give_up_when_gateway_error(config, server):
-    with pytest.raises(RuntimeError, match='server communication error - status code: 502, request id: None'):
-        settings = Settings(Env.create({
-            'api_key': 'error',
-            'api_timeout': '2',
-            'api_retries': '1',
-            'api_url': server.url,
-            'build_id': '4242',
-            'vcs_branch': 'master',
-            'vcs_revision': 'asd43da',
-        }))
-        scheduler = Scheduler(settings)
-
-        server.next_response(502, {})
-
-        scheduler.next_file()
-
-
-@pytest.mark.e2e
 def test_stop_on_empty_schedule(config, server):
     settings = Settings(Env.create({
         'api_key': '42',

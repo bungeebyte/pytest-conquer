@@ -37,13 +37,11 @@ class TestInitSettings():
         settings = Settings(MockedEnv({
             'api_url': 'http://0.0.0.0',
         }))
-        assert settings.api_url == 'http://0.0.0.0'
+        assert settings.api_urls == ['http://0.0.0.0']
 
     def test_api_url_default(self):
-        settings = Settings(MockedEnv({
-            'api_url': 'https://scheduler.maketestsgofaster.com',
-        }))
-        assert settings.api_url == 'https://scheduler.maketestsgofaster.com'
+        settings = Settings(MockedEnv())
+        assert settings.api_urls == ['https://scheduler.maketestsgofaster.com', 'https://scheduler.maketestsgofaster.co']
 
     def test_build_id(self):
         settings = Settings(MockedEnv({

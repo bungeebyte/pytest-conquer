@@ -12,13 +12,12 @@ class Client():
         self.api_key = settings.api_key
         self.api_retries = settings.api_retries
         self.api_timeout = settings.api_timeout
-        self.api_url = settings.api_url
+        self.api_urls = settings.api_urls
         self.build_id = settings.build_id
         self.build_worker = settings.build_worker
         self.user_agent = settings.client_name + '/' + settings.client_version
 
     def send(self, path, data):
-        url = self.api_url + path
         body = zlib.compress(json.dumps(data).encode('utf8'))
         headers = {
             'Accept': 'application/json',
@@ -34,7 +33,9 @@ class Client():
         result = None
         last_err = None
         wait_before_retry = 0
-        while result is None and attempts < self.api_retries:
+        while result is None and attempts < self.api_retries + 1:
+            url = self.api_urls[0] + path
+
             if wait_before_retry >= 1:
                 logger.debug('retrying in %ss', wait_before_retry)
                 time.sleep(wait_before_retry)
@@ -42,7 +43,7 @@ class Client():
 
             try:
                 headers['X-Attempt'] = str(attempts)
-                response, content = self.__json_request(url, headers, body, self.api_timeout)
+                response, content = self.request(url, headers, body, self.api_timeout)
                 log_msg = 'status code: ' + str(response.status) + ', request id: ' + str(response.get('x-request-id'))
                 if 200 <= response.status < 300:
                     result = json.loads(content.decode('utf-8'))
@@ -50,6 +51,7 @@ class Client():
                 else:
                     last_err = log_msg
             except IOError as e:
+                self.api_urls.reverse()  # let's try the next API URL because this one seems unreachable
                 last_err = e
             finally:
                 if last_err:
@@ -62,11 +64,11 @@ class Client():
 
         return result
 
-    def __current_time(self):
-        return int(round(time.time() * 1000))
-
-    def __json_request(self, url, headers, body, timeout):
+    def request(self, url, headers, body, timeout):
         http = Http(timeout=timeout)
         response, content = http.request(
             url, 'POST', headers=headers, body=body)
         return response, content
+
+    def __current_time(self):
+        return int(round(time.time() * 1000))
