@@ -37,8 +37,8 @@ class Settings():
 
         self.platform_name = 'python'
         self.platform_version = platform.python_version()
-        if env.python_version() < (3, 0):
-            raise SystemExit('Sorry, maketestsgofaster requires at least Python 3.x\n')
+        if env.python_version() < (3, 4):
+            raise SystemExit('Sorry, maketestsgofaster requires at least Python 3.4\n')
 
         self.runner_name = None
         self.runner_plugins = set()
