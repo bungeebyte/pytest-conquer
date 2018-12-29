@@ -238,7 +238,7 @@ def config(mocker):
     build_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return {
         'build': {'dir': '/app', 'id': build_id, 'pool': 1, 'project': None, 'url': None, 'worker': 'build-worker'},
-        'client': {'name': 'python-official', 'version': '1.0'},
+        'client': {'capabilities': [], 'name': 'python-official', 'version': '1.0'},
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'name': None, 'plugins': [], 'root': None, 'version': None},
         'system': {'context': {}, 'name': 'custom', 'os': {'name': 'Linux', 'version': '1.42'}, 'cpus': 3, 'ram': 17179869184},

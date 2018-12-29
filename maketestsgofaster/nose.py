@@ -15,7 +15,7 @@ from nose.suite import ContextSuiteFactory
 from maketestsgofaster import logger
 from maketestsgofaster.cloud.env import Env
 from maketestsgofaster.cloud.scheduler import Scheduler
-from maketestsgofaster.cloud.settings import Settings
+from maketestsgofaster.cloud.settings import Capability, Settings
 from maketestsgofaster.model import Failure, Location
 
 
@@ -81,6 +81,11 @@ class MTGFNosePlugin(Plugin):
     def configure(self, options, conf):
         global scheduler, settings
         settings = Settings(Env.create())
+        settings.client_capabilities = [
+            Capability.Fixtures,
+            Capability.LifecycleTimings,
+            Capability.SplitByFile,
+        ]
         settings.runner_name = 'nose'
         for plugin in conf.plugins:
             settings.runner_plugins.add((plugin.name, None))

@@ -13,8 +13,8 @@ from _pytest import python
 
 from maketestsgofaster import logger
 from maketestsgofaster.cloud.env import Env
-from maketestsgofaster.cloud.settings import Settings
 from maketestsgofaster.cloud.scheduler import Scheduler
+from maketestsgofaster.cloud.settings import Capability, Settings
 from maketestsgofaster.model import Failure, Location
 
 settings = None
@@ -34,6 +34,11 @@ def pytest_configure(config):
         raise SystemExit('Sorry, maketestsgofaster requires at least pytest 3.0\n')
 
     settings = Settings(Env.create())
+    settings.client_capabilities = [
+        Capability.Fixtures,
+        Capability.LifecycleTimings,
+        Capability.SplitByFile,
+    ]
     settings.runner_name = 'pytest'
     for plugin, dist in config.pluginmanager.list_plugin_distinfo():
         settings.runner_plugins.add((dist.project_name, dist.version))

@@ -56,6 +56,7 @@ class ConfigSerializer:
                 'worker': Serializer.truncate(settings.build_worker, 256),
             },
             'client': {
+                'capabilities': settings.client_capabilities,
                 'name': Serializer.truncate(settings.client_name, 64),
                 'version': Serializer.truncate(settings.client_version, 32),
             },
