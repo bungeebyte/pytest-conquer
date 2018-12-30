@@ -1,3 +1,4 @@
+import configparser
 import os
 import platform
 
@@ -16,21 +17,23 @@ class Capability(Enum):
 class Settings():
     def __init__(self, env):
         self.env = env
+        self.config = configparser.ConfigParser()
+        self.config.read('maketestsgofaster.cfg')
 
-        self.api_key = self.__parse('api_key')
-        self.api_retries = int(self.__parse('api_retries', 5))
-        self.api_retry_cap = float(self.__parse('api_retry_cap', 60))
-        self.api_timeout = float(self.__parse('api_timeout', 10))
-        self.api_urls = self.__parse('api_url', ['https://scheduler.maketestsgofaster.com', 'https://scheduler.maketestsgofaster.co'])
+        self.api_key = self.__parse('api', 'key')
+        self.api_retries = int(self.__parse('api', 'retries', 5))
+        self.api_retry_cap = float(self.__parse('api', 'retry_cap', 60))
+        self.api_timeout = float(self.__parse('api', 'timeout', 10))
+        self.api_urls = self.__parse('api', 'url', ['https://scheduler.maketestsgofaster.com', 'https://scheduler.maketestsgofaster.co'])
         if not isinstance(self.api_urls, list):
             self.api_urls = [self.api_urls]
 
-        self.build_dir = self.__parse('build_dir', os.getcwd())
-        self.build_id = self.__parse('build_id')
-        self.build_pool = int(self.__parse('build_pool', 1))
-        self.build_project = self.__parse('build_project')
-        self.build_url = self.__parse('build_url')
-        self.build_worker = self.__parse('build_worker')
+        self.build_dir = self.__parse('build', 'dir', os.getcwd())
+        self.build_id = self.__parse('build', 'id')
+        self.build_pool = int(self.__parse('build', 'pool', 1))
+        self.build_project = self.__parse('build', 'project')
+        self.build_url = self.__parse('build', 'url')
+        self.build_worker = self.__parse('build', 'worker')
 
         self.client_capabilities = []
         self.client_name = 'python-official'
@@ -53,16 +56,18 @@ class Settings():
         self.system_os_version = platform.release()
         self.system_ram = psutil.virtual_memory().total
 
-        self.vcs_branch = self.__parse('vcs_branch')
-        self.vcs_pr = self.__parse('vsc_pr')
-        self.vcs_repo = self.__parse('vcs_repo')
-        self.vcs_revision = self.__parse('vcs_revision')
-        self.vcs_revision_message = self.__parse('vcs_revision_message')
-        self.vcs_tag = self.__parse('vcs_tag')
-        self.vcs_type = self.__parse('vcs_type')
+        self.vcs_branch = self.__parse('vcs', 'branch')
+        self.vcs_pr = self.__parse('vcs', 'pr')
+        self.vcs_repo = self.__parse('vcs', 'repo')
+        self.vcs_revision = self.__parse('vcs', 'revision')
+        self.vcs_revision_message = self.__parse('vcs', 'revision_message')
+        self.vcs_tag = self.__parse('vcs', 'tag')
+        self.vcs_type = self.__parse('vcs', 'type')
 
-    def __parse(self, name, default=None):
-        return self.env.get(name) or default
+    def __parse(self, namespace, name, default=None):
+        return self.env.get(namespace + '_' + name) or \
+            self.config.get(namespace, name, fallback=None) or \
+            default
 
     def validate(self):
         if self.api_key is None:
