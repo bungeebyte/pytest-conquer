@@ -160,7 +160,8 @@ def test_successful_server_communication(config, server):
 def test_retry_on_server_error(config, server):
     settings = Settings(Env.create({
         'api_key': '42',
-        'api_timeout': '2',
+        'api_retry_cap': '0.1',
+        'api_timeout': '0.1',
         'api_url': server.url,
         'build_id': '4242',
         'vcs_branch': 'master',
@@ -186,8 +187,9 @@ def test_give_up_when_server_unreachable(config):
     with pytest.raises(RuntimeError, match='server communication error - (.*) Connection refused'):
         settings = Settings(Env.create({
             'api_key': '42',
-            'api_timeout': '2',
             'api_retries': '2',
+            'api_retry_cap': '0.1',
+            'api_timeout': '0.1',
             'api_url': 'http://localhost:12345',
             'build_id': '4242',
             'vcs_branch': 'master',

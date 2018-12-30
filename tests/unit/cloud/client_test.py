@@ -53,7 +53,8 @@ class TestClient():
 class MockClient(Client):
     def __init__(self, responses, settings=Settings(Env.create({
         'api_retries': '3',
-        'api_timeout': '1',
+        'api_retry_cap': '0.1',
+        'api_timeout': '0.1',
     }))):
         super().__init__(settings)
         self.responses = responses
