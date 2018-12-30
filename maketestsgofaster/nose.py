@@ -82,7 +82,6 @@ class MTGFNosePlugin(Plugin):
         global scheduler, settings
         settings = Settings(Env.create())
         settings.client_capabilities = [
-            Capability.Fixtures,
             Capability.LifecycleTimings,
             Capability.SplitByFile,
         ]
