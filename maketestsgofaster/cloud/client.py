@@ -11,6 +11,7 @@ class Client():
     def __init__(self, settings):
         self.api_key = settings.api_key
         self.api_retries = settings.api_retries
+        self.api_retry_cap = settings.api_retry_cap
         self.api_timeout = settings.api_timeout
         self.api_urls = settings.api_urls
         self.build_id = settings.build_id
@@ -38,8 +39,8 @@ class Client():
 
             if wait_before_retry >= 1:
                 logger.debug('retrying in %ss', wait_before_retry)
-                time.sleep(wait_before_retry)
-            start = self.__current_time()
+                time.sleep(min(self.api_retry_cap, wait_before_retry))
+            start = time.time()
 
             try:
                 headers['X-Attempt'] = str(attempts)
@@ -56,7 +57,7 @@ class Client():
             finally:
                 if last_err:
                     attempts += 1
-                    wait_before_retry = max(0, int(self.api_timeout - ((self.__current_time() - start) / 1000)))
+                    wait_before_retry = 2 ** attempts - (time.time() - start)
                     logger.warning('could not get successful response from server: %s', last_err)
 
         if last_err:
@@ -69,6 +70,3 @@ class Client():
         response, content = http.request(
             url, 'POST', headers=headers, body=body)
         return response, content
-
-    def __current_time(self):
-        return int(round(time.time() * 1000))

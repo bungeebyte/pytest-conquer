@@ -25,13 +25,23 @@ class TestInitSettings():
 
     def test_api_timeout_default(self):
         settings = Settings(MockedEnv())
-        assert settings.api_timeout == 60
+        assert settings.api_timeout == 10
 
     def test_api_timeout(self):
         settings = Settings(MockedEnv({
-            'api_timeout': '10',
+            'api_timeout': '1',
         }))
-        assert settings.api_timeout == 10
+        assert settings.api_timeout == 1
+
+    def test_api_retry_cap_default(self):
+        settings = Settings(MockedEnv())
+        assert settings.api_retry_cap == 60
+
+    def test_api_retry_cap(self):
+        settings = Settings(MockedEnv({
+            'api_retry_cap': '1',
+        }))
+        assert settings.api_retry_cap == 1
 
     def test_api_url(self):
         settings = Settings(MockedEnv({
