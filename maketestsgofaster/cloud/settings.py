@@ -17,8 +17,9 @@ class Capability(Enum):
 class Settings():
     def __init__(self, env):
         self.env = env
+
         self.config = configparser.ConfigParser()
-        self.config.read('maketestsgofaster.cfg')
+        self.config.read('.maketestsgofaster.cfg')
 
         self.api_key = self.__parse('api', 'key')
         self.api_retries = int(self.__parse('api', 'retries', 5))
