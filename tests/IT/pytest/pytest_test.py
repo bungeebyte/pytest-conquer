@@ -55,6 +55,10 @@ def test_function_setup(testdir):
     result = run_test(testdir, [test_file])
     assert_outcomes(result, passed=1)
 
+    assert suite_items() == [
+        SuiteItem('test', Location(test_file, 'test', 5), 42, []),
+    ]
+
     assert report_items() == [
         ReportItem('setup', Location(test_file, 'setup_function', 1), 'passed', 0.1, None),
         ReportItem('test', Location(test_file, 'test', 5), 'passed', 0.1, None),
@@ -310,37 +314,37 @@ def test_class(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
-        SuiteItem('test', Location(test_file, 'TestObject::()::test', 3), 42, []),
+        SuiteItem('test', Location(test_file, 'TestObject::test', 3), 42, []),
     ]
 
     assert report_items() == [
-        ReportItem('test', Location(test_file, 'TestObject::()::test', 3), 'passed', 0.1, None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 3), 'passed', 0.1, None),
     ]
 
 
 def test_class_inheritance(testdir):
     result = run_test(testdir, ['fixtures/test_class_inheritance_1.py', 'fixtures/test_class_inheritance_2.py'])
-    assert_outcomes(result, passed=4)  # yes, not 3  ¯\_(ツ)_/¯
+    assert_outcomes(result, passed=4)
 
     assert suite_items() == [
-        SuiteItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::()::test1', 11), 42, []),
-        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1::()::test1', 11), 42, []),
-        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::()::test1', 11), 42, []),
-        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::()::test2', 6), 42, []),
+        SuiteItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::test1', 11), 42, []),
+        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1::test1', 11), 42, []),
+        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test1', 11), 42, []),
+        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test2', 6), 42, []),
     ]
 
     assert report_items() == [
         ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::setup_class', 3), 'passed', 0.1, None),
-        ReportItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::()::test1', 11), 'passed', 0.1, None),
+        ReportItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::test1', 11), 'passed', 0.1, None),
         ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::teardown_class', 7), 'passed', 0.1, None),
 
         ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::setup_class', 3), 'passed', 0.1, None),
-        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1::()::test1', 11), 'passed', 0.1, None),
+        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1::test1', 11), 'passed', 0.1, None),
         ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::teardown_class', 7), 'passed', 0.1, None),
 
         ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject2::setup_class', 3), 'passed', 0.1, None),
-        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::()::test1', 11), 'passed', 0.1, None),
-        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::()::test2', 6), 'passed', 0.1, None),
+        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test1', 11), 'passed', 0.1, None),
+        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test2', 6), 'passed', 0.1, None),
         ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject2::teardown_class', 7), 'passed', 0.1, None),
     ]
 
@@ -351,14 +355,14 @@ def test_class_setup(testdir):
     assert_outcomes(result, passed=2)
 
     assert suite_items() == [
-        SuiteItem('test', Location(test_file, 'TestObject::()::test1', 11), 42, []),
-        SuiteItem('test', Location(test_file, 'TestObject::()::test2', 15), 42, []),
+        SuiteItem('test', Location(test_file, 'TestObject::test1', 11), 42, []),
+        SuiteItem('test', Location(test_file, 'TestObject::test2', 15), 42, []),
     ]
 
     assert report_items() == [
         ReportItem('setup', Location(test_file, 'TestObject::setup_class', 6), 'passed', 0.1, None),
-        ReportItem('test', Location(test_file, 'TestObject::()::test1', 11), 'passed', 0.1, None),
-        ReportItem('test', Location(test_file, 'TestObject::()::test2', 15), 'passed', 0.1, None),
+        ReportItem('test', Location(test_file, 'TestObject::test1', 11), 'passed', 0.1, None),
+        ReportItem('test', Location(test_file, 'TestObject::test2', 15), 'passed', 0.1, None),
     ]
 
 
@@ -368,22 +372,39 @@ def test_class_nested(testdir):
     assert_outcomes(result, passed=2)
 
     assert suite_items() == [
-        SuiteItem('test', Location(test_file, 'TestOuter::()::TestInner::()::test', 19), 42, []),
-        SuiteItem('test', Location(test_file, 'TestOuter::()::test', 36), 42, []),
+        SuiteItem('test', Location(test_file, 'TestOuter::TestInner::test', 19), 42, []),
+        SuiteItem('test', Location(test_file, 'TestOuter::test', 36), 42, []),
     ]
 
-    assert report_items() == [
-        ReportItem('setup', Location(test_file, 'TestOuter::setup_class', 22), 'passed', 0.1, None),
-        ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_class', 5), 'passed', 0.1, None),
-        ReportItem('setup', Location(test_file, 'TestOuter::()::TestInner::()::setup_method', 13), 'passed', 0.1, None),
-        ReportItem('test', Location(test_file, 'TestOuter::()::TestInner::()::test', 19), 'passed', 0.1, None),
-        ReportItem('teardown', Location(test_file, 'TestOuter::()::TestInner::()::teardown_method', 16), 'passed', 0.1, None),
-        ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_class', 9), 'passed', 0.1, None),
-        ReportItem('setup', Location(test_file, 'TestOuter::()::setup_method', 30), 'passed', 0.1, None),
-        ReportItem('test', Location(test_file, 'TestOuter::()::test', 36), 'passed', 0.1, None),
-        ReportItem('teardown', Location(test_file, 'TestOuter::()::teardown_method', 33), 'passed', 0.1, None),
-        ReportItem('teardown', Location(test_file, 'TestOuter::teardown_class', 26), 'passed', 0.1, None),
-    ]
+    for item in report_items():
+        print(item)
+
+    if __version__.split('.')[0] == '3':
+        assert report_items() == [
+            ReportItem('setup', Location(test_file, 'TestOuter::setup_class', 22), 'passed', 0.1, None),  # this is what changes
+            ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_class', 5), 'passed', 0.1, None),
+            ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_method', 13), 'passed', 0.1, None),
+            ReportItem('test', Location(test_file, 'TestOuter::TestInner::test', 19), 'passed', 0.1, None),
+            ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_method', 16), 'passed', 0.1, None),
+            ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_class', 9), 'passed', 0.1, None),
+            ReportItem('setup', Location(test_file, 'TestOuter::setup_method', 30), 'passed', 0.1, None),
+            ReportItem('test', Location(test_file, 'TestOuter::test', 36), 'passed', 0.1, None),
+            ReportItem('teardown', Location(test_file, 'TestOuter::teardown_method', 33), 'passed', 0.1, None),
+            ReportItem('teardown', Location(test_file, 'TestOuter::teardown_class', 26), 'passed', 0.1, None),
+        ]
+    else:
+        assert report_items() == [
+            ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_class', 5), 'passed', 0.1, None),
+            ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_method', 13), 'passed', 0.1, None),
+            ReportItem('test', Location(test_file, 'TestOuter::TestInner::test', 19), 'passed', 0.1, None),
+            ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_method', 16), 'passed', 0.1, None),
+            ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_class', 9), 'passed', 0.1, None),
+            ReportItem('setup', Location(test_file, 'TestOuter::setup_class', 22), 'passed', 0.1, None),  # this is what changes
+            ReportItem('setup', Location(test_file, 'TestOuter::setup_method', 30), 'passed', 0.1, None),
+            ReportItem('test', Location(test_file, 'TestOuter::test', 36), 'passed', 0.1, None),
+            ReportItem('teardown', Location(test_file, 'TestOuter::teardown_method', 33), 'passed', 0.1, None),
+            ReportItem('teardown', Location(test_file, 'TestOuter::teardown_class', 26), 'passed', 0.1, None),
+        ]
 
 
 def test_class_setup_fail(testdir):
@@ -394,7 +415,7 @@ def test_class_setup_fail(testdir):
     assert report_items() == [
         ReportItem('setup', Location(test_file, 'TestObject::setup_class', 3), 'failed', 0.1,
                    Failure('Exception', 'setup failed')),
-        ReportItem('test', Location(test_file, 'TestObject::()::test', 7), 'failed', 0.1, None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'failed', 0.1, None),
     ]
 
 
@@ -404,13 +425,13 @@ def test_class_method_setup_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert suite_items() == [
-        SuiteItem('test', Location(test_file, 'TestObject::()::test', 6), 42, []),
+        SuiteItem('test', Location(test_file, 'TestObject::test', 6), 42, []),
     ]
 
     assert report_items() == [
-        ReportItem('setup', Location(test_file, 'TestObject::()::setup_method', 3), 'failed', 0.1,
+        ReportItem('setup', Location(test_file, 'TestObject::setup_method', 3), 'failed', 0.1,
                    Failure('Exception', 'setup failed')),
-        ReportItem('test', Location(test_file, 'TestObject::()::test', 6), 'failed', 0.1, None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 6), 'failed', 0.1, None),
     ]
 
 
@@ -420,7 +441,7 @@ def test_class_teardown(testdir):
     assert_outcomes(result, passed=1)
 
     assert report_items() == [
-        ReportItem('test', Location(test_file, 'TestObject::()::test', 7), 'passed', 0.1, None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'passed', 0.1, None),
         ReportItem('teardown', Location(test_file, 'TestObject::teardown_class', 3), 'passed', 0.1, None),
     ]
 
@@ -431,7 +452,7 @@ def test_class_teardown_fail(testdir):
     assert_outcomes(result, error=1, passed=1)
 
     assert report_items() == [
-        ReportItem('test', Location(test_file, 'TestObject::()::test', 7), 'passed', 0.1, None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'passed', 0.1, None),
         ReportItem('teardown', Location(test_file, 'TestObject::teardown_class', 3), 'failed', 0.1,
                    Failure('Exception', 'teardown failed')),
     ]
@@ -443,8 +464,8 @@ def test_class_method_teardown_fail(testdir):
     assert_outcomes(result, error=1, passed=1)
 
     assert report_items() == [
-        ReportItem('test', Location(test_file, 'TestObject::()::test', 6), 'passed', 0.1, None),
-        ReportItem('teardown', Location(test_file, 'TestObject::()::teardown_method', 3), 'failed', 0.1,
+        ReportItem('test', Location(test_file, 'TestObject::test', 6), 'passed', 0.1, None),
+        ReportItem('teardown', Location(test_file, 'TestObject::teardown_method', 3), 'failed', 0.1,
                    Failure('Exception', 'teardown failed')),
     ]
 

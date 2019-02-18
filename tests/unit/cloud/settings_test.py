@@ -171,7 +171,7 @@ class TestValidateSettings():
 
     @pytest.mark.parametrize('fn,expected', invalid_scenarios)
     def test_validation(self, fn, expected):
-        with pytest.raises(RuntimeError, message=expected):
+        with pytest.raises(RuntimeError, match=expected):
             data = self.valid_settings.copy()
             fn(data)
             Settings(MockedEnv(data)).validate()
