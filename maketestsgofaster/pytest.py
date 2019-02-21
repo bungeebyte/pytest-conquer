@@ -1,15 +1,10 @@
 import os.path
 import inspect
-import time
 import sys
+import time
 from collections import defaultdict
 
 import pytest
-try:
-    from _pytest.nodes import Node
-except ImportError:
-    from _pytest.main import Node
-from _pytest import python
 
 from maketestsgofaster import logger
 from maketestsgofaster.cloud.env import Env
@@ -61,13 +56,15 @@ class ScheduledList:
     def collect_test(self, item):
         fixtures = []
         for _, fixturedef in sorted(item._fixtureinfo.name2fixturedefs.items()):
-            if fixturedef[0].baseid == '':  # means it's an artificial fixture for @pytest.mark.parametrize
-                continue
             location = to_function_location(fixturedef[0].func)
+            if is_artifical_fixture(fixturedef[0], location):
+                continue
             fixtures.append(scheduler.collect('fixture', location))
 
         file = os.path.relpath(item.fspath.strpath, settings.runner_root)
-        name = '::'.join(item.nodeid.split('::')[1:])
+        name = '::' \
+            .join(item.nodeid.split('::')[1:]) \
+            .replace('::()::', '::')  # the format was changed in pytest 4.x
         _, line = inspect.getsourcelines(item._obj)
         location = Location(file, name, line)
         scheduler.collect('test', location, fixtures)
@@ -122,7 +119,9 @@ def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
 
     file = report.nodeid.split('::')[0]
-    name = item.nodeid.replace(file + '::', '')
+    name = item.nodeid \
+        .replace(file + '::', '') \
+        .replace('::()::', '::')  # the format was changed in pytest 4.x
     line = report.location[1]
     location = Location(file, name, line + 1)
 
@@ -158,133 +157,74 @@ def pytest_fixture_setup(fixturedef, request):
 
     result = yield  # actual setup
 
-    if fixturedef.baseid == '':  # means it's an artificial fixture for @pytest.mark.parametrize
+    location = to_function_location(fixturedef.func)
+
+    if is_artifical_fixture(fixturedef, location):
         return
 
-    location = to_function_location(fixturedef.func)
     status = 'error' if result.excinfo else 'passed'
     failure = to_failure(result.excinfo)
     scheduler.report('fixture', location, status, time.time() - start, failure)
 
 
 # ======================================================================================
-# SETUP / TEARDOWN COLLECTION & REPORTING
+# SETUP / TEARDOWN REPORTING
 # ======================================================================================
 
 
-# Overwrite `_getcustomclass` to swap default implementations with custom ones
-# that hook into setup and teardown procedures.
-
-_getcustomclass = Node._getcustomclass
-
-
-def getcustomclass(self, name):
-    from maketestsgofaster.pytest import CustomClass, CustomFunction
-    if name is 'Class':
-        return CustomClass
-    if name is 'Function':
-        return CustomFunction
-    return _getcustomclass(self, name)
-
-
-Node._getcustomclass = getcustomclass
-
-
-# Return a custom `Module` in order to hook into setup and teardown procedures.
-@pytest.hookimpl(tryfirst=True)
-def pytest_pycollect_makemodule(path, parent):
-    if path.basename == '__init__.py':
-        return python.Package(path, parent)
-    return CustomModule(path, parent)
-
-
-# Mixin that wraps default setup and teardown (finalizers) procedures.
-class SetupReporting():
-    def setup(self):
-        func_location = self.setup_func_loc()
+def wrap_report_func(func, func_loc, type):
+    def wrapper(arg1=None, arg2=None):
         start = time.time()
         try:
-            self.run_setup()  # actual setup
+            arg_count = func.__code__.co_argcount
+            if inspect.ismethod(func):
+                arg_count -= 1
+            if arg_count == 0:
+                func()
+            elif arg_count == 1:
+                func(arg1)
+            else:
+                func(arg1, arg2)
         except Exception:
-            if func_location:
+            if func_loc:
                 failure = to_failure(sys.exc_info())
-                scheduler.report('setup', func_location, 'failed', time.time() - start, failure)
+                scheduler.report(type, func_loc, 'failed', time.time() - start, failure)
             raise
-        if func_location:
-            scheduler.report('setup', func_location, 'passed', time.time() - start, None)
-
-    def addfinalizer(self, fin):
-        def wrapped_teardown():
-            func_location = self.teardown_func_loc()
-            start = time.time()
-            try:
-                fin()  # actual teardown
-            except Exception:
-                failure = to_failure(sys.exc_info())
-                scheduler.report('teardown', func_location, 'failed', time.time() - start, failure)
-                raise
-            scheduler.report('teardown', func_location, 'passed', time.time() - start, None)
-        python.PyCollector.addfinalizer(self, wrapped_teardown)
+        if func_loc:
+            scheduler.report(type, func_loc, 'passed', time.time() - start, None)
+    return wrapper
 
 
-class CustomModule(SetupReporting, python.Module):
-    def run_setup(self):
-        python.Module.setup(self)
-
-    def setup_func_loc(self):
-        func = python._get_xunit_func(self.obj, 'setUpModule') or \
-            python._get_xunit_func(self.obj, 'setup_module')
-        return to_function_location(func, self.obj)
-
-    def teardown_func_loc(self):
-        func = python._get_xunit_func(self.obj, 'tearDownModule') or \
-            python._get_xunit_func(self.obj, 'teardown_module')
-        return to_function_location(func, self.obj)
+def replace_func(obj, name, type):
+    if hasattr(obj, name):
+        func = getattr(obj, name)
+        if hasattr(func, '__wrapped__'):
+            func = func.__wrapped__
+        func_loc = to_function_location(func, obj)
+        wrapped_func = wrap_report_func(func, func_loc, type)
+        wrapped_func.__wrapped__ = func
+        setattr(obj, name, wrapped_func)
 
 
-class CustomClass(SetupReporting, python.Class):
-    def run_setup(self):
-        python.Class.setup(self)
+@pytest.hookimpl(tryfirst=True)
+def pytest_make_collect_report(collector):
+    if not hasattr(collector, 'obj'):
+        return
+    obj = collector.obj
 
-    def setup_func_loc(self):
-        func = python._get_xunit_func(self.obj, 'setup_class')
-        return to_function_location(func, self.obj)
+    if inspect.isclass(obj):
+        replace_func(obj, 'setup_class', 'setup')
+        replace_func(obj, 'setup_method', 'setup')
+        replace_func(obj, 'teardown_class', 'teardown')
+        replace_func(obj, 'teardown_method', 'teardown')
 
-    def teardown_func_loc(self):
-        func = python._get_xunit_func(self.obj, 'teardown_class')
-        return to_function_location(func, self.obj)
-
-
-class CustomFunction(SetupReporting, python.Function):
-    def __init__(self, *args, **kwargs):
-        super(CustomFunction, self).__init__(*args, **kwargs)
-
-    def run_setup(self):
-        python.Function.setup(self)
-
-    def teardown_func_loc(self):
-        return self.lifecycle_func('teardown_function', 'teardown_method')
-
-    def setup_func_loc(self):
-        return self.lifecycle_func('setup_function', 'setup_method')
-
-    def lifecycle_func(self, func_name, meth_name):
-        if hasattr(self, '_preservedparent'):
-            obj = self._preservedparent
-        elif isinstance(self.parent, python.Instance):
-            obj = self.parent.newinstance()
-            self.obj = self._getobj()
-        else:
-            obj = self.parent.obj
-
-        if inspect.ismethod(self.obj):
-            setup_name = meth_name
-        else:
-            setup_name = func_name
-
-        # TODO: _get_xunit_setup_teardown?
-        func = python._get_xunit_func(obj, setup_name)
-        return to_function_location(func, self.obj)
+    if inspect.ismodule(obj):
+        replace_func(obj, 'setup_function', 'setup')
+        replace_func(obj, 'setup_module', 'setup')
+        replace_func(obj, 'setUpModule', 'setup')
+        replace_func(obj, 'teardown_function', 'teardown')
+        replace_func(obj, 'teardown_module', 'teardown')
+        replace_func(obj, 'tearDownModule', 'teardown')
 
 
 # ======================================================================================
@@ -301,7 +241,7 @@ def to_function_location(func, obj=None):
                 name = cls + '::' + name
         elif inspect.ismethod(obj):
             for cls in obj.__qualname__.split('.')[:-1][::-1]:
-                name = cls + '::()::' + name
+                name = cls + '::' + name
         _, line = inspect.getsourcelines(func)
         return Location(file, name, line)
 
@@ -311,3 +251,16 @@ def to_failure(exc_info):
         return None
     exc_type, exc_obj, exc_tb = exc_info
     return Failure(exc_type.__name__, str(exc_obj))
+
+
+def is_artifical_fixture(fixturedef, location):
+    # means it's an artificial fixture for @pytest.mark.parametrize
+    if fixturedef.baseid == '':
+        return True
+    # means it's an artificial setup/teardown fixture (pytest 4+)
+    if location.name == 'xunit_setup_class_fixture' or \
+            location.name == 'xunit_setup_function_fixture' or \
+            location.name == 'xunit_setup_method_fixture' or \
+            location.name == 'xunit_setup_module_fixture':
+        return True
+    return False
