@@ -1,16 +1,11 @@
 import pkgutil
 import os
-import subprocess
 import uuid
 import sys
 
 from maketestsgofaster import logger
+from maketestsgofaster.cloud.git import Git
 
-
-try:
-    from subprocess import DEVNULL
-except ImportError:
-    DEVNULL = open(os.devnull, 'wb')
 
 ENV_PREFIX = 'MTGF_'
 
@@ -69,38 +64,26 @@ class Env:
     def python_version(self):
         return sys.version_info
 
-    def vcs_branch(self):
-        try:
-            subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stderr=DEVNULL).strip()
-        except subprocess.CalledProcessError:
-            return None
+    def vcs_branch(self, cwd=None):
+        return Git.branch(cwd)
 
-    def vcs_repo(self):
-        try:
-            subprocess.check_output(['git', 'config', '--get', 'remove.origin.url'], stderr=DEVNULL).strip()
-        except subprocess.CalledProcessError:
-            return None
+    def vcs_repo(self, cwd=None):
+        return Git.repo(cwd)
 
-    def vcs_revision(self):
-        try:
-            subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=DEVNULL).strip()
-        except subprocess.CalledProcessError:
-            return None
+    def vcs_revision(self, cwd=None):
+        return Git.revision(cwd)
 
-    def vcs_revision_message(self):
-        try:
-            subprocess.check_output(['git', 'log', '-1', '--pretty=%B'], stderr=DEVNULL).strip()
-        except subprocess.CalledProcessError:
-            return None
+    def vcs_revision_message(self, cwd=None):
+        return Git.revision_message(cwd)
 
     def vcs_type(self):
-        'git'
+        return 'git'
 
 
 class Custom(Env):
 
     def active(self):
-        False
+        return False
 
     def name(self):
         return 'custom'
