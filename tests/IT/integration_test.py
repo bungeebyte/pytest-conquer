@@ -23,7 +23,9 @@ def test_successful_server_communication(config, server):
         'build_dir': '/app',
         'build_id': config['build']['id'],
         'vcs_branch': 'master',
+        'vcs_repo': 'github.com/myrepo',
         'vcs_revision': 'asd43da',
+        'vcs_revision_message': 'my commit',
     }))
     headers = {
         'Accept': 'application/json',
@@ -263,6 +265,6 @@ def config(mocker):
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'name': None, 'plugins': [], 'root': None, 'version': None},
         'system': {'context': {}, 'name': 'custom', 'os': {'name': 'Linux', 'version': '1.42'}, 'cpus': 3, 'ram': 17179869184},
-        'vcs': {'branch': 'master', 'pr': None, 'repo': None,
-                'revision': 'asd43da', 'revision_message': None, 'tag': None, 'type': None},
+        'vcs': {'branch': 'master', 'pr': None, 'repo': 'github.com/myrepo',
+                'revision': 'asd43da', 'revision_message': 'my commit', 'tag': None, 'type': 'git'},
     }
