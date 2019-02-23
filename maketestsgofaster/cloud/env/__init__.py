@@ -40,8 +40,9 @@ class Env:
             return self.overrides[var]
 
         env_var_name = (ENV_PREFIX + var).upper()
-        if env_var_name in os.environ:
-            return os.environ[env_var_name]
+        for key in os.environ:
+            if key.upper() == env_var_name:
+                return os.environ[key]
 
         method = getattr(self, var, None)
         if method:
