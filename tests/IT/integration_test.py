@@ -260,7 +260,7 @@ def config(mocker):
     mocker.patch.object(uuid, 'uuid4', return_value='build-worker', autospec=True)
     build_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return {
-        'build': {'dir': '/app', 'id': build_id, 'pool': 1, 'project': None, 'url': None, 'worker': 'build-worker'},
+        'build': {'dir': '/app', 'id': build_id, 'pool': 0, 'project': None, 'url': None, 'worker': 'build-worker'},
         'client': {'capabilities': [], 'name': 'python-official', 'version': '1.0'},
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'name': None, 'plugins': [], 'root': None, 'version': None},

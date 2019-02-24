@@ -31,7 +31,7 @@ class Settings():
 
         self.build_dir = self.__parse('build', 'dir', os.getcwd())
         self.build_id = self.__parse('build', 'id')
-        self.build_pool = int(self.__parse('build', 'pool', 1))
+        self.build_pool = int(self.__parse('build', 'pool', 0))
         self.build_project = self.__parse('build', 'project')
         self.build_url = self.__parse('build', 'url')
         self.build_worker = self.__parse('build', 'worker')

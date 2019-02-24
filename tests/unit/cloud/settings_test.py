@@ -59,6 +59,16 @@ class TestInitSettings():
         }))
         assert settings.build_id == 'ABCD'
 
+    def test_build_pool(self):
+        settings = Settings(MockedEnv({
+            'build_pool': 2,
+        }))
+        assert settings.build_pool == 2
+
+    def test_build_pool_default(self):
+        settings = Settings(MockedEnv())
+        assert settings.build_pool == 0
+
     def test_build_dir(self):
         settings = Settings(MockedEnv({
             'build_dir': '/app',
