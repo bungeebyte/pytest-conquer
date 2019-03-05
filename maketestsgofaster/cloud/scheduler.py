@@ -36,6 +36,7 @@ class Scheduler:
             logger.debug('no more items')
             return
         file = self.schedule.items[self.index].file
+        logger.debug('next file: %s', file)
         self.index += 1
         return file
 
