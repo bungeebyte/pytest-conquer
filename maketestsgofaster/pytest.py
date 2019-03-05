@@ -130,15 +130,12 @@ def pytest_runtest_makereport(item, call):
         time = report.duration
         scheduler.report('test', location, status, time, failure)
 
-    def send_report():
+    if report.when == 'call':
         failure = None
         if call.excinfo:
             exc_info = (call.excinfo.type, call.excinfo.value, call.excinfo.tb)
             failure = to_failure(exc_info)
         report_test(failure)
-
-    if report.when == 'call':
-        send_report()
     elif report.when == 'setup':
         if report.skipped:
             report_test()
