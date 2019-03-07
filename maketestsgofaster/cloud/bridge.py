@@ -66,6 +66,7 @@ class ConfigSerializer:
                 'version': Serializer.truncate(settings.platform_version, 32),
             },
             'runner': {
+                'args': [Serializer.truncate(arg, 255) for arg in settings.runner_args],
                 'name': Serializer.truncate(settings.runner_name, 64),
                 'plugins': [{
                     'name': Serializer.truncate(p[0], 64),

@@ -1,6 +1,7 @@
 import configparser
 import os
 import platform
+import sys
 
 import psutil
 
@@ -46,6 +47,7 @@ class Settings():
         if env.python_version() < (3, 4):
             raise SystemExit('Sorry, maketestsgofaster requires at least Python 3.4\n')
 
+        self.runner_args = sys.argv
         self.runner_name = None
         self.runner_plugins = set()
         self.runner_root = None

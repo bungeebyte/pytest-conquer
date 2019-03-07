@@ -1,6 +1,7 @@
 import platform
 import random
 import string
+import sys
 import uuid
 from collections import namedtuple
 
@@ -259,12 +260,13 @@ def config(mocker):
     mocker.patch.object(platform, 'release', return_value='1.42', autospec=True)
     mocker.patch.object(platform, 'system', return_value='Linux', autospec=True)
     mocker.patch.object(uuid, 'uuid4', return_value='build-worker', autospec=True)
+    mocker.patch.object(sys, 'argv', ['arg1'])
     build_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return {
         'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'worker': 'build-worker'},
         'client': {'capabilities': [], 'name': 'python-official', 'version': '1.0'},
         'platform': {'name': 'python', 'version': '3.6'},
-        'runner': {'name': None, 'plugins': [], 'root': None, 'version': None},
+        'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},
         'system': {'context': {}, 'name': 'custom', 'os': {'name': 'Linux', 'version': '1.42'}, 'cpus': 3, 'ram': 17179869184},
         'vcs': {'branch': 'master', 'pr': None, 'repo': 'github.com/myrepo',
                 'revision': 'asd43da', 'revision_message': 'my commit', 'tag': None, 'type': 'git'},
