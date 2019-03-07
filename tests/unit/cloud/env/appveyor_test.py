@@ -14,6 +14,7 @@ def test_create(appveyor_env):
 def test_settings(appveyor_env):
     env = Env.create()
     assert env.build_id() == 'build_id'
+    assert env.build_job() == 'job'
     assert env.build_project() == 'org/repo'
     assert env.build_worker() == 'job_num'
     assert env.context() == {
@@ -36,6 +37,7 @@ def test_settings_for_pr(appveyor_env):
 def appveyor_env():
     os.environ['APPVEYOR'] = 'true'
     os.environ['APPVEYOR_BUILD_ID'] = 'build_id'
+    os.environ['APPVEYOR_JOB_NAME'] = 'job'
     os.environ['APPVEYOR_JOB_NUMBER'] = 'job_num'
     os.environ['APPVEYOR_PROJECT_SLUG'] = 'org/repo'
     os.environ['APPVEYOR_RE_BUILD'] = 'True'

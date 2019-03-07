@@ -14,11 +14,13 @@ class Circle(Env):
 
     def context(self):
         return self.get_all(
-            'CIRCLE_JOB',
             'CIRCLE_STAGE')
 
     def build_id(self):
         return os.environ.get('CIRCLE_BUILD_NUM')
+
+    def build_job(self):
+        return os.environ.get('CIRCLE_JOB')
 
     def build_url(self):
         return os.environ.get('CIRCLE_BUILD_URL')

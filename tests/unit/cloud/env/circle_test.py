@@ -14,11 +14,11 @@ def test_create(circle_env):
 def test_settings(circle_env):
     env = Env.create()
     assert env.build_id() == 'build_num'
+    assert env.build_job() == 'job'
     assert env.build_pool() == 'node_total'
     assert env.build_url() == 'build_url'
     assert env.build_worker() == 'node_index'
     assert env.context() == {
-        'CIRCLE_JOB': 'job',
         'CIRCLE_STAGE': 'stage',
     }
     assert env.vcs_branch() == 'branch'

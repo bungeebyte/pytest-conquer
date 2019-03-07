@@ -13,15 +13,16 @@ class GitLab(Env):
 
     def context(self):
         return self.get_all(
-            'CI_JOB_NAME',
-            'CI_JOB_STAGE',
             'CI_RUNNER_REVISION',
             'CI_RUNNER_VERSION',
             'CI_SERVER_REVISION',
             'CI_SERVER_VERSION')
 
     def build_id(self):
-        return os.environ.get('CI_JOB_ID') or os.environ.get('CI_BUILD_ID')
+        return os.environ.get('CI_JOB_NAME') or os.environ.get('CI_BUILD_NAME')
+
+    def build_job(self):
+        return os.environ.get('CI_JOB_STAGE') or os.environ.get('CI_BUILD_STAGE')
 
     def build_worker(self):
         return os.environ.get('CI_RUNNER_ID')

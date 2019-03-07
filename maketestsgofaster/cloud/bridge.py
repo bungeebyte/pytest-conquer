@@ -48,8 +48,9 @@ class ConfigSerializer:
     def serialize(settings):
         return {
             'build': {
-                'id': Serializer.truncate(settings.build_id, 64),
                 'dir': Serializer.truncate(settings.build_dir, 1024),
+                'id': Serializer.truncate(settings.build_id, 64),
+                'job': Serializer.truncate(settings.build_job, 64),
                 'pool': settings.build_pool,
                 'project': Serializer.truncate(settings.build_project, 1024),
                 'url': Serializer.truncate(settings.build_url, 1024),

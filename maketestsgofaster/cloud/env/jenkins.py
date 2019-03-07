@@ -13,11 +13,14 @@ class Jenkins(Env):
 
     def context(self):
         return self.get_all(
-            'JOB_NAME',
-            'NODE_NAME')
+            'NODE_NAME',
+        )
 
     def build_id(self):
         return os.environ.get('BUILD_NUMBER')
+
+    def build_job(self):
+        return os.environ.get('JOB_NAME')
 
     def build_url(self):
         return os.environ.get('BUILD_URL')

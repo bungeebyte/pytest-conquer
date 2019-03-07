@@ -17,7 +17,9 @@ def test_settings(bamboo_env):
     assert env.build_project() == 'build_project'
     assert env.build_url() == 'build_url'
     assert env.build_worker() == 'job_num'
-    assert env.context() == {}
+    assert env.context() == {
+        'bamboo.buildKey': 'BAM-MAIN-JOBX',
+    }
     assert env.vcs_branch() == 'branch'
     assert env.vcs_repo() == 'repo_url'
     assert env.vcs_revision() == 'sha'

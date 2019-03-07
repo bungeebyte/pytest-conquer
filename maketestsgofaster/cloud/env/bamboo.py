@@ -12,7 +12,8 @@ class Bamboo(Env):
         return 'bamboo'
 
     def context(self):
-        return self.get_all()
+        return self.get_all(
+            'bamboo.buildKey')
 
     def build_id(self):
         return os.environ.get('bamboo.buildNumber')
@@ -21,7 +22,7 @@ class Bamboo(Env):
         return os.environ.get('bamboo.planKey')
 
     def build_url(self):
-        return os.environ.get('bamboo.resultsUrl')
+        return os.environ.get('bamboo.buildResultsUrl') or os.environ.get('bamboo.resultsUrl')
 
     def build_worker(self):
         return os.environ.get('bamboo.shortJobKey')

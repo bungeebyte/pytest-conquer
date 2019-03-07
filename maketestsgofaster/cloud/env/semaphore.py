@@ -13,12 +13,14 @@ class Semaphore(Env):
 
     def context(self):
         return self.get_all(
-            'SEMAPHORE_CURRENT_JOB',
             'SEMAPHORE_JOB_COUNT',
             'SEMAPHORE_TRIGGER_SOURCE')
 
     def build_id(self):
         return os.environ.get('SEMAPHORE_BUILD_NUMBER')
+
+    def build_job(self):
+        return os.environ.get('SEMAPHORE_CURRENT_JOB')
 
     def build_pool(self):
         return os.environ.get('SEMAPHORE_THREAD_COUNT')

@@ -18,6 +18,9 @@ class AppVeyor(Env):
     def build_id(self):
         return os.environ.get('APPVEYOR_BUILD_ID')
 
+    def build_job(self):
+        return os.environ.get('APPVEYOR_JOB_NAME')
+
     def build_project(self):
         return os.environ.get('APPVEYOR_PROJECT_SLUG')
 

@@ -19,6 +19,9 @@ class Buildkite(Env):
     def build_id(self):
         return os.environ.get('BUILDKITE_BUILD_NUMBER')
 
+    def build_job(self):
+        return os.environ.get('BUILDKITE_LABEL')
+
     def build_url(self):
         return os.environ.get('BUILDKITE_BUILD_URL')
 

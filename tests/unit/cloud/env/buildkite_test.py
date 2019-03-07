@@ -14,6 +14,7 @@ def test_create(buildkite_env):
 def test_settings(buildkite_env):
     env = Env.create()
     assert env.build_id() == 'build_num'
+    assert env.build_job() == 'specs'
     assert env.build_pool() == 'job_count'
     assert env.build_url() == 'build_url'
     assert env.build_worker() == 'job_num'
@@ -41,6 +42,7 @@ def buildkite_env():
     os.environ['BUILDKITE_BUILD_URL'] = 'build_url'
     os.environ['BUILDKITE_COMMAND'] = 'command'
     os.environ['BUILDKITE_MESSAGE'] = 'commit_message'
+    os.environ['BUILDKITE_LABEL'] = 'specs'
     os.environ['BUILDKITE_ORGANIZATION_SLUG'] = 'org'
     os.environ['BUILDKITE_PARALLEL_JOB'] = 'job_num'
     os.environ['BUILDKITE_PARALLEL_JOB_COUNT'] = 'job_count'

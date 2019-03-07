@@ -3,7 +3,7 @@ import os
 from maketestsgofaster.cloud.env import Env
 
 
-# http://readme.drone.io/usage/environment-reference/
+# https://docs.drone.io/reference/environ/
 class Drone(Env):
     def active(self):
         return 'CI' in os.environ and 'DRONE' in os.environ

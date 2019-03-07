@@ -22,6 +22,7 @@ def test_successful_server_communication(config, server):
         'api_url': server.url,
         'build_dir': '/app',
         'build_id': config['build']['id'],
+        'build_job': 'job',
         'vcs_branch': 'master',
         'vcs_repo': 'github.com/myrepo',
         'vcs_revision': 'asd43da',
@@ -260,7 +261,7 @@ def config(mocker):
     mocker.patch.object(uuid, 'uuid4', return_value='build-worker', autospec=True)
     build_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return {
-        'build': {'dir': '/app', 'id': build_id, 'pool': 0, 'project': None, 'url': None, 'worker': 'build-worker'},
+        'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'worker': 'build-worker'},
         'client': {'capabilities': [], 'name': 'python-official', 'version': '1.0'},
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'name': None, 'plugins': [], 'root': None, 'version': None},

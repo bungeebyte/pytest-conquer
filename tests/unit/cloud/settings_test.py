@@ -59,6 +59,12 @@ class TestInitSettings():
         }))
         assert settings.build_id == 'ABCD'
 
+    def test_build_job(self):
+        settings = Settings(MockedEnv({
+            'build_job': 'JOB#1',
+        }))
+        assert settings.build_job == 'JOB#1'
+
     def test_build_pool(self):
         settings = Settings(MockedEnv({
             'build_pool': 2,
