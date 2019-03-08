@@ -15,7 +15,7 @@ class TestInitSettings():
 
     def test_api_retries_default(self):
         settings = Settings(MockedEnv())
-        assert settings.api_retries == 5
+        assert settings.api_retries == 6
 
     def test_api_retries(self):
         settings = Settings(MockedEnv({

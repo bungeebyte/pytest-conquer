@@ -23,7 +23,7 @@ class Settings():
         self.config.read('.maketestsgofaster.cfg')
 
         self.api_key = self.__parse('api', 'key')
-        self.api_retries = int(self.__parse('api', 'retries', 5))
+        self.api_retries = int(self.__parse('api', 'retries', 6))
         self.api_retry_cap = float(self.__parse('api', 'retry_cap', 60))
         self.api_timeout = float(self.__parse('api', 'timeout', 10))
         self.api_urls = self.__parse('api', 'url', ['https://scheduler.maketestsgofaster.com', 'https://scheduler.maketestsgofaster.co'])
