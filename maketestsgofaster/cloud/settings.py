@@ -20,7 +20,7 @@ class Settings():
         self.env = env
 
         self.config = configparser.ConfigParser()
-        self.config.read('.maketestsgofaster.cfg')
+        self.config.read('pytest.ini')
 
         self.api_key = self.__parse('api', 'key')
         self.api_retries = int(self.__parse('api', 'retries', 6))
@@ -68,9 +68,10 @@ class Settings():
         self.vcs_tag = self.__parse('vcs', 'tag')
         self.vcs_type = self.__parse('vcs', 'type')
 
-    def __parse(self, namespace, name, default=None):
-        return self.env.get(namespace + '_' + name) or \
-            self.config.get(namespace, name, fallback=None) or \
+    def __parse(self, prefix, name, default=None):
+        full_name = prefix + '_' + name
+        return self.env.get(full_name) or \
+            self.config.get("maketestsgofaster", full_name, fallback=None) or \
             default
 
     def validate(self):
