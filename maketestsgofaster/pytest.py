@@ -169,7 +169,41 @@ def pytest_fixture_setup(fixturedef, request):
 # ======================================================================================
 
 
-def wrap_report_func(func, func_loc, type):
+@pytest.hookimpl(tryfirst=True)
+def pytest_make_collect_report(collector):
+    if not hasattr(collector, 'obj'):
+        return
+    obj = collector.obj
+
+    if inspect.isclass(obj):
+        add_introspection(obj, 'setup_class', 'setup')
+        add_introspection(obj, 'setup_method', 'setup')
+        add_introspection(obj, 'teardown_class', 'teardown')
+        add_introspection(obj, 'teardown_method', 'teardown')
+
+    if inspect.ismodule(obj):
+        add_introspection(obj, 'setup_function', 'setup')
+        add_introspection(obj, 'setup_module', 'setup')
+        add_introspection(obj, 'setUpModule', 'setup')
+        add_introspection(obj, 'teardown_function', 'teardown')
+        add_introspection(obj, 'teardown_module', 'teardown')
+        add_introspection(obj, 'tearDownModule', 'teardown')
+
+
+def add_introspection(obj, name, type):
+    if not hasattr(obj, name):
+        return
+    func = getattr(obj, name)
+    if hasattr(func, '__wrapped__'):
+        func = func.__wrapped__
+    func_loc = to_function_location(func, obj)
+    scheduler.collect(type, func_loc)
+    wrapped_func = wrap_with_report_func(func, func_loc, type)
+    wrapped_func.__wrapped__ = func
+    setattr(obj, name, wrapped_func)
+
+
+def wrap_with_report_func(func, func_loc, type):
     def wrapper(arg1=None, arg2=None):
         start = time.time()
         try:
@@ -190,38 +224,6 @@ def wrap_report_func(func, func_loc, type):
         if func_loc:
             scheduler.report(type, func_loc, 'passed', time.time() - start, None)
     return wrapper
-
-
-def replace_func(obj, name, type):
-    if hasattr(obj, name):
-        func = getattr(obj, name)
-        if hasattr(func, '__wrapped__'):
-            func = func.__wrapped__
-        func_loc = to_function_location(func, obj)
-        wrapped_func = wrap_report_func(func, func_loc, type)
-        wrapped_func.__wrapped__ = func
-        setattr(obj, name, wrapped_func)
-
-
-@pytest.hookimpl(tryfirst=True)
-def pytest_make_collect_report(collector):
-    if not hasattr(collector, 'obj'):
-        return
-    obj = collector.obj
-
-    if inspect.isclass(obj):
-        replace_func(obj, 'setup_class', 'setup')
-        replace_func(obj, 'setup_method', 'setup')
-        replace_func(obj, 'teardown_class', 'teardown')
-        replace_func(obj, 'teardown_method', 'teardown')
-
-    if inspect.ismodule(obj):
-        replace_func(obj, 'setup_function', 'setup')
-        replace_func(obj, 'setup_module', 'setup')
-        replace_func(obj, 'setUpModule', 'setup')
-        replace_func(obj, 'teardown_function', 'teardown')
-        replace_func(obj, 'teardown_module', 'teardown')
-        replace_func(obj, 'tearDownModule', 'teardown')
 
 
 # ======================================================================================

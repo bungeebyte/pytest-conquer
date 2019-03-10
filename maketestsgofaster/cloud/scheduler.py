@@ -60,7 +60,7 @@ class SuiteBuilder:
 
         item = SuiteItem(type, location, file_size, fixtures)
 
-        if type == 'test' and location not in self.locations:  # prevents duplicates
+        if location not in self.locations:  # prevents duplicates
             self.items.append(item)
             self.locations.add(location)
 

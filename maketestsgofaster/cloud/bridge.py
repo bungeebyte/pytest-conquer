@@ -114,7 +114,15 @@ class SuiteSerializer:
             'file_size': item.file_size,
             'name': Serializer.truncate(item.location.name, 1024),
             'line': item.location.line,
-            'fixtures': [SuiteSerializer.serialize_item(f) for f in item.fixtures],
+            'fixtures': [SuiteSerializer.serialize_fixture_ref(f) for f in item.fixtures],
+        }
+
+    @staticmethod
+    def serialize_fixture_ref(item):
+        return {
+            'file': Serializer.truncate(item.file, 1024),
+            'name': Serializer.truncate(item.name, 1024),
+            'line': item.line,
         }
 
 
