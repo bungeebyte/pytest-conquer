@@ -15,7 +15,7 @@ def test_settings_version_9(gitlab9_env):
     env = Env.create()
     assert env.build_id() == 'job_name'
     assert env.build_job() == 'job_stage'
-    assert env.build_worker() == 'runner_id'
+    assert env.build_node() == 'runner_id'
     assert env.context() == {
         'CI_RUNNER_REVISION': 'runner_revision',
         'CI_RUNNER_VERSION': 'runner_version',
@@ -32,7 +32,7 @@ def test_settings_version_8(gitlab8_env):
     env = Env.create()
     assert env.build_id() == 'job_name'
     assert env.build_job() == 'job_stage'
-    assert env.build_worker() == 'runner_id'
+    assert env.build_node() == 'runner_id'
     assert env.context() == {
         'CI_RUNNER_REVISION': 'runner_revision',
         'CI_RUNNER_VERSION': 'runner_version',

@@ -81,11 +81,11 @@ class TestInitSettings():
         }))
         assert settings.build_dir == '/app'
 
-    def test_build_worker(self):
+    def test_build_node(self):
         settings = Settings(MockedEnv({
-            'build_worker': '<worker>',
+            'build_node': '<node>',
         }))
-        assert settings.build_worker == '<worker>'
+        assert settings.build_node == '<node>'
 
     def test_build_dir_default(self, mocker):
         py_version = mocker.patch('os.getcwd')

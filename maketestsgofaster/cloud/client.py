@@ -15,7 +15,7 @@ class Client():
         self.api_timeout = settings.api_timeout
         self.api_urls = settings.api_urls
         self.build_id = settings.build_id
-        self.build_worker = settings.build_worker
+        self.build_node = settings.build_node
         self.user_agent = settings.client_name + '/' + settings.client_version
 
     def send(self, path, data):
@@ -27,7 +27,7 @@ class Client():
             'Content-Type': 'application/json; charset=UTF-8',
             'User-Agent': self.user_agent,
             'X-Build-Id': self.build_id,
-            'X-Build-Worker': self.build_worker,
+            'X-Build-Node': self.build_node,
         }
 
         attempts = 0

@@ -11,7 +11,7 @@ def test_create():
 
     assert env.active() is False
     assert env.build_dir()
-    assert env.build_worker()
+    assert env.build_node()
 
     # uses `git`
     cwd = os.path.dirname(os.path.realpath(__file__))  # by default tox runs test in a tmp dir

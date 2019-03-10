@@ -51,10 +51,10 @@ class ConfigSerializer:
                 'dir': Serializer.truncate(settings.build_dir, 1024),
                 'id': Serializer.truncate(settings.build_id, 64),
                 'job': Serializer.truncate(settings.build_job, 64),
+                'node': Serializer.truncate(settings.build_node, 256),
                 'pool': settings.build_pool,
                 'project': Serializer.truncate(settings.build_project, 1024),
                 'url': Serializer.truncate(settings.build_url, 1024),
-                'worker': Serializer.truncate(settings.build_worker, 256),
             },
             'client': {
                 'capabilities': [c.value for c in settings.client_capabilities],

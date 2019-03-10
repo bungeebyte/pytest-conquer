@@ -24,7 +24,7 @@ class GitLab(Env):
     def build_job(self):
         return os.environ.get('CI_JOB_STAGE') or os.environ.get('CI_BUILD_STAGE')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('CI_RUNNER_ID')
 
     def vcs_branch(self):

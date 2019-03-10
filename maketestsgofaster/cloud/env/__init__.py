@@ -55,7 +55,7 @@ class Env:
     def build_dir(self):
         return os.getcwd()
 
-    def build_worker(self):
+    def build_node(self):
         return str(uuid.uuid4())
 
     def context(self):

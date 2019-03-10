@@ -15,7 +15,7 @@ def test_settings(travis_env):
     env = Env.create()
     assert env.build_id() == 'build_num'
     assert env.build_project() == 'org/repo'
-    assert env.build_worker() == 'job_num'
+    assert env.build_node() == 'job_num'
     assert env.context() == {
         'TRAVIS_EVENT_TYPE': 'event_type',
     }

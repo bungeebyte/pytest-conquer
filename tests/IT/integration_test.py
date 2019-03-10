@@ -39,7 +39,7 @@ def test_successful_server_communication(config, server):
         'User-Agent': 'python-official/1.0',
         'X-Attempt': '0',
         'X-Build-Id': config['build']['id'],
-        'X-Build-Worker': 'build-worker',
+        'X-Build-Node': 'build-node',
     }
     scheduler = Scheduler(settings)
 
@@ -259,11 +259,11 @@ def config(mocker):
     mocker.patch.object(platform, 'python_version', return_value='3.6', autospec=True)
     mocker.patch.object(platform, 'release', return_value='1.42', autospec=True)
     mocker.patch.object(platform, 'system', return_value='Linux', autospec=True)
-    mocker.patch.object(uuid, 'uuid4', return_value='build-worker', autospec=True)
+    mocker.patch.object(uuid, 'uuid4', return_value='build-node', autospec=True)
     mocker.patch.object(sys, 'argv', ['arg1'])
     build_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return {
-        'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'worker': 'build-worker'},
+        'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'node': 'build-node'},
         'client': {'capabilities': [], 'name': 'python-official', 'version': '1.0'},
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},

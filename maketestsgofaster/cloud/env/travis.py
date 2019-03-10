@@ -23,7 +23,7 @@ class Travis(Env):
     def build_project(self):
         return os.environ.get('TRAVIS_REPO_SLUG')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('TRAVIS_JOB_NUMBER')
 
     def vcs_branch(self):

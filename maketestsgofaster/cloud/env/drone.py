@@ -20,7 +20,7 @@ class Drone(Env):
     def build_url(self):
         return os.environ.get('DRONE_BUILD_LINK')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('DRONE_JOB_NUMBER')
 
     def vcs_branch(self):

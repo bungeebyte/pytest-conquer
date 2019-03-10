@@ -15,7 +15,7 @@ def test_settings(drone_env):
     env = Env.create()
     assert env.build_id() == 'build_num'
     assert env.build_url() == 'build_url'
-    assert env.build_worker() == 'job_num'
+    assert env.build_node() == 'job_num'
     assert env.context() == {}
     assert env.vcs_branch() == 'branch'
     assert env.vcs_pr() is None

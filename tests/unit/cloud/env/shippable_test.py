@@ -15,7 +15,7 @@ def test_settings(shippable_env):
     env = Env.create()
     assert env.build_id() == 'build_num'
     assert env.build_url() == 'build_url'
-    assert env.build_worker() == 'job_id'
+    assert env.build_node() == 'job_id'
     assert env.context() == {
         'PROJECT_ID': 'project_id',
     }

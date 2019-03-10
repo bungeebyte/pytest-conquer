@@ -17,7 +17,7 @@ def test_settings(circle_env):
     assert env.build_job() == 'job'
     assert env.build_pool() == 'node_total'
     assert env.build_url() == 'build_url'
-    assert env.build_worker() == 'node_index'
+    assert env.build_node() == 'node_index'
     assert env.context() == {
         'CIRCLE_STAGE': 'stage',
     }

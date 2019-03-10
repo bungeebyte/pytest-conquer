@@ -24,7 +24,7 @@ class Bamboo(Env):
     def build_url(self):
         return os.environ.get('bamboo.buildResultsUrl') or os.environ.get('bamboo.resultsUrl')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('bamboo.shortJobKey')
 
     def vcs_branch(self):

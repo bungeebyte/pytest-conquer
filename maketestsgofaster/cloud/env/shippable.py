@@ -21,7 +21,7 @@ class Shippable(Env):
     def build_url(self):
         return os.environ.get('BUILD_URL')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('JOB_NUMBER')
 
     def vcs_branch(self):

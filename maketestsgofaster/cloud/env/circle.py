@@ -28,7 +28,7 @@ class Circle(Env):
     def build_pool(self):
         return os.environ.get('CIRCLE_NODE_TOTAL')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('CIRCLE_NODE_INDEX')
 
     def vcs_branch(self):

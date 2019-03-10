@@ -25,7 +25,7 @@ class Semaphore(Env):
     def build_pool(self):
         return os.environ.get('SEMAPHORE_THREAD_COUNT')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('SEMAPHORE_CURRENT_THREAD')
 
     def vcs_branch(self):

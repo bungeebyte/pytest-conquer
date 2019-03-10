@@ -17,7 +17,7 @@ def test_settings(buildkite_env):
     assert env.build_job() == 'specs'
     assert env.build_pool() == 'job_count'
     assert env.build_url() == 'build_url'
-    assert env.build_worker() == 'job_num'
+    assert env.build_node() == 'job_num'
     assert env.context() == {
         'BUILDKITE_AGENT_NAME': 'agent_name',
         'BUILDKITE_COMMAND': 'command',

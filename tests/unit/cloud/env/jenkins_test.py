@@ -16,7 +16,7 @@ def test_settings(jenkins_env):
     assert env.build_id() == 'build_num'
     assert env.build_job() == 'job_name'
     assert env.build_url() == 'build_url'
-    assert env.build_worker() == 'executor_num'
+    assert env.build_node() == 'executor_num'
     assert env.context() == {
         'NODE_NAME': 'node_name',
     }

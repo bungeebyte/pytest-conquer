@@ -16,7 +16,7 @@ def test_settings(semaphore_env):
     assert env.build_id() == 'build_num'
     assert env.build_job() == 'current_job'
     assert env.build_pool() == 'thread_count'
-    assert env.build_worker() == 'current_thread'
+    assert env.build_node() == 'current_thread'
     assert env.context() == {
         'SEMAPHORE_JOB_COUNT': 'job_count',
         'SEMAPHORE_TRIGGER_SOURCE': 'trigger',

@@ -16,7 +16,7 @@ def test_settings(appveyor_env):
     assert env.build_id() == 'build_id'
     assert env.build_job() == 'job'
     assert env.build_project() == 'org/repo'
-    assert env.build_worker() == 'job_num'
+    assert env.build_node() == 'job_num'
     assert env.context() == {
         'APPVEYOR_RE_BUILD': 'True',
     }

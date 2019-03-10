@@ -24,7 +24,7 @@ class AppVeyor(Env):
     def build_project(self):
         return os.environ.get('APPVEYOR_PROJECT_SLUG')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('APPVEYOR_JOB_NUMBER')
 
     def vcs_branch(self):

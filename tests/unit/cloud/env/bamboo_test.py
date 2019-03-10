@@ -16,7 +16,7 @@ def test_settings(bamboo_env):
     assert env.build_id() == 'build_num'
     assert env.build_project() == 'build_project'
     assert env.build_url() == 'build_url'
-    assert env.build_worker() == 'job_num'
+    assert env.build_node() == 'job_num'
     assert env.context() == {
         'bamboo.buildKey': 'BAM-MAIN-JOBX',
     }

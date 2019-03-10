@@ -33,10 +33,10 @@ class Settings():
         self.build_dir = self.__parse('build', 'dir', os.getcwd())
         self.build_id = self.__parse('build', 'id')
         self.build_job = self.__parse('build', 'job')
+        self.build_node = self.__parse('build', 'node')
         self.build_pool = int(self.__parse('build', 'pool', 0))
         self.build_project = self.__parse('build', 'project')
         self.build_url = self.__parse('build', 'url')
-        self.build_worker = self.__parse('build', 'worker')
 
         self.client_capabilities = []
         self.client_name = 'python-official'
@@ -71,7 +71,7 @@ class Settings():
     def __parse(self, prefix, name, default=None):
         full_name = prefix + '_' + name
         return self.env.get(full_name) or \
-            self.config.get("maketestsgofaster", full_name, fallback=None) or \
+            self.config.get('maketestsgofaster', full_name, fallback=None) or \
             default
 
     def validate(self):

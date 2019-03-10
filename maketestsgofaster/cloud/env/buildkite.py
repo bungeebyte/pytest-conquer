@@ -28,7 +28,7 @@ class Buildkite(Env):
     def build_pool(self):
         return os.environ.get('BUILDKITE_PARALLEL_JOB_COUNT')
 
-    def build_worker(self):
+    def build_node(self):
         return os.environ.get('BUILDKITE_PARALLEL_JOB')
 
     def vcs_branch(self):
