@@ -51,7 +51,7 @@ class Client():
                     last_err = None
                 else:
                     last_err = log_msg
-                    if 400 <= response.status < 500:  # this means we'll likely not recover anyway
+                    if response.status != 404 and 400 <= response.status < 500:  # this means we'll likely not recover anyway
                         break
             except IOError as e:
                 self.api_urls.reverse()  # let's try the next API URL because this one seems unreachable

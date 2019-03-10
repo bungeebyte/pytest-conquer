@@ -15,6 +15,19 @@ class TestClient():
         res = client.send('/endpoint', {})
         assert res == {'message': 'Hello world!'}
 
+    def test_retry_on_404(self):
+        client = MockClient([
+            (MockResponse(404), MOCK_CONTENT),
+            (MockResponse(200), MOCK_CONTENT),
+        ])
+        res = client.send('/endpoint', {})
+        assert res == {'message': 'Hello world!'}
+
+    def test_do_not_retry_on_400(self):
+        client = MockClient([(MockResponse(400), MOCK_CONTENT)])
+        with pytest.raises(RuntimeError, match='server communication error - status code: 400, request id: REQ_ID'):
+            client.send('/endpoint', {})
+
     def test_switch_api_url_for_connection_problems(self):
         client = MockClient([
             IOError('unable to reach server'),
