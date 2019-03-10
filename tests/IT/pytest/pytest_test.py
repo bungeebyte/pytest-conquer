@@ -56,6 +56,7 @@ def test_function_setup(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
+        SuiteItem('setup', Location(test_file, 'setup_function', 1), 42, []),
         SuiteItem('test', Location(test_file, 'test', 5), 42, []),
     ]
 
@@ -83,6 +84,7 @@ def test_function_teardown(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
+        SuiteItem('teardown', Location(test_file, 'teardown_function', 1), 42, []),
         SuiteItem('test', Location(test_file, 'test', 5), 42, []),
     ]
 
@@ -128,6 +130,7 @@ def test_module_setup(testdir):
     assert_outcomes(result, passed=2)
 
     assert suite_items() == [
+        SuiteItem('setup', Location(test_file, 'setup_module', 4), 42, []),
         SuiteItem('test', Location(test_file, 'test1', 9), 42, []),
         SuiteItem('test', Location(test_file, 'test2', 14), 42, []),
     ]
@@ -157,6 +160,7 @@ def test_module_teardown(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
+        SuiteItem('teardown', Location(test_file, 'teardown_module', 4), 42, []),
         SuiteItem('test', Location(test_file, 'test', 9), 42, []),
     ]
 
@@ -184,6 +188,7 @@ def test_fixture(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
+        SuiteItem('fixture', Location(test_file, 'fixture', 4), 42, []),
         SuiteItem('test', Location(test_file, 'test_with_fixture', 9), 42, [
             SuiteItem('fixture', Location(test_file, 'fixture', 4), 42, []),
         ]),
@@ -201,6 +206,8 @@ def test_fixtures(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
+        SuiteItem('fixture', Location(test_file, 'fixture1', 4), 42, []),
+        SuiteItem('fixture', Location(test_file, 'fixture2', 9), 42, []),
         SuiteItem('test', Location(test_file, 'test_with_fixtures', 14), 42, [
             SuiteItem('fixture', Location(test_file, 'fixture1', 4), 42, []),
             SuiteItem('fixture', Location(test_file, 'fixture2', 9), 42, []),
@@ -220,6 +227,8 @@ def test_fixture_nested(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
+        SuiteItem('fixture', Location(test_file, 'fixture1', 4), 42, []),
+        SuiteItem('fixture', Location(test_file, 'fixture2', 9), 42, []),
         SuiteItem('test', Location(test_file, 'test_with_fixture', 14), 42, [
             SuiteItem('fixture', Location(test_file, 'fixture1', 4), 42, []),
             SuiteItem('fixture', Location(test_file, 'fixture2', 9), 42, []),
@@ -240,6 +249,7 @@ def test_fixture_session(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
+        SuiteItem('fixture', Location('fixtures/conftest.py', 'fixture_session', 4), 42, []),
         SuiteItem('test', Location(test_file, 'test_with_fixture', 1), 42, [
             SuiteItem('fixture', Location('fixtures/conftest.py', 'fixture_session', 4), 42, []),
         ]),
@@ -271,6 +281,7 @@ def test_fixture_import(testdir):
     assert_outcomes(result, passed=1)
 
     assert suite_items() == [
+        SuiteItem('fixture', Location('fixtures/fixture.py', 'fixture_import', 4), 42, []),
         SuiteItem('test', Location(test_file, 'test_with_fixture', 5), 42, [
             SuiteItem('fixture', Location('fixtures/fixture.py', 'fixture_import', 4), 42, []),
         ]),
@@ -288,6 +299,7 @@ def test_fixture_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert suite_items() == [
+        SuiteItem('fixture', Location(test_file, 'fixture', 4), 42, []),
         SuiteItem('test', Location(test_file, 'test_with_fixture', 9), 42, [
             SuiteItem('fixture', Location(test_file, 'fixture', 4), 42, []),
         ]),
@@ -327,6 +339,10 @@ def test_class_inheritance(testdir):
     assert_outcomes(result, passed=4)
 
     assert suite_items() == [
+        SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::setup_class', 3), 42, []),
+        SuiteItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::teardown_class', 7), 42, []),
+        SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject2::setup_class', 3), 42, []),
+        SuiteItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject2::teardown_class', 7), 42, []),
         SuiteItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::test1', 11), 42, []),
         SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1::test1', 11), 42, []),
         SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test1', 11), 42, []),
@@ -355,6 +371,7 @@ def test_class_setup(testdir):
     assert_outcomes(result, passed=2)
 
     assert suite_items() == [
+        SuiteItem('setup', Location(test_file, 'TestObject::setup_class', 6), 42, []),
         SuiteItem('test', Location(test_file, 'TestObject::test1', 11), 42, []),
         SuiteItem('test', Location(test_file, 'TestObject::test2', 15), 42, []),
     ]
@@ -372,6 +389,14 @@ def test_class_nested(testdir):
     assert_outcomes(result, passed=2)
 
     assert suite_items() == [
+        SuiteItem('setup', Location(test_file, 'TestOuter::setup_class', 22), 42, []),
+        SuiteItem('setup', Location(test_file, 'TestOuter::setup_method', 30), 42, []),
+        SuiteItem('teardown', Location(test_file, 'TestOuter::teardown_class', 26), 42, []),
+        SuiteItem('teardown', Location(test_file, 'TestOuter::teardown_method', 33), 42, []),
+        SuiteItem('setup', Location(test_file, 'TestOuter::TestInner::setup_class', 5), 42, []),
+        SuiteItem('setup', Location(test_file, 'TestOuter::TestInner::setup_method', 13), 42, []),
+        SuiteItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_class', 9), 42, []),
+        SuiteItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_method', 16), 42, []),
         SuiteItem('test', Location(test_file, 'TestOuter::TestInner::test', 19), 42, []),
         SuiteItem('test', Location(test_file, 'TestOuter::test', 36), 42, []),
     ]
@@ -422,6 +447,7 @@ def test_class_method_setup_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert suite_items() == [
+        SuiteItem('setup', Location(test_file, 'TestObject::setup_method', 3), 42, []),
         SuiteItem('test', Location(test_file, 'TestObject::test', 6), 42, []),
     ]
 

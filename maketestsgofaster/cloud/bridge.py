@@ -109,12 +109,21 @@ class SuiteSerializer:
     @staticmethod
     def serialize_item(item):
         return {
-            'type': Serializer.truncate(item.type, 1024),
+            'type': item.type,
             'file': Serializer.truncate(item.location.file, 1024),
             'file_size': item.file_size,
             'name': Serializer.truncate(item.location.name, 1024),
             'line': item.location.line,
-            'fixtures': [SuiteSerializer.serialize_item(f) for f in item.fixtures],
+            'deps': [SuiteSerializer.serialize_fixture_ref(f) for f in item.fixtures],
+        }
+
+    @staticmethod
+    def serialize_fixture_ref(item):
+        return {
+            'type': item.type,
+            'file': Serializer.truncate(item.file, 1024),
+            'name': Serializer.truncate(item.name, 1024),
+            'line': item.line,
         }
 
 
