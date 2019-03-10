@@ -66,28 +66,28 @@ def test_successful_server_communication(config, server):
             'file_size': 0,
             'name': 'test_A',
             'line': None,
-            'fixtures': [],
+            'deps': [],
         }, {
             'type': 'test',
             'file': 'tests/IT/example_B.py',
             'file_size': 0,
             'name': 'test_B_1',
             'line': None,
-            'fixtures': [],
+            'deps': [],
         }, {
             'type': 'test',
             'file': 'tests/IT/example_B.py',
             'file_size': 0,
             'name': 'test_B_2',
             'line': None,
-            'fixtures': [],
+            'deps': [],
         }, {
             'type': 'test',
             'file': 'tests/IT/example_C.py',
             'file_size': 0,
             'name': 'test_C',
             'line': None,
-            'fixtures': [],
+            'deps': [],
         }],
     })]
 
