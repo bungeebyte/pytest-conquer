@@ -1,6 +1,7 @@
 import os
 import os.path
 from pytest import __version__
+import pytest
 
 from tests.IT.util import MockScheduler, round_file_size, round_time
 
@@ -8,6 +9,7 @@ from maketestsgofaster.model import Failure, Location, ReportItem, SuiteItem
 import maketestsgofaster.pytest
 
 
+@pytest.mark.wip
 def test_function_pass(testdir):
     test_file = 'fixtures/test_function_pass.py'
     result = run_test(testdir, [test_file])

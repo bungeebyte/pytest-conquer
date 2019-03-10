@@ -1,19 +1,21 @@
 import os.path
 import inspect
+import multiprocessing
 import sys
 import time
 from collections import defaultdict
 
 import pytest
 
-from maketestsgofaster import logger
 from maketestsgofaster.cloud.env import Env
 from maketestsgofaster.cloud.scheduler import Scheduler
 from maketestsgofaster.cloud.settings import Capability, Settings
 from maketestsgofaster.model import Failure, Location
 
+
 settings = None
 scheduler = None
+manager = multiprocessing.Manager()
 create_scheduler = lambda settings: Scheduler(settings)  # noqa: E731
 
 
@@ -23,11 +25,18 @@ create_scheduler = lambda settings: Scheduler(settings)  # noqa: E731
 
 
 def pytest_configure(config):
-    logger.debug('loading maketestsgofaster')
     global scheduler, settings
+
     if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
         raise SystemExit('Sorry, maketestsgofaster requires at least pytest 3.0\n')
 
+    create_settings(config)
+    if settings.plugin_enabled():
+        scheduler = create_scheduler(settings)
+
+
+def create_settings(config):
+    global settings
     settings = Settings(Env.create())
     settings.client_capabilities = [
         Capability.Fixtures,
@@ -39,12 +48,26 @@ def pytest_configure(config):
         settings.runner_plugins.add((dist.project_name, dist.version))
     settings.runner_root = str(config.rootdir)
     settings.runner_version = pytest.__version__
-    scheduler = create_scheduler(settings)
 
 
 # ======================================================================================
 # COLLECTION
 # ======================================================================================
+
+
+# Replace collected test items with `ScheduledList`.
+# This way they can be loaded dynamically.
+@pytest.hookimpl(hookwrapper=True)
+def pytest_collection_modifyitems(session, config, items):
+    yield  # let other plugins go first
+
+    if not settings.plugin_enabled():
+        return
+
+    scheduled_list = ScheduledList()
+    for item in items:
+        scheduled_list.collect_test(item)
+    session.items = scheduled_list
 
 
 class ScheduledList:
@@ -98,17 +121,6 @@ class ScheduledList:
             self.items.extend(self.items_by_file[next_file])
 
 
-# Replace collected test items with `ScheduledList`.
-# This way they can be loaded dynamically.
-@pytest.hookimpl(hookwrapper=True)
-def pytest_collection_modifyitems(session, config, items):
-    yield  # let other plugins go first
-    scheduled_list = ScheduledList()
-    for item in items:
-        scheduled_list.collect_test(item)
-    session.items = scheduled_list
-
-
 # ======================================================================================
 # TEST REPORTING
 # ======================================================================================
@@ -117,6 +129,9 @@ def pytest_collection_modifyitems(session, config, items):
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
+
+    if not settings.plugin_enabled():
+        return report
 
     file = report.nodeid.split('::')[0]
     name = item.nodeid \
@@ -154,6 +169,9 @@ def pytest_fixture_setup(fixturedef, request):
 
     result = yield  # actual setup
 
+    if not settings.plugin_enabled():
+        return
+
     location = to_function_location(fixturedef.func)
 
     if is_artifical_fixture(fixturedef, location):
@@ -171,6 +189,9 @@ def pytest_fixture_setup(fixturedef, request):
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_make_collect_report(collector):
+    if not settings.plugin_enabled():
+        return
+
     if not hasattr(collector, 'obj'):
         return
     obj = collector.obj

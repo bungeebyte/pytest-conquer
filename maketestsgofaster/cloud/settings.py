@@ -68,6 +68,9 @@ class Settings():
         self.vcs_tag = self.__parse('vcs', 'tag')
         self.vcs_type = self.__parse('vcs', 'type')
 
+    def plugin_enabled(self):
+        return True  # TODO
+
     def __parse(self, prefix, name, default=None):
         full_name = prefix + '_' + name
         return self.env.get(full_name) or \
