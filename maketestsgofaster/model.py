@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 SuiteItem = \
-    namedtuple('SuiteItem', ['type', 'location', 'file_size', 'fixtures'])
+    namedtuple('SuiteItem', ['type', 'location', 'file_size', 'deps'])
 
 ReportItem = \
     namedtuple('ReportItem', ['type', 'location', 'status', 'time', 'details'])
