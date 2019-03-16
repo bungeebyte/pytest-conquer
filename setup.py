@@ -16,17 +16,16 @@ setup(
     description='Test framework plugin to parallize tests efficiently.',
     packages=[
         'maketestsgofaster',
-        'maketestsgofaster.cloud',
-        'maketestsgofaster.cloud.env',
-        'maketestsgofaster.cloud.vendor',
-        'maketestsgofaster.cloud.vendor.httplib2',
+        'maketestsgofaster.env',
+        'maketestsgofaster.vendor',
+        'maketestsgofaster.vendor.httplib2',
     ],
     package_data={
-        'maketestsgofaster.cloud.vendor.httplib2': ['*.txt'],
+        'maketestsgofaster.vendor.httplib2': ['*.txt'],
     },
     entry_points={
         'pytest11': [
-            'maketestsgofaster = maketestsgofaster.pytest',
+            'maketestsgofaster = maketestsgofaster.plugin',
         ],
     },
     install_requires=[
