@@ -4,6 +4,7 @@ import string
 import sys
 import uuid
 from collections import namedtuple
+from datetime import datetime, timezone
 
 import psutil
 import pytest
@@ -14,6 +15,9 @@ from maketestsgofaster.settings import Settings
 from maketestsgofaster.model import Failure, Location, ReportItem, ScheduleItem, SuiteItem
 
 from tests.IT.mock.server import Server
+
+
+time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.mark.e2e
@@ -47,14 +51,14 @@ def test_successful_server_communication(config, server):
 
     server.next_response(200, {
         'items': [
-            {'file': 'tests/IT/stub/stub_A.py', 'name': 'test_A'},
+            {'file': 'tests/IT/stub/stub_A.py', 'func': 'test_A'},
         ]})
 
     assert scheduler.init([
-        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', None), 86, []),
-        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', None), 86, []),
-        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', None), 86, []),
-        SuiteItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', None), 86, []),
+        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', 1)),
+        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_1', 1)),
+        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_2', 2)),
+        SuiteItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 1)),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_A.py'),
     ]
@@ -64,31 +68,31 @@ def test_successful_server_communication(config, server):
         'items': [{
             'type': 'test',
             'file': 'tests/IT/stub/stub_A.py',
-            'file_size': 86,
-            'name': 'test_A',
-            'line': None,
-            'deps': [],
+            'module': 'stub_A',
+            'class': 'TestClass',
+            'func': 'test_A',
+            'line': 1,
         }, {
             'type': 'test',
             'file': 'tests/IT/stub/stub_B.py',
-            'file_size': 86,
-            'name': 'test_B_1',
-            'line': None,
-            'deps': [],
+            'module': 'stub_B',
+            'class': 'TestClass',
+            'func': 'test_B_1',
+            'line': 1,
         }, {
             'type': 'test',
             'file': 'tests/IT/stub/stub_B.py',
-            'file_size': 86,
-            'name': 'test_B_2',
-            'line': None,
-            'deps': [],
+            'module': 'stub_B',
+            'class': 'TestClass',
+            'func': 'test_B_2',
+            'line': 2,
         }, {
             'type': 'test',
             'file': 'tests/IT/stub/stub_C.py',
-            'file_size': 86,
-            'name': 'test_C',
-            'line': None,
-            'deps': [],
+            'module': 'stub_C',
+            'class': 'TestClass',
+            'func': 'test_C',
+            'line': 1,
         }],
     })]
 
@@ -96,14 +100,14 @@ def test_successful_server_communication(config, server):
 
     server.next_response(200, {
         'items': [
-            {'file': 'tests/IT/stub/stub_B.py', 'name': 'test_B_1'},
-            {'file': 'tests/IT/stub/stub_B.py', 'name': 'test_B_2'},
-            {'file': 'tests/IT/stub/stub_C.py', 'name': 'test_C'},
+            {'file': 'tests/IT/stub/stub_B.py', 'func': 'test_B_1'},
+            {'file': 'tests/IT/stub/stub_B.py', 'func': 'test_B_2'},
+            {'file': 'tests/IT/stub/stub_C.py', 'func': 'test_C'},
         ]})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', 3), 'failed', 0.2,
-                   Failure('AssertionError', 'assert 1 + 1 == 4')),
+        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', 3), 'failed',
+                   Failure('AssertionError', 'assert 1 + 1 == 4'), time, time, 'wid', 'pid'),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_B.py'),
         ScheduleItem('tests/IT/stub/stub_C.py'),
@@ -114,14 +118,18 @@ def test_successful_server_communication(config, server):
         'items': [{
             'file': 'tests/IT/stub/stub_A.py',
             'type': 'test',
-            'name': 'test_A',
+            'module': 'stub_A',
+            'class': 'TestClass',
+            'func': 'test_A',
             'line': 3,
-            'details': {
+            'error': {
                 'type': 'AssertionError',
                 'message': 'assert 1 + 1 == 4',
             },
+            'process_id': 'pid',
             'status': 'failed',
-            'time': 0.2,
+            'started_at': '2000-01-01T00:00:00.000Z',
+            'finished_at': '2000-01-01T00:00:00.000Z',
         }],
     })]
 
@@ -130,9 +138,9 @@ def test_successful_server_communication(config, server):
     server.next_response(200, {'items': []})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', 1), 'passed', 0.1, None),
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', 2), 'passed', 0.15, None),
-        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', 4), 'skipped', 0.01, None),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_1', 1), 'passed', None, time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_2', 2), 'passed', None, time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 4), 'skipped', None, time, time, 'wid', 'pid'),
     ]).items == []
     assert server.last_requests == [('POST', '/reports', headers, {
         'config': config,
@@ -140,24 +148,36 @@ def test_successful_server_communication(config, server):
             {
                 'file': 'tests/IT/stub/stub_B.py',
                 'type': 'test',
-                'name': 'test_B_1',
+                'module': 'stub_B',
+                'class': 'TestClass',
+                'func': 'test_B_1',
                 'line': 1,
                 'status': 'passed',
-                'time': 0.1,
+                'process_id': 'pid',
+                'started_at': '2000-01-01T00:00:00.000Z',
+                'finished_at': '2000-01-01T00:00:00.000Z',
             }, {
                 'file': 'tests/IT/stub/stub_B.py',
                 'type': 'test',
-                'name': 'test_B_2',
+                'module': 'stub_B',
+                'class': 'TestClass',
+                'func': 'test_B_2',
                 'line': 2,
                 'status': 'passed',
-                'time': 0.15,
+                'process_id': 'pid',
+                'started_at': '2000-01-01T00:00:00.000Z',
+                'finished_at': '2000-01-01T00:00:00.000Z',
             }, {
                 'file': 'tests/IT/stub/stub_C.py',
                 'type': 'test',
-                'name': 'test_C',
+                'module': 'stub_C',
+                'class': 'TestClass',
+                'func': 'test_C',
                 'line': 4,
                 'status': 'skipped',
-                'time': 0.01,
+                'process_id': 'pid',
+                'started_at': '2000-01-01T00:00:00.000Z',
+                'finished_at': '2000-01-01T00:00:00.000Z',
             },
         ],
     })]
@@ -178,10 +198,10 @@ def test_retry_on_server_error(config, server):
 
     server.next_response(500, {})
     server.next_response(500, {})
-    server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py', 'name': 'test_A'}]})
+    server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py', 'func': 'test_A'}]})
 
     assert scheduler.init([
-        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', None), '42', []),
+        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', None), '42', []),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_A.py'),
     ]
@@ -211,7 +231,6 @@ def test_give_up_when_receiving_400s_from_server(config, server):
 
 
 @pytest.mark.e2e
-@pytest.mark.wip
 def test_give_up_when_server_unreachable(config):
     with pytest.raises(RuntimeError, match='server communication error - (.*) Connection refused'):
         settings = Settings(Env.create({
@@ -249,10 +268,9 @@ def config(mocker):
     build_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return {
         'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'node': 'build-node'},
-        'client': {'capabilities': ['fixtures', 'lifecycle_timings', 'split_by_file'],
-                   'name': 'python-official', 'version': '1.0'},
+        'client': {'capabilities': ['fixtures', 'isolated_process', 'lifecycle_timings', 'split_by_file'],
+                   'name': 'python-official', 'version': '1.0', 'workers': 1},
         'platform': {'name': 'python', 'version': '3.6'},
-        'plugin': {'workers': 1},
         'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},
         'system': {'context': {}, 'name': 'custom', 'os': {'name': 'Linux', 'version': '1.42'}, 'cpus': 3, 'ram': 17179869184},
         'vcs': {'branch': 'master', 'pr': None, 'repo': 'github.com/myrepo',

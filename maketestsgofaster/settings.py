@@ -12,6 +12,7 @@ from maketestsgofaster import __version__
 
 class Capability(Enum):
     Fixtures = 'fixtures'
+    IsolatedProcess = 'isolated_process'
     LifecycleTimings = 'lifecycle_timings'
     SplitByFile = 'split_by_file'
 
@@ -42,6 +43,7 @@ class Settings():
 
         self.client_capabilities = [
             Capability.Fixtures,
+            Capability.IsolatedProcess,
             Capability.LifecycleTimings,
             Capability.SplitByFile,
         ]

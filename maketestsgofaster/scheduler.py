@@ -28,7 +28,7 @@ class Scheduler:
         tests_by_file = OrderedDict()
         for item in data['items']:
             tests_by_file.setdefault(item['file'], [])
-            tests_by_file[item['file']].append(item['name'])
+            tests_by_file[item['file']].append(item['func'])
         items = [ScheduleItem(f) for f in tests_by_file.keys()]
         logger.debug('received schedule with %s item(s)', len(items))
         return Schedule(items)
@@ -64,13 +64,11 @@ class ConfigSerializer:
                 'capabilities': [c.value for c in settings.client_capabilities],
                 'name': Serializer.truncate(settings.client_name, 64),
                 'version': Serializer.truncate(settings.client_version, 32),
+                'workers': settings.plugin_workers,
             },
             'platform': {
                 'name': Serializer.truncate(settings.platform_name, 64),
                 'version': Serializer.truncate(settings.platform_version, 32),
-            },
-            'plugin': {
-                'workers': settings.plugin_workers,
             },
             'runner': {
                 'args': [Serializer.truncate(arg, 255) for arg in settings.runner_args],
@@ -115,26 +113,42 @@ class SuiteSerializer:
 
     @staticmethod
     def serialize_item(item):
-        return {
+        data = {
             'type': item.type,
             'file': Serializer.truncate(item.location.file, 1024),
-            'file_size': item.file_size,
-            'name': Serializer.truncate(item.location.name, 1024),
-            'line': item.location.line,
-            'deps': [SuiteSerializer.serialize_fixture_ref(f) for f in item.deps],
         }
+        if item.location.func:
+            data['func'] = Serializer.truncate(item.location.func, 1024)
+        if item.size:
+            data['file_size'] = item.size
+        if item.location.module:
+            data['module'] = Serializer.truncate(item.location.module, 1024)
+        if item.location.cls:
+            data['class'] = Serializer.truncate(item.location.cls, 1024)
+        if item.location.line:
+            data['line'] = item.location.line
+        if item.deps:
+            data['deps'] = [SuiteSerializer.serialize_fixture_ref(f) for f in item.deps]
+        return data
 
     @staticmethod
     def serialize_fixture_ref(item):
-        return {
+        data = {
             'type': item.type,
             'file': Serializer.truncate(item.file, 1024),
-            'name': Serializer.truncate(item.name, 1024),
+            'func': Serializer.truncate(item.func, 1024),
             'line': item.line,
         }
+        if item.module:
+            data['module'] = Serializer.truncate(item.module, 1024)
+        if item.cls:
+            data['class'] = Serializer.truncate(item.cls, 1024)
+        return data
 
 
 class ReportSerializer:
+
+    date_format = '%Y-%m-%dT%H:%M:%S.000Z'
 
     @staticmethod
     def serialize(config, report_items):
@@ -147,16 +161,21 @@ class ReportSerializer:
     def serialize_item(item):
         data = {
             'file': Serializer.truncate(item.location.file, 1024),
-            'type': item.type,
-            'name': Serializer.truncate(item.location.name, 1024),
+            'type': str(item.type),
+            'func': Serializer.truncate(item.location.func, 1024),
             'line': item.location.line,
             'status': item.status,
-            'time': item.time,
+            'process_id': Serializer.truncate(item.process_id, 64),
+            'started_at': item.started_at.strftime(ReportSerializer.date_format),
+            'finished_at': item.finished_at.strftime(ReportSerializer.date_format),
         }
-        details = item.details
-        if item.details:
-            data['details'] = {
-                'type': Serializer.truncate(details.type, 1024),
-                'message': Serializer.truncate(details.message, 1024),
+        if item.location.module:
+            data['module'] = Serializer.truncate(item.location.module, 1024)
+        if item.location.cls:
+            data['class'] = Serializer.truncate(item.location.cls, 1024)
+        if item.error:
+            data['error'] = {
+                'type': Serializer.truncate(item.error.type, 1024),
+                'message': Serializer.truncate(item.error.message, 1024),
             }
         return data
