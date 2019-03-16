@@ -4,7 +4,7 @@ SuiteItem = \
     namedtuple('SuiteItem', ['type', 'location', 'file_size', 'deps'])
 
 ReportItem = \
-    namedtuple('ReportItem', ['type', 'location', 'status', 'time', 'details'])
+    namedtuple('ReportItem', ['type', 'location', 'status', 'time', 'error'])
 
 Schedule = \
     namedtuple('Schedule', ['items'])

@@ -153,10 +153,9 @@ class ReportSerializer:
             'status': item.status,
             'time': item.time,
         }
-        details = item.details
         if item.details:
             data['details'] = {
-                'type': Serializer.truncate(details.type, 1024),
-                'message': Serializer.truncate(details.message, 1024),
+                'type': Serializer.truncate(item.details.type, 1024),
+                'message': Serializer.truncate(item.details.message, 1024),
             }
         return data
