@@ -6,6 +6,7 @@ import sys
 import time
 import threading
 import traceback
+import uuid
 from collections import defaultdict
 
 import pytest
@@ -27,6 +28,7 @@ suite_item_locations = set()
 suite_item_file_size_by_file = {}
 reporter = None
 tests_by_file = defaultdict(list)
+worker_id = None
 
 
 # ======================================================================================
@@ -102,6 +104,7 @@ class Worker(threading.Thread):
     def __init__(self, *args, **kwargs):
         threading.Thread.__init__(self, *args, **kwargs)
         self.session = kwargs['args'][0]
+        self.id = str(uuid.uuid4())
 
     def run(self):
         schedule = scheduler.init(suite_items)
@@ -121,12 +124,13 @@ class Worker(threading.Thread):
             print('\033[91m' + 'INTERNAL ERROR:')
             print(proc.exception + '\033[0m')
         reporter.pytest_runtest_logreport(None)  # force logs of the process to print
-        return proc.pid
+        return proc.id
 
 
 class Process(multiprocessing.Process):
     def __init__(self, *args, **kwargs):
         multiprocessing.Process.__init__(self, *args, **kwargs)
+        self.id = uuid.uuid4()
         self.reader, self.writer = multiprocessing.Pipe()
         self.tests = kwargs['args'][0]
         self.session = kwargs['args'][1]
@@ -187,6 +191,11 @@ def collect_test(item):
 # ======================================================================================
 
 
+# @pytest.hookimpl(hookwrapper=True)
+# def pytest_runtest_call(item):
+#     pass
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
@@ -203,8 +212,7 @@ def pytest_runtest_makereport(item, call):
 
     def report_test(failure=None):
         status = report.outcome or 'passed'
-        time = report.duration
-        report_item('test', location, status, time, failure)
+        report_item('test', location, status, call.start, call.stop, failure)
 
     if report.when == 'call':
         failure = None
@@ -227,9 +235,18 @@ def pytest_runtest_makereport(item, call):
 @pytest.hookimpl(hookwrapper=True)
 def pytest_fixture_setup(fixturedef, request):
     start = time.time()
-
     result = yield  # actual setup
+    report_fixture_step('setup', start, fixturedef, result)
 
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_fixture_post_finalizer(fixturedef, request):
+    start = time.time()
+    result = yield  # actual teardown
+    report_fixture_step('teardown', start, fixturedef, result)
+
+
+def report_fixture_step(type, started_at, fixturedef, result):
     if not settings.plugin_enabled():
         return
 
@@ -240,7 +257,7 @@ def pytest_fixture_setup(fixturedef, request):
 
     status = 'error' if result.excinfo else 'passed'
     failure = to_failure(result.excinfo)
-    report_item('fixture', location, status, time.time() - start, failure)
+    report_item(type, location, status, started_at, time.time(), failure)
 
 
 # ======================================================================================
@@ -301,10 +318,10 @@ def wrap_with_report_func(func, func_loc, type):
         except Exception:
             if func_loc:
                 failure = to_failure(sys.exc_info())
-                report_item(type, func_loc, 'failed', time.time() - start, failure)
+                report_item(type, func_loc, 'failed', start, time.time(), failure)
             raise
         if func_loc:
-            report_item(type, func_loc, 'passed', time.time() - start, None)
+            report_item(type, func_loc, 'passed', start, time.time(), None)
     return wrapper
 
 
@@ -331,13 +348,14 @@ def collect_item(type, location, fixtures=[]):
 
 
 # This is called from multiple subprocesses, so we need to manage the data by process ID.
-def report_item(type, location, status, time, details):
-    pid = os.getpid()
+def report_item(type, location, status, start, end, failure):
     items = []
-    if pid in report_items:
-        items = report_items[pid]
-    items.append(ReportItem(type, location, status, time, details))
-    report_items[pid] = items  # only be reassigning will the data be synced
+    process_id = multiprocessing.current_process().id
+    if process_id in report_items:
+        items = report_items[process_id]
+    worker_id = threading.current_thread().id
+    items.append(ReportItem(type, location, status, start, end, worker_id, process_id, failure))
+    report_items[process_id] = items  # only be reassigning will the data be synced
 
 
 def to_function_location(func, obj=None):

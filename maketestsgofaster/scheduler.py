@@ -147,15 +147,17 @@ class ReportSerializer:
     def serialize_item(item):
         data = {
             'file': Serializer.truncate(item.location.file, 1024),
-            'type': item.type,
+            'type': str(item.type),
             'name': Serializer.truncate(item.location.name, 1024),
             'line': item.location.line,
             'status': item.status,
-            'time': item.time,
+            'process_id': Serializer.truncate(item.process_id, 64),
+            'started_at': item.started_at,
+            'finished_at': item.finished_at,
         }
-        if item.details:
-            data['details'] = {
-                'type': Serializer.truncate(item.details.type, 1024),
-                'message': Serializer.truncate(item.details.message, 1024),
+        if item.error:
+            data['error'] = {
+                'type': Serializer.truncate(item.error.type, 1024),
+                'message': Serializer.truncate(item.error.message, 1024),
             }
         return data

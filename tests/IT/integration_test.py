@@ -102,7 +102,7 @@ def test_successful_server_communication(config, server):
         ]})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', 3), 'failed', 0.2,
+        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', 3), 'failed', 10, 11, 'wid', 'pid',
                    Failure('AssertionError', 'assert 1 + 1 == 4')),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_B.py'),
@@ -116,12 +116,14 @@ def test_successful_server_communication(config, server):
             'type': 'test',
             'name': 'test_A',
             'line': 3,
-            'details': {
+            'error': {
                 'type': 'AssertionError',
                 'message': 'assert 1 + 1 == 4',
             },
+            'process_id': 'pid',
             'status': 'failed',
-            'time': 0.2,
+            'started_at': 10,
+            'finished_at': 11,
         }],
     })]
 
@@ -130,9 +132,9 @@ def test_successful_server_communication(config, server):
     server.next_response(200, {'items': []})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', 1), 'passed', 0.1, None),
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', 2), 'passed', 0.15, None),
-        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', 4), 'skipped', 0.01, None),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', 1), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', 2), 'passed', 11, 12, 'wid', 'pid', None),
+        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', 4), 'skipped', 12, 13, 'wid', 'pid', None),
     ]).items == []
     assert server.last_requests == [('POST', '/reports', headers, {
         'config': config,
@@ -143,21 +145,27 @@ def test_successful_server_communication(config, server):
                 'name': 'test_B_1',
                 'line': 1,
                 'status': 'passed',
-                'time': 0.1,
+                'process_id': 'pid',
+                'started_at': 10,
+                'finished_at': 11,
             }, {
                 'file': 'tests/IT/stub/stub_B.py',
                 'type': 'test',
                 'name': 'test_B_2',
                 'line': 2,
                 'status': 'passed',
-                'time': 0.15,
+                'process_id': 'pid',
+                'started_at': 11,
+                'finished_at': 12,
             }, {
                 'file': 'tests/IT/stub/stub_C.py',
                 'type': 'test',
                 'name': 'test_C',
                 'line': 4,
                 'status': 'skipped',
-                'time': 0.01,
+                'process_id': 'pid',
+                'started_at': 12,
+                'finished_at': 13,
             },
         ],
     })]
@@ -211,7 +219,6 @@ def test_give_up_when_receiving_400s_from_server(config, server):
 
 
 @pytest.mark.e2e
-@pytest.mark.wip
 def test_give_up_when_server_unreachable(config):
     with pytest.raises(RuntimeError, match='server communication error - (.*) Connection refused'):
         settings = Settings(Env.create({
@@ -249,7 +256,7 @@ def config(mocker):
     build_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return {
         'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'node': 'build-node'},
-        'client': {'capabilities': ['fixtures', 'lifecycle_timings', 'split_by_file'],
+        'client': {'capabilities': ['fixtures', 'isolated_process', 'lifecycle_timings', 'split_by_file'],
                    'name': 'python-official', 'version': '1.0'},
         'platform': {'name': 'python', 'version': '3.6'},
         'plugin': {'workers': 1},
