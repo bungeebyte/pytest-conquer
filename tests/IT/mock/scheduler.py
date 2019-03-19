@@ -51,8 +51,6 @@ class MockScheduler(Scheduler):
             asdict['process_id'] = None
             asdict['started_at'] = None
             asdict['finished_at'] = None
-            asdict['process_memory_start'] = None
-            asdict['process_memory_finish'] = None
             items.append(namedtuple('ReportItem', asdict.keys())(**asdict))
         return items
 
