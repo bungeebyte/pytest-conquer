@@ -64,13 +64,11 @@ class ConfigSerializer:
                 'capabilities': [c.value for c in settings.client_capabilities],
                 'name': Serializer.truncate(settings.client_name, 64),
                 'version': Serializer.truncate(settings.client_version, 32),
+                'workers': settings.plugin_workers,
             },
             'platform': {
                 'name': Serializer.truncate(settings.platform_name, 64),
                 'version': Serializer.truncate(settings.platform_version, 32),
-            },
-            'plugin': {
-                'workers': settings.plugin_workers,
             },
             'runner': {
                 'args': [Serializer.truncate(arg, 255) for arg in settings.runner_args],
