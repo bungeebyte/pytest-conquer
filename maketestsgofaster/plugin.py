@@ -191,11 +191,6 @@ def collect_test(item):
 # ======================================================================================
 
 
-# @pytest.hookimpl(hookwrapper=True)
-# def pytest_runtest_call(item):
-#     pass
-
-
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
@@ -354,7 +349,7 @@ def report_item(type, location, status, start, end, failure):
     if process_id in report_items:
         items = report_items[process_id]
     worker_id = threading.current_thread().id
-    items.append(ReportItem(type, location, status, start, end, worker_id, process_id, failure))
+    items.append(ReportItem(type, location, status, failure, start, end, worker_id, process_id))
     report_items[process_id] = items  # only be reassigning will the data be synced
 
 

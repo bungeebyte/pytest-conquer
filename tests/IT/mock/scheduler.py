@@ -47,12 +47,12 @@ class MockScheduler(Scheduler):
         items = []
         for item in report_items:
             asdict = item._asdict()
-            asdict['worker_id'] = 'wid'
-            asdict['process_id'] = 'pid'
-            if item.started_at:
-                asdict['started_at'] = 10
-            if item.finished_at:
-                asdict['finished_at'] = 11
+            asdict['worker_id'] = None
+            asdict['process_id'] = None
+            asdict['started_at'] = None
+            asdict['finished_at'] = None
+            asdict['process_memory_start'] = None
+            asdict['process_memory_finish'] = None
             items.append(namedtuple('ReportItem', asdict.keys())(**asdict))
         return items
 

@@ -102,8 +102,7 @@ def test_successful_server_communication(config, server):
         ]})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', 3), 'failed', 10, 11, 'wid', 'pid',
-                   Failure('AssertionError', 'assert 1 + 1 == 4')),
+        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', 3), 'failed', Failure('AssertionError', 'assert 1 + 1 == 4'), 10, 11, 'wid', 'pid'),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_B.py'),
         ScheduleItem('tests/IT/stub/stub_C.py'),
@@ -132,9 +131,9 @@ def test_successful_server_communication(config, server):
     server.next_response(200, {'items': []})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', 1), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', 2), 'passed', 11, 12, 'wid', 'pid', None),
-        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', 4), 'skipped', 12, 13, 'wid', 'pid', None),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', 1), 'passed', None, 10, 11, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', 2), 'passed', None, 11, 12, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', 4), 'skipped', None, 12, 13, 'wid', 'pid'),
     ]).items == []
     assert server.last_requests == [('POST', '/reports', headers, {
         'config': config,

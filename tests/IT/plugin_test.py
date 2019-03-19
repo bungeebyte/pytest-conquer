@@ -15,7 +15,7 @@ def test_function_pass(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.report_items == [
-        ReportItem('test', Location(test_file, 'test_pass', 1), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'test_pass', 1), 'passed'),
     ]
 
 
@@ -25,7 +25,7 @@ def test_function_fail(testdir):
     assert_outcomes(result, failed=1)
 
     assert scheduler.report_items == [
-        ReportItem('test', Location(test_file, 'test_fail', 1), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('test', Location(test_file, 'test_fail', 1), 'failed',
                    Failure('AssertionError', 'assert (2 + 2) == 22')),
     ]
 
@@ -36,7 +36,7 @@ def test_function_skip(testdir):
     assert_outcomes(result, skipped=1)
 
     assert scheduler.report_items == [
-        ReportItem('test', Location(test_file, 'test_skip', 4), 'skipped', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'test_skip', 4), 'skipped'),
     ]
 
 
@@ -46,7 +46,7 @@ def test_function_xfail(testdir):
     assert_outcomes(result, passed=0)
 
     assert scheduler.report_items == [
-        ReportItem('test', Location(test_file, 'test_xfail', 4), 'skipped', 10, 11, 'wid', 'pid',
+        ReportItem('test', Location(test_file, 'test_xfail', 4), 'skipped',
                    Failure('AssertionError', 'assert (1 + 2) == 12')),
     ]
 
@@ -62,8 +62,8 @@ def test_function_setup(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'setup_function', 1), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test', 5), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location(test_file, 'setup_function', 1), 'passed'),
+        ReportItem('test', Location(test_file, 'test', 5), 'passed'),
     ]
 
 
@@ -73,9 +73,9 @@ def test_function_setup_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'setup_function', 1), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('setup', Location(test_file, 'setup_function', 1), 'failed',
                    Failure('Exception', 'setup failed')),
-        ReportItem('test', Location(test_file, 'test', 5), 'failed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'test', 5), 'failed'),
     ]
 
 
@@ -90,8 +90,8 @@ def test_function_teardown(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('teardown', Location(test_file, 'teardown_function', 1), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test', 5), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('teardown', Location(test_file, 'teardown_function', 1), 'passed'),
+        ReportItem('test', Location(test_file, 'test', 5), 'passed'),
     ]
 
 
@@ -101,9 +101,9 @@ def test_function_teardown_fail(testdir):
     assert_outcomes(result, error=1, passed=1)
 
     assert scheduler.report_items == [
-        ReportItem('teardown', Location(test_file, 'teardown_function', 1), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('teardown', Location(test_file, 'teardown_function', 1), 'failed',
                    Failure('Exception', 'teardown failed')),
-        ReportItem('test', Location(test_file, 'test', 5), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'test', 5), 'passed'),
     ]
 
 
@@ -119,9 +119,9 @@ def test_function_parameterized(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('test', Location(test_file, 'test_param[2+4-6]', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test_param[3+5-8]', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test_param[6*9-54]', 4), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'test_param[2+4-6]', 4), 'passed'),
+        ReportItem('test', Location(test_file, 'test_param[3+5-8]', 4), 'passed'),
+        ReportItem('test', Location(test_file, 'test_param[6*9-54]', 4), 'passed'),
     ]
 
 
@@ -137,9 +137,9 @@ def test_module_setup(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'setup_module', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test1', 9), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test2', 14), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location(test_file, 'setup_module', 4), 'passed'),
+        ReportItem('test', Location(test_file, 'test1', 9), 'passed'),
+        ReportItem('test', Location(test_file, 'test2', 14), 'passed'),
     ]
 
 
@@ -149,9 +149,9 @@ def test_module_setup_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'setup_module', 1), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('setup', Location(test_file, 'setup_module', 1), 'failed',
                    Failure('Exception', 'setup failed')),
-        ReportItem('test', Location(test_file, 'test', 5), 'failed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'test', 5), 'failed'),
     ]
 
 
@@ -166,8 +166,8 @@ def test_module_teardown(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('teardown', Location(test_file, 'teardown_module', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test', 9), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('teardown', Location(test_file, 'teardown_module', 4), 'passed'),
+        ReportItem('test', Location(test_file, 'test', 9), 'passed'),
     ]
 
 
@@ -177,9 +177,9 @@ def test_module_teardown_fail(testdir):
     assert_outcomes(result, error=1, passed=1)
 
     assert scheduler.report_items == [
-        ReportItem('teardown', Location(test_file, 'teardown_module', 1), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('teardown', Location(test_file, 'teardown_module', 1), 'failed',
                    Failure('Exception', 'teardown failed')),
-        ReportItem('test', Location(test_file, 'test', 5), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'test', 5), 'passed'),
     ]
 
 
@@ -196,9 +196,9 @@ def test_fixture(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'fixture', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'fixture', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test_with_fixture', 9), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location(test_file, 'fixture', 4), 'passed'),
+        ReportItem('teardown', Location(test_file, 'fixture', 4), 'passed'),
+        ReportItem('test', Location(test_file, 'test_with_fixture', 9), 'passed'),
     ]
 
 
@@ -217,11 +217,11 @@ def test_fixtures(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'fixture1', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('setup', Location(test_file, 'fixture2', 9), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'fixture1', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'fixture2', 9), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test_with_fixtures', 14), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location(test_file, 'fixture1', 4), 'passed'),
+        ReportItem('setup', Location(test_file, 'fixture2', 9), 'passed'),
+        ReportItem('teardown', Location(test_file, 'fixture1', 4), 'passed'),
+        ReportItem('teardown', Location(test_file, 'fixture2', 9), 'passed'),
+        ReportItem('test', Location(test_file, 'test_with_fixtures', 14), 'passed'),
     ]
 
 
@@ -241,12 +241,12 @@ def test_fixture_nested(testdir):
 
     # note that nested fixtures are evaluated sequentially, one _after_ the other
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'fixture1', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('setup', Location(test_file, 'fixture2', 9), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'fixture1', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'fixture2', 9), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'fixture2', 9), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test_with_fixture', 14), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location(test_file, 'fixture1', 4), 'passed'),
+        ReportItem('setup', Location(test_file, 'fixture2', 9), 'passed'),
+        ReportItem('teardown', Location(test_file, 'fixture1', 4), 'passed'),
+        ReportItem('teardown', Location(test_file, 'fixture2', 9), 'passed'),
+        ReportItem('teardown', Location(test_file, 'fixture2', 9), 'passed'),
+        ReportItem('test', Location(test_file, 'test_with_fixture', 14), 'passed'),
     ]
 
 
@@ -263,9 +263,9 @@ def test_fixture_session(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location('fixtures/conftest.py', 'fixture_session', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location('fixtures/conftest.py', 'fixture_session', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test_with_fixture', 1), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location('fixtures/conftest.py', 'fixture_session', 4), 'passed'),
+        ReportItem('teardown', Location('fixtures/conftest.py', 'fixture_session', 4), 'passed'),
+        ReportItem('test', Location(test_file, 'test_with_fixture', 1), 'passed'),
     ]
 
 
@@ -279,7 +279,7 @@ def test_fixture_missing(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('test', Location(test_file, 'test_with_missing_fixture', 1), 'failed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'test_with_missing_fixture', 1), 'failed'),
     ]
 
 
@@ -296,9 +296,9 @@ def test_fixture_import(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location('fixtures/fixture.py', 'fixture_import', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location('fixtures/fixture.py', 'fixture_import', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test_with_fixture', 5), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location('fixtures/fixture.py', 'fixture_import', 4), 'passed'),
+        ReportItem('teardown', Location('fixtures/fixture.py', 'fixture_import', 4), 'passed'),
+        ReportItem('test', Location(test_file, 'test_with_fixture', 5), 'passed'),
     ]
 
 
@@ -315,10 +315,10 @@ def test_fixture_fail(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'fixture', 4), 'error', 10, 11, 'wid', 'pid',
+        ReportItem('setup', Location(test_file, 'fixture', 4), 'error',
                    Failure('Exception', 'setup failed')),
-        ReportItem('teardown', Location(test_file, 'fixture', 4), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'test_with_fixture', 9), 'failed', 10, 11, 'wid', 'pid', None),
+        ReportItem('teardown', Location(test_file, 'fixture', 4), 'passed'),
+        ReportItem('test', Location(test_file, 'test_with_fixture', 9), 'failed'),
     ]
 
 
@@ -340,7 +340,7 @@ def test_class(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('test', Location(test_file, 'TestObject::test', 3), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 3), 'passed'),
     ]
 
 
@@ -360,16 +360,16 @@ def test_class_inheritance(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::setup_class', 3), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::setup_class', 3), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject2::setup_class', 3), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::teardown_class', 7), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::teardown_class', 7), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject2::teardown_class', 7), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::test1', 11), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1::test1', 11), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test1', 11), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test2', 6), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::setup_class', 3), 'passed'),
+        ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::setup_class', 3), 'passed'),
+        ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject2::setup_class', 3), 'passed'),
+        ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::teardown_class', 7), 'passed'),
+        ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::teardown_class', 7), 'passed'),
+        ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject2::teardown_class', 7), 'passed'),
+        ReportItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1::test1', 11), 'passed'),
+        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1::test1', 11), 'passed'),
+        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test1', 11), 'passed'),
+        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2::test2', 6), 'passed'),
     ]
 
 
@@ -385,9 +385,9 @@ def test_class_setup(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'TestObject::setup_class', 6), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'TestObject::test1', 11), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'TestObject::test2', 15), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location(test_file, 'TestObject::setup_class', 6), 'passed'),
+        ReportItem('test', Location(test_file, 'TestObject::test1', 11), 'passed'),
+        ReportItem('test', Location(test_file, 'TestObject::test2', 15), 'passed'),
     ]
 
 
@@ -410,16 +410,16 @@ def test_class_nested(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'TestOuter::setup_class', 22), 'passed', 10, 11, 'wid', 'pid', None),  # this is what changes
-        ReportItem('setup', Location(test_file, 'TestOuter::setup_method', 30), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_class', 5), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_method', 13), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'TestOuter::teardown_class', 26), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'TestOuter::teardown_method', 33), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_class', 9), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_method', 16), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'TestOuter::test', 36), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'TestOuter::TestInner::test', 19), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('setup', Location(test_file, 'TestOuter::setup_class', 22), 'passed'),  # this is what changes
+        ReportItem('setup', Location(test_file, 'TestOuter::setup_method', 30), 'passed'),
+        ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_class', 5), 'passed'),
+        ReportItem('setup', Location(test_file, 'TestOuter::TestInner::setup_method', 13), 'passed'),
+        ReportItem('teardown', Location(test_file, 'TestOuter::teardown_class', 26), 'passed'),
+        ReportItem('teardown', Location(test_file, 'TestOuter::teardown_method', 33), 'passed'),
+        ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_class', 9), 'passed'),
+        ReportItem('teardown', Location(test_file, 'TestOuter::TestInner::teardown_method', 16), 'passed'),
+        ReportItem('test', Location(test_file, 'TestOuter::test', 36), 'passed'),
+        ReportItem('test', Location(test_file, 'TestOuter::TestInner::test', 19), 'passed'),
     ]
 
 
@@ -429,9 +429,9 @@ def test_class_setup_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'TestObject::setup_class', 3), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('setup', Location(test_file, 'TestObject::setup_class', 3), 'failed',
                    Failure('Exception', 'setup failed')),
-        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'failed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'failed'),
     ]
 
 
@@ -446,9 +446,9 @@ def test_class_method_setup_fail(testdir):
     ]
 
     assert scheduler.report_items == [
-        ReportItem('setup', Location(test_file, 'TestObject::setup_method', 3), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('setup', Location(test_file, 'TestObject::setup_method', 3), 'failed',
                    Failure('Exception', 'setup failed')),
-        ReportItem('test', Location(test_file, 'TestObject::test', 6), 'failed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 6), 'failed'),
     ]
 
 
@@ -458,8 +458,8 @@ def test_class_teardown(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.report_items == [
-        ReportItem('teardown', Location(test_file, 'TestObject::teardown_class', 3), 'passed', 10, 11, 'wid', 'pid', None),
-        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('teardown', Location(test_file, 'TestObject::teardown_class', 3), 'passed'),
+        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'passed'),
     ]
 
 
@@ -469,9 +469,9 @@ def test_class_teardown_fail(testdir):
     assert_outcomes(result, error=1, passed=1)
 
     assert scheduler.report_items == [
-        ReportItem('teardown', Location(test_file, 'TestObject::teardown_class', 3), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('teardown', Location(test_file, 'TestObject::teardown_class', 3), 'failed',
                    Failure('Exception', 'teardown failed')),
-        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 7), 'passed'),
     ]
 
 
@@ -481,9 +481,9 @@ def test_class_method_teardown_fail(testdir):
     assert_outcomes(result, error=1, passed=1)
 
     assert scheduler.report_items == [
-        ReportItem('teardown', Location(test_file, 'TestObject::teardown_method', 3), 'failed', 10, 11, 'wid', 'pid',
+        ReportItem('teardown', Location(test_file, 'TestObject::teardown_method', 3), 'failed',
                    Failure('Exception', 'teardown failed')),
-        ReportItem('test', Location(test_file, 'TestObject::test', 6), 'passed', 10, 11, 'wid', 'pid', None),
+        ReportItem('test', Location(test_file, 'TestObject::test', 6), 'passed'),
     ]
 
 
