@@ -228,14 +228,14 @@ def pytest_runtest_makereport(item, call):
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_fixture_setup(fixturedef, request):
+def pytest_fixture_setup(fixturedef):
     start = time.time()
     result = yield  # actual setup
     report_fixture_step('setup', start, fixturedef, result)
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_fixture_post_finalizer(fixturedef, request):
+def pytest_fixture_post_finalizer(fixturedef):
     start = time.time()
     result = yield  # actual teardown
     report_fixture_step('teardown', start, fixturedef, result)
