@@ -4,6 +4,7 @@ import string
 import sys
 import uuid
 from collections import namedtuple
+from datetime import datetime, timezone
 
 import psutil
 import pytest
@@ -14,6 +15,9 @@ from maketestsgofaster.settings import Settings
 from maketestsgofaster.model import Failure, Location, ReportItem, ScheduleItem, SuiteItem
 
 from tests.IT.mock.server import Server
+
+
+time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.mark.e2e
@@ -102,7 +106,7 @@ def test_successful_server_communication(config, server):
         ]})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', 3), 'failed', Failure('AssertionError', 'assert 1 + 1 == 4'), 10, 11, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', 3), 'failed', Failure('AssertionError', 'assert 1 + 1 == 4'), time, time, 'wid', 'pid'),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_B.py'),
         ScheduleItem('tests/IT/stub/stub_C.py'),
@@ -121,8 +125,8 @@ def test_successful_server_communication(config, server):
             },
             'process_id': 'pid',
             'status': 'failed',
-            'started_at': 10,
-            'finished_at': 11,
+            'started_at': '2000-01-01T00:00:00.000Z',
+            'finished_at': '2000-01-01T00:00:00.000Z',
         }],
     })]
 
@@ -131,9 +135,9 @@ def test_successful_server_communication(config, server):
     server.next_response(200, {'items': []})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', 1), 'passed', None, 10, 11, 'wid', 'pid'),
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', 2), 'passed', None, 11, 12, 'wid', 'pid'),
-        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', 4), 'skipped', None, 12, 13, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', 1), 'passed', None, time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', 2), 'passed', None, time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', 4), 'skipped', None, time, time, 'wid', 'pid'),
     ]).items == []
     assert server.last_requests == [('POST', '/reports', headers, {
         'config': config,
@@ -145,8 +149,8 @@ def test_successful_server_communication(config, server):
                 'line': 1,
                 'status': 'passed',
                 'process_id': 'pid',
-                'started_at': 10,
-                'finished_at': 11,
+                'started_at': '2000-01-01T00:00:00.000Z',
+                'finished_at': '2000-01-01T00:00:00.000Z',
             }, {
                 'file': 'tests/IT/stub/stub_B.py',
                 'type': 'test',
@@ -154,8 +158,8 @@ def test_successful_server_communication(config, server):
                 'line': 2,
                 'status': 'passed',
                 'process_id': 'pid',
-                'started_at': 11,
-                'finished_at': 12,
+                'started_at': '2000-01-01T00:00:00.000Z',
+                'finished_at': '2000-01-01T00:00:00.000Z',
             }, {
                 'file': 'tests/IT/stub/stub_C.py',
                 'type': 'test',
@@ -163,8 +167,8 @@ def test_successful_server_communication(config, server):
                 'line': 4,
                 'status': 'skipped',
                 'process_id': 'pid',
-                'started_at': 12,
-                'finished_at': 13,
+                'started_at': '2000-01-01T00:00:00.000Z',
+                'finished_at': '2000-01-01T00:00:00.000Z',
             },
         ],
     })]
@@ -256,9 +260,8 @@ def config(mocker):
     return {
         'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'node': 'build-node'},
         'client': {'capabilities': ['fixtures', 'isolated_process', 'lifecycle_timings', 'split_by_file'],
-                   'name': 'python-official', 'version': '1.0'},
+                   'name': 'python-official', 'version': '1.0', 'workers': 1},
         'platform': {'name': 'python', 'version': '3.6'},
-        'plugin': {'workers': 1},
         'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},
         'system': {'context': {}, 'name': 'custom', 'os': {'name': 'Linux', 'version': '1.42'}, 'cpus': 3, 'ram': 17179869184},
         'vcs': {'branch': 'master', 'pr': None, 'repo': 'github.com/myrepo',

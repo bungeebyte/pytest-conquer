@@ -3,11 +3,11 @@ import os
 import inspect
 import multiprocessing
 import sys
-import time
 import threading
 import traceback
 import uuid
 from collections import defaultdict
+from datetime import datetime
 
 import pytest
 from _pytest import main
@@ -229,14 +229,14 @@ def pytest_runtest_makereport(item, call):
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_fixture_setup(fixturedef):
-    start = time.time()
+    start = datetime.utcnow()
     result = yield  # actual setup
     report_fixture_step('setup', start, fixturedef, result)
 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_fixture_post_finalizer(fixturedef):
-    start = time.time()
+    start = datetime.utcnow()
     result = yield  # actual teardown
     report_fixture_step('teardown', start, fixturedef, result)
 
@@ -252,7 +252,7 @@ def report_fixture_step(type, started_at, fixturedef, result):
 
     status = 'error' if result.excinfo else 'passed'
     failure = to_failure(result.excinfo)
-    report_item(type, location, status, started_at, time.time(), failure)
+    report_item(type, location, status, started_at, datetime.utcnow(), failure)
 
 
 # ======================================================================================
@@ -299,7 +299,7 @@ def add_introspection(obj, name, type):
 
 def wrap_with_report_func(func, func_loc, type):
     def wrapper(arg1=None, arg2=None):
-        start = time.time()
+        start = datetime.utcnow()
         try:
             arg_count = func.__code__.co_argcount
             if inspect.ismethod(func):
@@ -313,10 +313,10 @@ def wrap_with_report_func(func, func_loc, type):
         except Exception:
             if func_loc:
                 failure = to_failure(sys.exc_info())
-                report_item(type, func_loc, 'failed', start, time.time(), failure)
+                report_item(type, func_loc, 'failed', start, datetime.utcnow(), failure)
             raise
         if func_loc:
-            report_item(type, func_loc, 'passed', start, time.time(), None)
+            report_item(type, func_loc, 'passed', start, datetime.utcnow(), None)
     return wrapper
 
 

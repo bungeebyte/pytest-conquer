@@ -134,6 +134,8 @@ class SuiteSerializer:
 
 class ReportSerializer:
 
+    date_format = '%Y-%m-%dT%H:%M:%S.000Z'
+
     @staticmethod
     def serialize(config, report_items):
         return {
@@ -150,8 +152,8 @@ class ReportSerializer:
             'line': item.location.line,
             'status': item.status,
             'process_id': Serializer.truncate(item.process_id, 64),
-            'started_at': item.started_at,
-            'finished_at': item.finished_at,
+            'started_at': item.started_at.strftime(ReportSerializer.date_format),
+            'finished_at': item.finished_at.strftime(ReportSerializer.date_format),
         }
         if item.error:
             data['error'] = {
