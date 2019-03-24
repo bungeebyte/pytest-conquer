@@ -170,20 +170,16 @@ def pytest_collection_modifyitems(session, config, items):
 def collect_test(item):
     fixtures = []
     for _, fixturedef in sorted(item._fixtureinfo.name2fixturedefs.items()):
-        location = to_function_location(fixturedef[0].func)
+        location = func_to_location(fixturedef[0].func)
         if is_artifical_fixture(fixturedef[0], location):
             continue
         fixtures.append(collect_item('fixture', location))
 
-    file = os.path.relpath(item.fspath.strpath, settings.runner_root)
-    name = '::' \
-        .join(item.nodeid.split('::')[1:]) \
-        .replace('::()::', '::')  # the format was changed in pytest 4.x
     _, line = inspect.getsourcelines(item._obj)
-    location = Location(file, name, line)
+    location = item_to_location(item, line)
 
     collect_item('test', location, fixtures)
-    tests_by_file[file].append(item)
+    tests_by_file[location.file].append(item)
 
 
 # ======================================================================================
@@ -198,12 +194,8 @@ def pytest_runtest_makereport(item, call):
     if not settings.plugin_enabled():
         return report
 
-    file = report.nodeid.split('::')[0]
-    name = item.nodeid \
-        .replace(file + '::', '') \
-        .replace('::()::', '::')  # the format was changed in pytest 4.x
-    line = report.location[1]
-    location = Location(file, name, line + 1)
+    line = report.location[1] + 1
+    location = item_to_location(report, line)
 
     def report_test(failure=None):
         status = report.outcome or 'passed'
@@ -245,7 +237,9 @@ def report_fixture_step(type, started_at, fixturedef, result):
     if not settings.plugin_enabled():
         return
 
-    location = to_function_location(fixturedef.func)
+    print(fixturedef.__dict__)
+
+    location = func_to_location(fixturedef.func)
 
     if is_artifical_fixture(fixturedef, location):
         return
@@ -290,7 +284,7 @@ def add_introspection(obj, name, type):
     func = getattr(obj, name)
     if hasattr(func, '__wrapped__'):
         func = func.__wrapped__
-    func_loc = to_function_location(func, obj)
+    func_loc = func_to_location(func, obj)
     collect_item(type, func_loc)
     wrapped_func = wrap_with_report_func(func, func_loc, type)
     wrapped_func.__wrapped__ = func
@@ -353,18 +347,28 @@ def report_item(type, location, status, start, end, failure):
     report_items[process_id] = items  # only be reassigning will the data be synced
 
 
-def to_function_location(func, obj=None):
+def func_to_location(func, obj=None):
     if func:
         file = os.path.relpath(inspect.getfile(func), settings.runner_root)
         name = func.__name__
+        classes = []
         if inspect.isclass(obj):
             for cls in obj.__qualname__.split('.')[::-1]:
-                name = cls + '::' + name
+                classes.append(cls)
         elif inspect.ismethod(obj):
             for cls in obj.__qualname__.split('.')[:-1][::-1]:
-                name = cls + '::' + name
+                classes.append(cls)
         _, line = inspect.getsourcelines(func)
-        return Location(file, name, line)
+        cls = '::'.join(classes[::-1]) if classes else None
+        return Location(file, cls, name, line)
+
+
+def item_to_location(item, line):
+    nodeid = item.nodeid.split('::')
+    file = nodeid.pop(0)
+    name = nodeid.pop()
+    cls = '::'.join(nodeid).replace('::()::', '::') if nodeid else None  # the format was changed in pytest 4.x
+    return Location(file, cls, name, line)
 
 
 def to_failure(exc_info):

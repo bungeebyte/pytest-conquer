@@ -55,10 +55,10 @@ def test_successful_server_communication(config, server):
         ]})
 
     assert scheduler.init([
-        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', None), 86, []),
-        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', None), 86, []),
-        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', None), 86, []),
-        SuiteItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', None), 86, []),
+        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'TestClass', 'test_A', None), 86, []),
+        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'TestClass', 'test_B_1', None), 86, []),
+        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'TestClass', 'test_B_2', None), 86, []),
+        SuiteItem('test', Location('tests/IT/stub/stub_C.py', 'TestClass', 'test_C', None), 86, []),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_A.py'),
     ]
@@ -69,6 +69,7 @@ def test_successful_server_communication(config, server):
             'type': 'test',
             'file': 'tests/IT/stub/stub_A.py',
             'file_size': 86,
+            'class': 'TestClass',
             'name': 'test_A',
             'line': None,
             'deps': [],
@@ -76,6 +77,7 @@ def test_successful_server_communication(config, server):
             'type': 'test',
             'file': 'tests/IT/stub/stub_B.py',
             'file_size': 86,
+            'class': 'TestClass',
             'name': 'test_B_1',
             'line': None,
             'deps': [],
@@ -83,6 +85,7 @@ def test_successful_server_communication(config, server):
             'type': 'test',
             'file': 'tests/IT/stub/stub_B.py',
             'file_size': 86,
+            'class': 'TestClass',
             'name': 'test_B_2',
             'line': None,
             'deps': [],
@@ -90,6 +93,7 @@ def test_successful_server_communication(config, server):
             'type': 'test',
             'file': 'tests/IT/stub/stub_C.py',
             'file_size': 86,
+            'class': 'TestClass',
             'name': 'test_C',
             'line': None,
             'deps': [],
@@ -106,7 +110,7 @@ def test_successful_server_communication(config, server):
         ]})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', 3), 'failed', Failure('AssertionError', 'assert 1 + 1 == 4'), time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_A.py', 'TestClass', 'test_A', 3), 'failed', Failure('AssertionError', 'assert 1 + 1 == 4'), time, time, 'wid', 'pid'),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_B.py'),
         ScheduleItem('tests/IT/stub/stub_C.py'),
@@ -117,6 +121,7 @@ def test_successful_server_communication(config, server):
         'items': [{
             'file': 'tests/IT/stub/stub_A.py',
             'type': 'test',
+            'class': 'TestClass',
             'name': 'test_A',
             'line': 3,
             'error': {
@@ -135,9 +140,9 @@ def test_successful_server_communication(config, server):
     server.next_response(200, {'items': []})
 
     assert scheduler.next([
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_1', 1), 'passed', None, time, time, 'wid', 'pid'),
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'test_B_2', 2), 'passed', None, time, time, 'wid', 'pid'),
-        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'test_C', 4), 'skipped', None, time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'TestClass', 'test_B_1', 1), 'passed', None, time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'TestClass', 'test_B_2', 2), 'passed', None, time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'TestClass', 'test_C', 4), 'skipped', None, time, time, 'wid', 'pid'),
     ]).items == []
     assert server.last_requests == [('POST', '/reports', headers, {
         'config': config,
@@ -145,6 +150,7 @@ def test_successful_server_communication(config, server):
             {
                 'file': 'tests/IT/stub/stub_B.py',
                 'type': 'test',
+                'class': 'TestClass',
                 'name': 'test_B_1',
                 'line': 1,
                 'status': 'passed',
@@ -154,6 +160,7 @@ def test_successful_server_communication(config, server):
             }, {
                 'file': 'tests/IT/stub/stub_B.py',
                 'type': 'test',
+                'class': 'TestClass',
                 'name': 'test_B_2',
                 'line': 2,
                 'status': 'passed',
@@ -163,6 +170,7 @@ def test_successful_server_communication(config, server):
             }, {
                 'file': 'tests/IT/stub/stub_C.py',
                 'type': 'test',
+                'class': 'TestClass',
                 'name': 'test_C',
                 'line': 4,
                 'status': 'skipped',
@@ -192,7 +200,7 @@ def test_retry_on_server_error(config, server):
     server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py', 'name': 'test_A'}]})
 
     assert scheduler.init([
-        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'test_A', None), '42', []),
+        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'TestClass', 'test_A', None), '42', []),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_A.py'),
     ]

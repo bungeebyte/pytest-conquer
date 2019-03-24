@@ -64,4 +64,4 @@ class MockScheduler(Scheduler):
         return items
 
     def __sorted(self, items):
-        return sorted(items, key=lambda item: (item.type, item.location.file.lower(), item.location.name.lower()))
+        return sorted(items, key=lambda item: (item.type, item.location.file.lower(), (item.location.cls or '').lower(), item.location.name.lower()))

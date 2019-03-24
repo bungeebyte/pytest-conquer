@@ -117,6 +117,7 @@ class SuiteSerializer:
             'type': item.type,
             'file': Serializer.truncate(item.location.file, 1024),
             'file_size': item.file_size,
+            'class': Serializer.truncate(item.location.cls, 1024),
             'name': Serializer.truncate(item.location.name, 1024),
             'line': item.location.line,
             'deps': [SuiteSerializer.serialize_fixture_ref(f) for f in item.deps],
@@ -148,6 +149,7 @@ class ReportSerializer:
         data = {
             'file': Serializer.truncate(item.location.file, 1024),
             'type': str(item.type),
+            'class': Serializer.truncate(item.location.cls, 1024),
             'name': Serializer.truncate(item.location.name, 1024),
             'line': item.location.line,
             'status': item.status,

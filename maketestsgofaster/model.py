@@ -14,7 +14,7 @@ ScheduleItem = \
     namedtuple('ScheduleItem', ['file'])
 
 Location = \
-    namedtuple('Location', ['file', 'name', 'line'])
+    namedtuple('Location', ['file', 'cls', 'name', 'line'])
 
 Failure = \
     namedtuple('Failure', ['type', 'message'])
