@@ -322,27 +322,23 @@ def wrap_with_report_func(func, func_loc, type):
 def collect_item(item):
     def collect(item):
         if item.location in suite_item_locations:
-            return  # prevents duplicates
+            return False  # prevents duplicates
         suite_items.append(item)
         suite_item_locations.add(item.location)
+        return True
 
-    # collect file
-    file = item.location.file
-    file_size = suite_item_file_size_by_file.get(file, None)
-    if not os.path.isdir(file) and file_size is None:
-        file_size = os.path.getsize(file)
-        suite_item_file_size_by_file[file] = file_size
-    collect(SuiteItem('file', Location(file), size=file_size))
+    if collect(item):
+        file = item.location.file
+        file_size = suite_item_file_size_by_file.get(file, None)
+        if not os.path.isdir(file) and file_size is None:
+            file_size = os.path.getsize(file)
+            suite_item_file_size_by_file[file] = file_size
+        collect(SuiteItem('file', Location(file), size=file_size))
 
-    # collect class
-    # cls = item.location.cls
-    # if cls:
-    #     collect(SuiteItem('class', Location(file, cls)))
+        cls = item.location.cls
+        if cls:
+            collect(SuiteItem('class', Location(file, cls)))
 
-    # collect module
-    # TODO
-
-    collect(item)
     return item
 
 
@@ -359,7 +355,8 @@ def report_item(type, location, status, start, end, failure):
 
 def func_to_location(func, obj=None):
     if func:
-        file = os.path.relpath(inspect.getfile(func), settings.runner_root)
+        abs_file = inspect.getfile(obj) if obj else inspect.getfile(func)
+        rel_file = os.path.relpath(abs_file, settings.runner_root)
         name = func.__name__
         classes = []
         if inspect.isclass(obj):
@@ -370,8 +367,7 @@ def func_to_location(func, obj=None):
                 classes.append(cls)
         _, line = inspect.getsourcelines(func)
         cls = '.'.join(classes[::-1]) if classes else None
-        print
-        return Location(file, cls, name, line)
+        return Location(rel_file, cls, name, line)
 
 
 def item_to_location(item, line):

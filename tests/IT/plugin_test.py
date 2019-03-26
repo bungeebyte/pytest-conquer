@@ -355,6 +355,7 @@ def test_class(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
+        SuiteItem('class', Location(test_file, 'TestObject')),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('test', Location(test_file, 'TestObject', 'test', 3)),
     ]
@@ -364,32 +365,31 @@ def test_class(testdir):
     ]
 
 
+@pytest.mark.wip
 def test_class_inheritance(testdir):
     (result, scheduler) = run_test(testdir, ['fixtures/test_class_inheritance_1.py', 'fixtures/test_class_inheritance_2.py'])
-    assert_outcomes(result, passed=4)
+    assert_outcomes(result, passed=3)
 
     assert scheduler.suite_items == [
+        SuiteItem('class', Location('fixtures/test_class_inheritance_1.py', 'TestObject1')),
+        SuiteItem('class', Location('fixtures/test_class_inheritance_2.py', 'TestObject2')),
         SuiteItem('file', Location('fixtures/test_class_inheritance_1.py'), size=42),
         SuiteItem('file', Location('fixtures/test_class_inheritance_2.py'), size=42),
         SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'setup_class', 3)),
-        SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject2', 'setup_class', 3)),
+        SuiteItem('setup', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'setup_class', 3)),
         SuiteItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'teardown_class', 7)),
-        SuiteItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject2', 'teardown_class', 7)),
+        SuiteItem('teardown', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'teardown_class', 7)),
         SuiteItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'test1', 11)),
-        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1', 'test1', 11)),
         SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'test1', 11)),
         SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'test2', 6)),
     ]
 
     assert scheduler.report_items == [
         ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'setup_class', 3), 'passed'),
-        ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'setup_class', 3), 'passed'),
-        ReportItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject2', 'setup_class', 3), 'passed'),
+        ReportItem('setup', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'setup_class', 3), 'passed'),
         ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'teardown_class', 7), 'passed'),
-        ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'teardown_class', 7), 'passed'),
-        ReportItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject2', 'teardown_class', 7), 'passed'),
+        ReportItem('teardown', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'teardown_class', 7), 'passed'),
         ReportItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'test1', 11), 'passed'),
-        ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1', 'test1', 11), 'passed'),
         ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'test1', 11), 'passed'),
         ReportItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'test2', 6), 'passed'),
     ]
@@ -401,6 +401,7 @@ def test_class_setup(testdir):
     assert_outcomes(result, passed=2)
 
     assert scheduler.suite_items == [
+        SuiteItem('class', Location(test_file, 'TestObject')),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('setup', Location(test_file, 'TestObject', 'setup_class', 6)),
         SuiteItem('test', Location(test_file, 'TestObject', 'test1', 11)),
@@ -420,6 +421,8 @@ def test_class_nested(testdir):
     assert_outcomes(result, passed=2)
 
     assert scheduler.suite_items == [
+        SuiteItem('class', Location(test_file, 'TestOuter')),
+        SuiteItem('class', Location(test_file, 'TestOuter.TestInner')),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('setup', Location(test_file, 'TestOuter', 'setup_class', 22)),
         SuiteItem('setup', Location(test_file, 'TestOuter', 'setup_method', 30)),
@@ -465,6 +468,7 @@ def test_class_method_setup_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert scheduler.suite_items == [
+        SuiteItem('class', Location(test_file, 'TestObject')),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('setup', Location(test_file, 'TestObject', 'setup_method', 3)),
         SuiteItem('test', Location(test_file, 'TestObject', 'test', 6)),

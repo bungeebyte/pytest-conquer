@@ -143,7 +143,7 @@ def test_successful_server_communication(config, server):
             {
                 'file': 'tests/IT/stub/stub_B.py',
                 'type': 'test',
-                    'class': 'TestClass',
+                'class': 'TestClass',
                 'func': 'test_B_1',
                 'line': 1,
                 'status': 'passed',
@@ -153,7 +153,7 @@ def test_successful_server_communication(config, server):
             }, {
                 'file': 'tests/IT/stub/stub_B.py',
                 'type': 'test',
-                    'class': 'TestClass',
+                'class': 'TestClass',
                 'func': 'test_B_2',
                 'line': 2,
                 'status': 'passed',
@@ -163,7 +163,7 @@ def test_successful_server_communication(config, server):
             }, {
                 'file': 'tests/IT/stub/stub_C.py',
                 'type': 'test',
-                    'class': 'TestClass',
+                'class': 'TestClass',
                 'func': 'test_C',
                 'line': 4,
                 'status': 'skipped',
