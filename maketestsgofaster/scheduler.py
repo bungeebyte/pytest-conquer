@@ -28,7 +28,7 @@ class Scheduler:
         tests_by_file = OrderedDict()
         for item in data['items']:
             tests_by_file.setdefault(item['file'], [])
-            tests_by_file[item['file']].append(item['name'])
+            tests_by_file[item['file']].append(item['func'])
         items = [ScheduleItem(f) for f in tests_by_file.keys()]
         logger.debug('received schedule with %s item(s)', len(items))
         return Schedule(items)
@@ -113,22 +113,28 @@ class SuiteSerializer:
 
     @staticmethod
     def serialize_item(item):
-        return {
+        data = {
             'type': item.type,
             'file': Serializer.truncate(item.location.file, 1024),
-            'file_size': item.file_size,
-            'class': Serializer.truncate(item.location.cls, 1024),
-            'name': Serializer.truncate(item.location.name, 1024),
-            'line': item.location.line,
-            'deps': [SuiteSerializer.serialize_fixture_ref(f) for f in item.deps],
         }
+        if item.location.func:
+            data['func'] = Serializer.truncate(item.location.func, 1024)
+        if item.size:
+            data['file_size'] = item.size
+        if item.location.cls:
+            data['class'] = Serializer.truncate(item.location.cls, 1024)
+        if item.location.line:
+            data['line'] = item.location.line
+        if item.deps:
+            data['deps'] = [SuiteSerializer.serialize_fixture_ref(f) for f in item.deps]
+        return data
 
     @staticmethod
     def serialize_fixture_ref(item):
         return {
             'type': item.type,
             'file': Serializer.truncate(item.file, 1024),
-            'name': Serializer.truncate(item.name, 1024),
+            'func': Serializer.truncate(item.func, 1024),
             'line': item.line,
         }
 
@@ -150,7 +156,7 @@ class ReportSerializer:
             'file': Serializer.truncate(item.location.file, 1024),
             'type': str(item.type),
             'class': Serializer.truncate(item.location.cls, 1024),
-            'name': Serializer.truncate(item.location.name, 1024),
+            'func': Serializer.truncate(item.location.func, 1024),
             'line': item.location.line,
             'status': item.status,
             'process_id': Serializer.truncate(item.process_id, 64),

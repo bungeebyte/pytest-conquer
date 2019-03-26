@@ -1,4 +1,3 @@
-from collections import namedtuple
 from multiprocessing import Manager
 
 from maketestsgofaster.scheduler import Scheduler
@@ -46,22 +45,22 @@ class MockScheduler(Scheduler):
     def __fixed_report(self, report_items):
         items = []
         for item in report_items:
-            asdict = item._asdict()
-            asdict['worker_id'] = None
-            asdict['process_id'] = None
-            asdict['started_at'] = None
-            asdict['finished_at'] = None
-            items.append(namedtuple('ReportItem', asdict.keys())(**asdict))
+            item = item._replace(started_at=None, finished_at=None, process_id=None, worker_id=None)
+            items.append(item)
         return items
 
     def __fixed_suite(self, suite_items):
         items = []
         for item in suite_items:
-            asdict = item._asdict()
-            asdict['file_size'] = 42
-            asdict['deps'] = self.__fixed_suite(asdict['deps'])
-            items.append(namedtuple('SuiteItem', asdict.keys())(**asdict))
+            if item.type == 'file':
+                item = item._replace(size=42)
+            item = item._replace(deps=self.__fixed_suite(item.deps) if item.deps else None)
+            items.append(item)
         return items
 
     def __sorted(self, items):
-        return sorted(items, key=lambda item: (item.type, item.location.file.lower(), (item.location.cls or '').lower(), item.location.name.lower()))
+        return sorted(items, key=lambda item: (
+            item.type,
+            item.location.file.lower(),
+            (item.location.cls or '').lower(),
+            (item.location.func or '').lower()))

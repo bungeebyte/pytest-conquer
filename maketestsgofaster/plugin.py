@@ -173,12 +173,12 @@ def collect_test(item):
         location = func_to_location(fixturedef[0].func)
         if is_artifical_fixture(fixturedef[0], location):
             continue
-        fixtures.append(collect_item('fixture', location))
+        fixtures.append(collect_item(SuiteItem('fixture', location)))
 
     _, line = inspect.getsourcelines(item._obj)
     location = item_to_location(item, line)
 
-    collect_item('test', location, fixtures)
+    collect_item(SuiteItem('test', location, deps=fixtures))
     tests_by_file[location.file].append(item)
 
 
@@ -285,7 +285,7 @@ def add_introspection(obj, name, type):
     if hasattr(func, '__wrapped__'):
         func = func.__wrapped__
     func_loc = func_to_location(func, obj)
-    collect_item(type, func_loc)
+    collect_item(SuiteItem(type, func_loc))
     wrapped_func = wrap_with_report_func(func, func_loc, type)
     wrapped_func.__wrapped__ = func
     setattr(obj, name, wrapped_func)
@@ -319,20 +319,30 @@ def wrap_with_report_func(func, func_loc, type):
 # ======================================================================================
 
 
-def collect_item(type, location, fixtures=[]):
-    file = location.file
+def collect_item(item):
+    def collect(item):
+        if item.location in suite_item_locations:
+            return  # prevents duplicates
+        suite_items.append(item)
+        suite_item_locations.add(item.location)
 
+    # collect file
+    file = item.location.file
     file_size = suite_item_file_size_by_file.get(file, None)
     if not os.path.isdir(file) and file_size is None:
         file_size = os.path.getsize(file)
         suite_item_file_size_by_file[file] = file_size
+    collect(SuiteItem('file', Location(file), size=file_size))
 
-    item = SuiteItem(type, location, file_size, fixtures)
+    # collect class
+    # cls = item.location.cls
+    # if cls:
+    #     collect(SuiteItem('class', Location(file, cls)))
 
-    if location not in suite_item_locations:  # prevents duplicates
-        suite_items.append(item)
-        suite_item_locations.add(location)
+    # collect module
+    # TODO
 
+    collect(item)
     return item
 
 
@@ -359,15 +369,18 @@ def func_to_location(func, obj=None):
             for cls in obj.__qualname__.split('.')[:-1][::-1]:
                 classes.append(cls)
         _, line = inspect.getsourcelines(func)
-        cls = '::'.join(classes[::-1]) if classes else None
+        cls = '.'.join(classes[::-1]) if classes else None
+        print
         return Location(file, cls, name, line)
 
 
 def item_to_location(item, line):
-    nodeid = item.nodeid.split('::')
+    nodeid = item.nodeid \
+        .replace('::()::', '::') \
+        .split('::')
     file = nodeid.pop(0)
     name = nodeid.pop()
-    cls = '::'.join(nodeid).replace('::()::', '::') if nodeid else None  # the format was changed in pytest 4.x
+    cls = '.'.join(nodeid) if nodeid else None
     return Location(file, cls, name, line)
 
 
@@ -383,9 +396,9 @@ def is_artifical_fixture(fixturedef, location):
     if fixturedef.baseid == '':
         return True
     # means it's an artificial setup/teardown fixture (pytest 4+)
-    if location.name == 'xunit_setup_class_fixture' or \
-            location.name == 'xunit_setup_function_fixture' or \
-            location.name == 'xunit_setup_method_fixture' or \
-            location.name == 'xunit_setup_module_fixture':
+    if location.func == 'xunit_setup_class_fixture' or \
+            location.func == 'xunit_setup_function_fixture' or \
+            location.func == 'xunit_setup_method_fixture' or \
+            location.func == 'xunit_setup_module_fixture':
         return True
     return False

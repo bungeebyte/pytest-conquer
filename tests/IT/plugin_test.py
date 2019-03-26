@@ -14,6 +14,11 @@ def test_function_pass(testdir):
     (result, scheduler) = run_test(testdir, [test_file])
     assert_outcomes(result, passed=1)
 
+    assert scheduler.suite_items == [
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, None, 'test_pass', 1)),
+    ]
+
     assert scheduler.report_items == [
         ReportItem('test', Location(test_file, None, 'test_pass', 1), 'passed'),
     ]
@@ -57,8 +62,9 @@ def test_function_setup(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('setup', Location(test_file, None, 'setup_function', 1), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test', 5), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('setup', Location(test_file, None, 'setup_function', 1)),
+        SuiteItem('test', Location(test_file, None, 'test', 5)),
     ]
 
     assert scheduler.report_items == [
@@ -85,8 +91,9 @@ def test_function_teardown(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('teardown', Location(test_file, None, 'teardown_function', 1), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test', 5), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('teardown', Location(test_file, None, 'teardown_function', 1)),
+        SuiteItem('test', Location(test_file, None, 'test', 5)),
     ]
 
     assert scheduler.report_items == [
@@ -113,9 +120,10 @@ def test_function_parameterized(testdir):
     assert_outcomes(result, passed=3)
 
     assert scheduler.suite_items == [
-        SuiteItem('test', Location(test_file, None, 'test_param[2+4-6]', 4), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test_param[3+5-8]', 4), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test_param[6*9-54]', 4), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, None, 'test_param[2+4-6]', 4)),
+        SuiteItem('test', Location(test_file, None, 'test_param[3+5-8]', 4)),
+        SuiteItem('test', Location(test_file, None, 'test_param[6*9-54]', 4)),
     ]
 
     assert scheduler.report_items == [
@@ -131,9 +139,10 @@ def test_module_setup(testdir):
     assert_outcomes(result, passed=2)
 
     assert scheduler.suite_items == [
-        SuiteItem('setup', Location(test_file, None, 'setup_module', 4), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test1', 9), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test2', 14), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('setup', Location(test_file, None, 'setup_module', 4)),
+        SuiteItem('test', Location(test_file, None, 'test1', 9)),
+        SuiteItem('test', Location(test_file, None, 'test2', 14)),
     ]
 
     assert scheduler.report_items == [
@@ -161,8 +170,9 @@ def test_module_teardown(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('teardown', Location(test_file, None, 'teardown_module', 4), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test', 9), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('teardown', Location(test_file, None, 'teardown_module', 4)),
+        SuiteItem('test', Location(test_file, None, 'test', 9)),
     ]
 
     assert scheduler.report_items == [
@@ -189,9 +199,10 @@ def test_fixture(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('fixture', Location(test_file, None, 'fixture', 4), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 9), 42, [
-            SuiteItem('fixture', Location(test_file, None, 'fixture', 4), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location(test_file, None, 'fixture', 4)),
+        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 9), deps=[
+            SuiteItem('fixture', Location(test_file, None, 'fixture', 4)),
         ]),
     ]
 
@@ -208,11 +219,12 @@ def test_fixtures(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('fixture', Location(test_file, None, 'fixture1', 4), 42, []),
-        SuiteItem('fixture', Location(test_file, None, 'fixture2', 9), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test_with_fixtures', 14), 42, [
-            SuiteItem('fixture', Location(test_file, None, 'fixture1', 4), 42, []),
-            SuiteItem('fixture', Location(test_file, None, 'fixture2', 9), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location(test_file, None, 'fixture1', 4)),
+        SuiteItem('fixture', Location(test_file, None, 'fixture2', 9)),
+        SuiteItem('test', Location(test_file, None, 'test_with_fixtures', 14), deps=[
+            SuiteItem('fixture', Location(test_file, None, 'fixture1', 4)),
+            SuiteItem('fixture', Location(test_file, None, 'fixture2', 9)),
         ]),
     ]
 
@@ -231,11 +243,12 @@ def test_fixture_nested(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('fixture', Location(test_file, None, 'fixture1', 4), 42, []),
-        SuiteItem('fixture', Location(test_file, None, 'fixture2', 9), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 14), 42, [
-            SuiteItem('fixture', Location(test_file, None, 'fixture1', 4), 42, []),
-            SuiteItem('fixture', Location(test_file, None, 'fixture2', 9), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location(test_file, None, 'fixture1', 4)),
+        SuiteItem('fixture', Location(test_file, None, 'fixture2', 9)),
+        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 14), deps=[
+            SuiteItem('fixture', Location(test_file, None, 'fixture1', 4)),
+            SuiteItem('fixture', Location(test_file, None, 'fixture2', 9)),
         ]),
     ]
 
@@ -256,9 +269,11 @@ def test_fixture_session(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('fixture', Location('fixtures/conftest.py', None, 'fixture_session', 4), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 1), 42, [
-            SuiteItem('fixture', Location('fixtures/conftest.py', None, 'fixture_session', 4), 42, []),
+        SuiteItem('file', Location('fixtures/conftest.py'), size=42),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location('fixtures/conftest.py', None, 'fixture_session', 4)),
+        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 1), deps=[
+            SuiteItem('fixture', Location('fixtures/conftest.py', None, 'fixture_session', 4)),
         ]),
     ]
 
@@ -275,7 +290,8 @@ def test_fixture_missing(testdir):
     assert_outcomes(result, error=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('test', Location(test_file, None, 'test_with_missing_fixture', 1), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, None, 'test_with_missing_fixture', 1)),
     ]
 
     assert scheduler.report_items == [
@@ -289,9 +305,11 @@ def test_fixture_import(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('fixture', Location('fixtures/fixture.py', None, 'fixture_import', 4), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 5), 42, [
-            SuiteItem('fixture', Location('fixtures/fixture.py', None, 'fixture_import', 4), 42, []),
+        SuiteItem('file', Location('fixtures/fixture.py'), size=42),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location('fixtures/fixture.py', None, 'fixture_import', 4)),
+        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 5), deps=[
+            SuiteItem('fixture', Location('fixtures/fixture.py', None, 'fixture_import', 4)),
         ]),
     ]
 
@@ -308,9 +326,10 @@ def test_fixture_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('fixture', Location(test_file, None, 'fixture', 4), 42, []),
-        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 9), 42, [
-            SuiteItem('fixture', Location(test_file, None, 'fixture', 4), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location(test_file, None, 'fixture', 4)),
+        SuiteItem('test', Location(test_file, None, 'test_with_fixture', 9), deps=[
+            SuiteItem('fixture', Location(test_file, None, 'fixture', 4)),
         ]),
     ]
 
@@ -336,7 +355,8 @@ def test_class(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('test', Location(test_file, 'TestObject', 'test', 3), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, 'TestObject', 'test', 3)),
     ]
 
     assert scheduler.report_items == [
@@ -349,14 +369,16 @@ def test_class_inheritance(testdir):
     assert_outcomes(result, passed=4)
 
     assert scheduler.suite_items == [
-        SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'setup_class', 3), 42, []),
-        SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject2', 'setup_class', 3), 42, []),
-        SuiteItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'teardown_class', 7), 42, []),
-        SuiteItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject2', 'teardown_class', 7), 42, []),
-        SuiteItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'test1', 11), 42, []),
-        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1', 'test1', 11), 42, []),
-        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'test1', 11), 42, []),
-        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'test2', 6), 42, []),
+        SuiteItem('file', Location('fixtures/test_class_inheritance_1.py'), size=42),
+        SuiteItem('file', Location('fixtures/test_class_inheritance_2.py'), size=42),
+        SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'setup_class', 3)),
+        SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'TestObject2', 'setup_class', 3)),
+        SuiteItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'teardown_class', 7)),
+        SuiteItem('teardown', Location('fixtures/test_class_inheritance_1.py', 'TestObject2', 'teardown_class', 7)),
+        SuiteItem('test', Location('fixtures/test_class_inheritance_1.py', 'TestObject1', 'test1', 11)),
+        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject1', 'test1', 11)),
+        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'test1', 11)),
+        SuiteItem('test', Location('fixtures/test_class_inheritance_2.py', 'TestObject2', 'test2', 6)),
     ]
 
     assert scheduler.report_items == [
@@ -379,9 +401,10 @@ def test_class_setup(testdir):
     assert_outcomes(result, passed=2)
 
     assert scheduler.suite_items == [
-        SuiteItem('setup', Location(test_file, 'TestObject', 'setup_class', 6), 42, []),
-        SuiteItem('test', Location(test_file, 'TestObject', 'test1', 11), 42, []),
-        SuiteItem('test', Location(test_file, 'TestObject', 'test2', 15), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('setup', Location(test_file, 'TestObject', 'setup_class', 6)),
+        SuiteItem('test', Location(test_file, 'TestObject', 'test1', 11)),
+        SuiteItem('test', Location(test_file, 'TestObject', 'test2', 15)),
     ]
 
     assert scheduler.report_items == [
@@ -397,29 +420,30 @@ def test_class_nested(testdir):
     assert_outcomes(result, passed=2)
 
     assert scheduler.suite_items == [
-        SuiteItem('setup', Location(test_file, 'TestOuter', 'setup_class', 22), 42, []),
-        SuiteItem('setup', Location(test_file, 'TestOuter', 'setup_method', 30), 42, []),
-        SuiteItem('setup', Location(test_file, 'TestOuter::TestInner', 'setup_class', 5), 42, []),
-        SuiteItem('setup', Location(test_file, 'TestOuter::TestInner', 'setup_method', 13), 42, []),
-        SuiteItem('teardown', Location(test_file, 'TestOuter', 'teardown_class', 26), 42, []),
-        SuiteItem('teardown', Location(test_file, 'TestOuter', 'teardown_method', 33), 42, []),
-        SuiteItem('teardown', Location(test_file, 'TestOuter::TestInner', 'teardown_class', 9), 42, []),
-        SuiteItem('teardown', Location(test_file, 'TestOuter::TestInner', 'teardown_method', 16), 42, []),
-        SuiteItem('test', Location(test_file, 'TestOuter', 'test', 36), 42, []),
-        SuiteItem('test', Location(test_file, 'TestOuter::TestInner', 'test', 19), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('setup', Location(test_file, 'TestOuter', 'setup_class', 22)),
+        SuiteItem('setup', Location(test_file, 'TestOuter', 'setup_method', 30)),
+        SuiteItem('setup', Location(test_file, 'TestOuter.TestInner', 'setup_class', 5)),
+        SuiteItem('setup', Location(test_file, 'TestOuter.TestInner', 'setup_method', 13)),
+        SuiteItem('teardown', Location(test_file, 'TestOuter', 'teardown_class', 26)),
+        SuiteItem('teardown', Location(test_file, 'TestOuter', 'teardown_method', 33)),
+        SuiteItem('teardown', Location(test_file, 'TestOuter.TestInner', 'teardown_class', 9)),
+        SuiteItem('teardown', Location(test_file, 'TestOuter.TestInner', 'teardown_method', 16)),
+        SuiteItem('test', Location(test_file, 'TestOuter', 'test', 36)),
+        SuiteItem('test', Location(test_file, 'TestOuter.TestInner', 'test', 19)),
     ]
 
     assert scheduler.report_items == [
         ReportItem('setup', Location(test_file, 'TestOuter', 'setup_class', 22), 'passed'),  # this is what changes
         ReportItem('setup', Location(test_file, 'TestOuter', 'setup_method', 30), 'passed'),
-        ReportItem('setup', Location(test_file, 'TestOuter::TestInner', 'setup_class', 5), 'passed'),
-        ReportItem('setup', Location(test_file, 'TestOuter::TestInner', 'setup_method', 13), 'passed'),
+        ReportItem('setup', Location(test_file, 'TestOuter.TestInner', 'setup_class', 5), 'passed'),
+        ReportItem('setup', Location(test_file, 'TestOuter.TestInner', 'setup_method', 13), 'passed'),
         ReportItem('teardown', Location(test_file, 'TestOuter', 'teardown_class', 26), 'passed'),
         ReportItem('teardown', Location(test_file, 'TestOuter', 'teardown_method', 33), 'passed'),
-        ReportItem('teardown', Location(test_file, 'TestOuter::TestInner', 'teardown_class', 9), 'passed'),
-        ReportItem('teardown', Location(test_file, 'TestOuter::TestInner', 'teardown_method', 16), 'passed'),
+        ReportItem('teardown', Location(test_file, 'TestOuter.TestInner', 'teardown_class', 9), 'passed'),
+        ReportItem('teardown', Location(test_file, 'TestOuter.TestInner', 'teardown_method', 16), 'passed'),
         ReportItem('test', Location(test_file, 'TestOuter', 'test', 36), 'passed'),
-        ReportItem('test', Location(test_file, 'TestOuter::TestInner', 'test', 19), 'passed'),
+        ReportItem('test', Location(test_file, 'TestOuter.TestInner', 'test', 19), 'passed'),
     ]
 
 
@@ -441,8 +465,9 @@ def test_class_method_setup_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('setup', Location(test_file, 'TestObject', 'setup_method', 3), 42, []),
-        SuiteItem('test', Location(test_file, 'TestObject', 'test', 6), 42, []),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('setup', Location(test_file, 'TestObject', 'setup_method', 3)),
+        SuiteItem('test', Location(test_file, 'TestObject', 'test', 6)),
     ]
 
     assert scheduler.report_items == [
