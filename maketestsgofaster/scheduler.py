@@ -125,6 +125,8 @@ class SuiteSerializer:
             data['class'] = Serializer.truncate(item.location.cls, 1024)
         if item.location.line:
             data['line'] = item.location.line
+        if item.tags:
+            data['tags'] = [Serializer.truncate(t, 64) for t in item.tags]
         if item.deps:
             data['deps'] = [SuiteSerializer.serialize_fixture_ref(f) for f in item.deps]
         return data

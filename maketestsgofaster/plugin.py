@@ -168,18 +168,28 @@ def pytest_collection_modifyitems(session, config, items):
 
 
 def collect_test(item):
+    _, line = inspect.getsourcelines(item._obj)
+    location = item_to_location(item, line)
+    fixtures = collect_fixtures(item)
+    tags = [mark.name for mark in item.iter_markers()]
+    collect_item(SuiteItem('test', location, deps=fixtures, tags=tags))
+    tests_by_file[location.file].append(item)
+
+
+def collect_fixtures(item):
     fixtures = []
     for _, fixturedef in sorted(item._fixtureinfo.name2fixturedefs.items()):
         location = func_to_location(fixturedef[0].func)
         if is_artifical_fixture(fixturedef[0], location):
             continue
-        fixtures.append(collect_item(SuiteItem('fixture', location)))
 
-    _, line = inspect.getsourcelines(item._obj)
-    location = item_to_location(item, line)
+        tags = []
+        if hasattr(fixturedef[0].func, 'pytestmark'):
+            for mark in fixturedef[0].func.pytestmark:
+                tags.append(mark.name)
 
-    collect_item(SuiteItem('test', location, deps=fixtures))
-    tests_by_file[location.file].append(item)
+        fixtures.append(collect_item(SuiteItem('fixture', location, tags=tags)))
+    return fixtures
 
 
 # ======================================================================================

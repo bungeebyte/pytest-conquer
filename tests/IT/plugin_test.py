@@ -24,6 +24,22 @@ def test_function_pass(testdir):
     ]
 
 
+@pytest.mark.wip
+def test_function_tag(testdir):
+    test_file = 'fixtures/test_function_tag.py'
+    (result, scheduler) = run_test(testdir, [test_file])
+    assert_outcomes(result, passed=1)
+
+    assert scheduler.suite_items == [
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, None, 'test_pass', 4), tags=['tag']),
+    ]
+
+    assert scheduler.report_items == [
+        ReportItem('test', Location(test_file, None, 'test_pass', 4), 'passed'),
+    ]
+
+
 def test_function_fail(testdir):
     test_file = 'fixtures/test_function_fail.py'
     (result, scheduler) = run_test(testdir, [test_file])
@@ -263,6 +279,32 @@ def test_fixture_nested(testdir):
     ]
 
 
+def test_fixture_params(testdir):
+    test_file = 'fixtures/test_fixture_params.py'
+    (result, scheduler) = run_test(testdir, [test_file])
+    assert_outcomes(result, passed=2)
+
+    assert scheduler.suite_items == [
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location(test_file, None, 'fixture', 4)),
+        SuiteItem('test', Location(test_file, None, 'test_with_fixture[2]', 9), deps=[
+            SuiteItem('fixture', Location(test_file, None, 'fixture', 4)),
+        ]),
+        SuiteItem('test', Location(test_file, None, 'test_with_fixture[4]', 9), deps=[
+            SuiteItem('fixture', Location(test_file, None, 'fixture', 4)),
+        ]),
+    ]
+
+    assert scheduler.report_items == [
+        ReportItem('setup', Location('fixtures/test_fixture_params.py', None, 'fixture', 4), 'passed'),
+        ReportItem('setup', Location('fixtures/test_fixture_params.py', None, 'fixture', 4), 'passed'),
+        ReportItem('teardown', Location('fixtures/test_fixture_params.py', None, 'fixture', 4), 'passed'),
+        ReportItem('teardown', Location('fixtures/test_fixture_params.py', None, 'fixture', 4), 'passed'),
+        ReportItem('test', Location('fixtures/test_fixture_params.py', None, 'test_with_fixture[2]', 9), 'passed'),
+        ReportItem('test', Location('fixtures/test_fixture_params.py', None, 'test_with_fixture[4]', 9), 'passed'),
+    ]
+
+
 def test_fixture_session(testdir):
     test_file = 'fixtures/test_fixture_session.py'
     (result, scheduler) = run_test(testdir, [test_file])
@@ -341,6 +383,19 @@ def test_fixture_fail(testdir):
     ]
 
 
+def test_fixture_tag(testdir):
+    test_file = 'fixtures/test_fixture_tag.py'
+    (_, scheduler) = run_test(testdir, [test_file])
+
+    assert scheduler.suite_items == [
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location(test_file, None, 'fixture', 4), tags=['tag']),
+        SuiteItem('test', Location('fixtures/test_fixture_tag.py', None, 'test_with_fixture', 10), deps=[
+            SuiteItem('fixture', Location('fixtures/test_fixture_tag.py', None, 'fixture', 4), tags=['tag']),
+        ]),
+    ]
+
+
 def test_multiple_test_files(testdir):
     (result, scheduler) = run_test(testdir, ['fixtures/test_function_fail.py', 'fixtures/test_function_pass.py', 'fixtures/test_function_skip.py'])
     assert_outcomes(result, failed=1, passed=1, skipped=1)
@@ -365,7 +420,6 @@ def test_class(testdir):
     ]
 
 
-@pytest.mark.wip
 def test_class_inheritance(testdir):
     (result, scheduler) = run_test(testdir, ['fixtures/test_class_inheritance_1.py', 'fixtures/test_class_inheritance_2.py'])
     assert_outcomes(result, passed=3)

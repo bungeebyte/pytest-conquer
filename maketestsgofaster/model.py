@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 SuiteItem = \
-    namedtuple('SuiteItem', ['type', 'location', 'details', 'size', 'deps'])
+    namedtuple('SuiteItem', ['type', 'location', 'details', 'size', 'tags', 'deps'])
 SuiteItem.__new__.__defaults__ = (None,) * len(SuiteItem._fields)
 
 ReportItem = \
