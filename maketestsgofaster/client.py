@@ -1,6 +1,7 @@
 import json
 import time
 import zlib
+import sys
 
 from maketestsgofaster.vendor.httplib2 import Http
 from maketestsgofaster import logger
@@ -63,7 +64,7 @@ class Client():
                     logger.warning('could not get successful response from server: [%s] %s', type(last_err).__name__, last_err)
 
         if last_err:
-            raise SystemExit('server communication error - ' + str(last_err))
+            sys.exit('server communication error - ' + str(last_err))
 
         return result
 
