@@ -61,7 +61,7 @@ class Client():
                 if last_err:
                     attempts += 1
                     wait_before_retry = 2 ** attempts - (time.time() - start)
-                    logger.warning('could not get successful response from server: [%s] %s', type(last_err).__name__, last_err)
+                    logger.warning('could not get successful response from server: %s', last_err)
 
         if last_err:
             sys.exit('server communication error - ' + str(last_err))

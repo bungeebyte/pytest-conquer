@@ -112,7 +112,7 @@ class Worker(threading.Thread):
             while schedule.items:
                 pid = self.run_schedule(schedule)
                 schedule = scheduler.next(report_items.get(pid, []))
-        except SystemError as e:
+        except SystemExit as e:
             internal_error_code = 3  # see https://docs.pytest.org/en/latest/usage.html#possible-exit-codes
             pytest.exit(e.str(), internal_error_code)
 
