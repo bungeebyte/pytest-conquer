@@ -107,10 +107,15 @@ class Worker(threading.Thread):
         self.id = str(uuid.uuid4())
 
     def run(self):
-        schedule = scheduler.init(suite_items)
-        while schedule.items:
-            pid = self.run_schedule(schedule)
-            schedule = scheduler.next(report_items.get(pid, []))
+        try:
+            schedule = scheduler.init(suite_items)
+            while schedule.items:
+                pid = self.run_schedule(schedule)
+                schedule = scheduler.next(report_items.get(pid, []))
+        except SystemError as e:
+            internal_error_code = 3  # see https://docs.pytest.org/en/latest/usage.html#possible-exit-codes
+            pytest.exit(e.str(), internal_error_code)
+
 
     def run_schedule(self, schedule):
         tests = []

@@ -1,7 +1,7 @@
 import json
+import sys
 import time
 import zlib
-import sys
 
 from maketestsgofaster.vendor.httplib2 import Http
 from maketestsgofaster import logger
