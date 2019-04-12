@@ -116,7 +116,6 @@ class Worker(threading.Thread):
             internal_error_code = 3  # see https://docs.pytest.org/en/latest/usage.html#possible-exit-codes
             pytest.exit(e.str(), internal_error_code)
 
-
     def run_schedule(self, schedule):
         tests = []
         items = schedule.items
