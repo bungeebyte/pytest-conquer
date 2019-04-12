@@ -46,7 +46,7 @@ class Client():
             try:
                 headers['X-Attempt'] = str(attempts)
                 response, content = self.request(url, headers, body, max(0.01, self.api_timeout))  # since zero means 'no timeout'
-                log_msg = 'status code: ' + str(response.status) + ', request id: ' + str(response.get('x-request-id'))
+                log_msg = 'status code=' + str(response.status) + ', request id=' + str(response.get('x-request-id'))
                 if 200 <= response.status < 300:
                     result = json.loads(content.decode('utf-8'))
                     last_err = None
