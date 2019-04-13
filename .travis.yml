@@ -35,7 +35,7 @@ install:
 
 script:
   - tox -e $TOX_ENV
-  - (cd e2e/server_unreachable && tox -e $TOX_ENV) && [ $? -ne 3 ] && exit 1
+  - (cd e2e/server_unreachable && tox -e $TOX_ENV) && echo "exit code $?" && [ $? -eq 3 ]
 
 after_script:
   - coveralls
