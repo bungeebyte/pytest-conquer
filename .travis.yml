@@ -5,10 +5,10 @@ matrix:
     include:
       # oldest supported versions:
       - python: 3.4
-        env: TOX_ENV=py34 NOSE_VERSION===1.0.0 PYTEST_VERSION===3.0.5
+        env: TOX_ENV=py34 PYTEST_VERSION===3.0.5
       # previous major versions:
       - python: 3.4
-        env: TOX_ENV=py34 NOSE_VERSION===1.2.1 PYTEST_VERSION===3.10.1
+        env: TOX_ENV=py34 PYTEST_VERSION===3.10.1
       # latest:
       - python: 3.4
         env: TOX_ENV=py34
