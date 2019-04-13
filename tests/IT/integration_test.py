@@ -232,7 +232,7 @@ def test_give_up_when_receiving_400s_from_server(config, server):
 
 @pytest.mark.e2e
 def test_give_up_when_server_unreachable(config):
-    with pytest.raises(SystemExit, match='server communication error: Connection refused'):
+    with pytest.raises(SystemExit, match='server communication error: (.*) Connection refused'):
         settings = Settings(Env.create({
             'api_key': '42',
             'api_retries': '2',
