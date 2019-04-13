@@ -113,7 +113,8 @@ class Worker(threading.Thread):
                 pid = self.run_schedule(schedule)
                 schedule = scheduler.next(report_items.get(pid, []))
         except SystemExit as e:
-            self.session.exitstatus = 3  # see https://docs.pytest.org/en/latest/usage.html#possible-exit-codes
+            from _pytest.main import EXIT_INTERNALERROR
+            self.session.exitstatus = EXIT_INTERNALERROR
             raise self.session.Interrupted(e.__str__())
 
     def run_schedule(self, schedule):
