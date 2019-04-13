@@ -116,7 +116,7 @@ class Worker(threading.Thread):
                 schedule = scheduler.next(report_items.get(pid, []))
         except SystemExit as e:
             failure = e
-            raise self.session.Interrupted(e.__str__())
+            raise e
 
     def run_schedule(self, schedule):
         tests = []
