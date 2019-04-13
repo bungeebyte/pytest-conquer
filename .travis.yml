@@ -35,7 +35,7 @@ install:
 
 script:
   - tox -e $TOX_ENV
-  - e2e/server_unreachable/test.sh $TOX_ENV
+  - bash e2e/server_unreachable/test.sh $TOX_ENV
 
 after_script:
   - coveralls
