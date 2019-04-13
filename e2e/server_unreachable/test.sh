@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -xe
 
 tox -e $1
 ret=$?
