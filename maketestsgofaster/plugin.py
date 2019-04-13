@@ -19,6 +19,7 @@ from maketestsgofaster.settings import Settings
 from maketestsgofaster.terminal import ParallelTerminalReporter
 
 
+failure = None
 manager = multiprocessing.Manager()
 report_items = manager.dict()
 settings = None
@@ -107,14 +108,14 @@ class Worker(threading.Thread):
         self.id = str(uuid.uuid4())
 
     def run(self):
+        global failure
         try:
             schedule = scheduler.init(suite_items)
             while schedule.items:
                 pid = self.run_schedule(schedule)
                 schedule = scheduler.next(report_items.get(pid, []))
         except SystemExit as e:
-            from _pytest.main import EXIT_INTERNALERROR
-            self.session.exitstatus = EXIT_INTERNALERROR
+            failure = e
             raise self.session.Interrupted(e.__str__())
 
     def run_schedule(self, schedule):
@@ -158,10 +159,10 @@ class Process(multiprocessing.Process):
 
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
-    print('In plugin session finish')
-    print(exitstatus)
-    from _pytest.main import EXIT_INTERNALERROR
-    session.exitstatus = EXIT_INTERNALERROR
+    global failure
+    if failure:
+        from _pytest.main import EXIT_INTERNALERROR
+        session.exitstatus = EXIT_INTERNALERROR
 
 
 # ======================================================================================
