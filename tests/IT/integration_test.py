@@ -213,7 +213,7 @@ def test_retry_on_server_error(config, server):
 
 @pytest.mark.e2e
 def test_give_up_when_receiving_400s_from_server(config, server):
-    with pytest.raises(SystemExit, match='server communication error - status code: 400, request id: <unique-request-id>'):
+    with pytest.raises(SystemExit, match='server communication error: status code=400, request id=<unique-request-id>'):
         settings = Settings(Env.create({
             'api_key': '42',
             'api_retry_cap': '0',
@@ -232,7 +232,7 @@ def test_give_up_when_receiving_400s_from_server(config, server):
 
 @pytest.mark.e2e
 def test_give_up_when_server_unreachable(config):
-    with pytest.raises(SystemExit, match='server communication error - (.*) Connection refused'):
+    with pytest.raises(SystemExit, match='server communication error: Connection refused'):
         settings = Settings(Env.create({
             'api_key': '42',
             'api_retries': '2',

@@ -156,6 +156,14 @@ class Process(multiprocessing.Process):
         return self.err
 
 
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    print('In plugin session finish')
+    print(exitstatus)
+    from _pytest.main import EXIT_INTERNALERROR
+    session.exitstatus = EXIT_INTERNALERROR
+
+
 # ======================================================================================
 # COLLECTION
 # ======================================================================================

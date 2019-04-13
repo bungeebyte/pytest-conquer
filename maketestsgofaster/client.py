@@ -64,7 +64,7 @@ class Client():
                     logger.warning('could not get successful response from server: %s', last_err)
 
         if last_err:
-            sys.exit('server communication error - ' + str(last_err))
+            sys.exit('server communication error: ' + str(last_err))
 
         return result
 
