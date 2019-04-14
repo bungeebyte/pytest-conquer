@@ -38,7 +38,7 @@ script: |
 
   if [ $TOX_ENV -ne flake8 ]; then
     (cd e2e/server_unreachable && tox -e $TOX_ENV)
-    check="$?
+    check="$?"
     echo "got exit code $check"
     if [ $check -ne 3 ]; then exit 1; fi
   fi
