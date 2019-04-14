@@ -3,7 +3,7 @@ import sys
 import time
 import zlib
 
-from maketestsgofaster.vendor.httplib2 import Http
+from maketestsgofaster.vendor.httplib2 import Http, HttpLib2Error
 from maketestsgofaster import logger
 
 
@@ -54,7 +54,7 @@ class Client():
                     last_err = log_msg
                     if response.status != 404 and 400 <= response.status < 500:  # this means we'll likely not recover anyway
                         break
-            except IOError as e:
+            except (HttpLib2Error, IOError) as e:
                 self.api_urls.reverse()  # let's try the next API URL because this one seems unreachable
                 last_err = e
             finally:

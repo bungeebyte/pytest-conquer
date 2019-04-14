@@ -51,7 +51,7 @@ def test_successful_server_communication(config, server):
 
     server.next_response(200, {
         'items': [
-            {'file': 'tests/IT/stub/stub_A.py', 'func': 'test_A'},
+            {'file': 'tests/IT/stub/stub_A.py'},
         ]})
 
     assert scheduler.init([
@@ -100,9 +100,8 @@ def test_successful_server_communication(config, server):
 
     server.next_response(200, {
         'items': [
-            {'file': 'tests/IT/stub/stub_B.py', 'func': 'test_B_1'},
-            {'file': 'tests/IT/stub/stub_B.py', 'func': 'test_B_2'},
-            {'file': 'tests/IT/stub/stub_C.py', 'func': 'test_C'},
+            {'file': 'tests/IT/stub/stub_B.py'},
+            {'file': 'tests/IT/stub/stub_C.py'},
         ]})
 
     assert scheduler.next([
@@ -198,7 +197,7 @@ def test_retry_on_server_error(config, server):
 
     server.next_response(500, {})
     server.next_response(500, {})
-    server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py', 'func': 'test_A'}]})
+    server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py'}]})
 
     assert scheduler.init([
         SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', None), '42', []),

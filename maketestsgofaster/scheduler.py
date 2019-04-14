@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from maketestsgofaster import logger
 from maketestsgofaster.client import Client
 from maketestsgofaster.model import Schedule, ScheduleItem
@@ -25,13 +23,11 @@ class Scheduler:
         return self.__parse_schedule(schedule_data)
 
     def __parse_schedule(self, data):
-        tests_by_file = OrderedDict()
+        schedule_items = []
         for item in data['items']:
-            tests_by_file.setdefault(item['file'], [])
-            tests_by_file[item['file']].append(item['func'])
-        items = [ScheduleItem(f) for f in tests_by_file.keys()]
-        logger.debug('received schedule with %s item(s)', len(items))
-        return Schedule(items)
+            schedule_items.append(ScheduleItem(item['file']))
+        logger.debug('received schedule with %s item(s)', len(schedule_items))
+        return Schedule(schedule_items)
 
     def validate_settings(self, settings):
         settings.validate()
