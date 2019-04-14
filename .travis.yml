@@ -33,10 +33,15 @@ install:
   - pip install tox
   - pip install coveralls
 
-script:
-  # - tox -e $TOX_ENV
-  - (cd e2e/server_unreachable && tox -e $TOX_ENV) && check="$?" && echo "got exit code $check"
-  - if [ $check -eq 3 ]; then exit 1; fi
+script: |
+  tox -e $TOX_ENV
+
+  if [ $TOX_ENV -ne flake8 ]; then
+    (cd e2e/server_unreachable && tox -e $TOX_ENV)
+    check="$?
+    echo "got exit code $check"
+    if [ $check -ne 3 ]; then exit 1; fi
+  fi
 
 after_script:
   - coveralls
