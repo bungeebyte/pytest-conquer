@@ -36,7 +36,7 @@ install:
 script: |
   # tox -e $TOX_ENV
 
-  if [ $TOX_ENV == "flake8" ]; then
+  if [ $TOX_ENV != "flake8" ]; then
     (cd e2e/server_unreachable && tox -e $TOX_ENV)
     check="$?"
     echo "got exit code $check"
