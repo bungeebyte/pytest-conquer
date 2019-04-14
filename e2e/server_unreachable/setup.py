@@ -5,5 +5,5 @@ from setuptools import setup
 
 setup(
     name='maketestsgofaster-server_unreachable',
-    version='1.0.0'
+    version='1.0.0',
 )
