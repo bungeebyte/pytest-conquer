@@ -369,21 +369,6 @@ def test_class_inheritance(testdir):
     (result, scheduler) = run_test(testdir, ['fixtures/test_class_inheritance_1.py', 'fixtures/test_class_inheritance_2.py'])
     assert_outcomes(result, passed=3)
 
-    # print(scheduler.suite_items)
-
-    # [SuiteItem(type='class', location=Location(file='fixtures/test_class_inheritance_1.py', module='test_class_inheritance_1', cls='TestObject1', func=None, line=None), details=None, size=None, scope=None, deps=None),
-    # SuiteItem(type='class', location=Location(file='fixtures/test_class_inheritance_2.py', module='test_class_inheritance_1', cls='TestObject2', func=None, line=None), details=None, size=None, scope=None, deps=None),
-    # SuiteItem(type='class', location=Location(file='fixtures/test_class_inheritance_2.py', module='test_class_inheritance_2', cls='TestObject2', func=None, line=None), details=None, size=None, scope=None, deps=None),
-    # SuiteItem(type='file', location=Location(file='fixtures/test_class_inheritance_1.py', module=None, cls=None, func=None, line=None), details=None, size=42, scope=None, deps=None),
-    # SuiteItem(type='file', location=Location(file='fixtures/test_class_inheritance_2.py', module=None, cls=None, func=None, line=None), details=None, size=42, scope=None, deps=None),
-    # SuiteItem(type='setup', location=Location(file='fixtures/test_class_inheritance_1.py', module='test_class_inheritance_1', cls='TestObject1', func='setup_class', line=3), details=None, size=None, scope='class', deps=None),
-    # SuiteItem(type='setup', location=Location(file='fixtures/test_class_inheritance_2.py', module='test_class_inheritance_1', cls='TestObject2', func='setup_class', line=3), details=None, size=None, scope='class', deps=None),
-    # SuiteItem(type='teardown', location=Location(file='fixtures/test_class_inheritance_1.py', module='test_class_inheritance_1', cls='TestObject1', func='teardown_class', line=7), details=None, size=None, scope='class', deps=None),
-    # SuiteItem(type='teardown', location=Location(file='fixtures/test_class_inheritance_2.py', module='test_class_inheritance_1', cls='TestObject2', func='teardown_class', line=7), details=None, size=None, scope='class', deps=None),
-    # SuiteItem(type='test', location=Location(file='fixtures/test_class_inheritance_1.py', module='test_class_inheritance_1', cls='TestObject1', func='test1', line=11), details=None, size=None, scope=None, deps=None),
-    # SuiteItem(type='test', location=Location(file='fixtures/test_class_inheritance_2.py', module='test_class_inheritance_1', cls='TestObject2', func='test1', line=11), details=None, size=None, scope=None, deps=None),
-    # SuiteItem(type='test', location=Location(file='fixtures/test_class_inheritance_2.py', module='test_class_inheritance_2', cls='TestObject2', func='test2', line=6), details=None, size=None, scope=None, deps=None)]
-
     assert scheduler.suite_items == [
         SuiteItem('class', Location('fixtures/test_class_inheritance_1.py', 'test_class_inheritance_1', 'TestObject1')),
         SuiteItem('class', Location('fixtures/test_class_inheritance_2.py', 'test_class_inheritance_2', 'TestObject2')),
