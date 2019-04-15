@@ -126,6 +126,7 @@ def test_successful_server_communication(config, server):
                 'message': 'assert 1 + 1 == 4',
             },
             'process_id': 'pid',
+            'worker_id': 'wid',
             'status': 'failed',
             'started_at': '2000-01-01T00:00:00.000Z',
             'finished_at': '2000-01-01T00:00:00.000Z',
@@ -153,6 +154,7 @@ def test_successful_server_communication(config, server):
                 'line': 1,
                 'status': 'passed',
                 'process_id': 'pid',
+                'worker_id': 'wid',
                 'started_at': '2000-01-01T00:00:00.000Z',
                 'finished_at': '2000-01-01T00:00:00.000Z',
             }, {
@@ -164,6 +166,7 @@ def test_successful_server_communication(config, server):
                 'line': 2,
                 'status': 'passed',
                 'process_id': 'pid',
+                'worker_id': 'wid',
                 'started_at': '2000-01-01T00:00:00.000Z',
                 'finished_at': '2000-01-01T00:00:00.000Z',
             }, {
@@ -175,6 +178,7 @@ def test_successful_server_communication(config, server):
                 'line': 4,
                 'status': 'skipped',
                 'process_id': 'pid',
+                'worker_id': 'wid',
                 'started_at': '2000-01-01T00:00:00.000Z',
                 'finished_at': '2000-01-01T00:00:00.000Z',
             },

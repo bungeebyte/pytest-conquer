@@ -161,7 +161,8 @@ class ReportSerializer:
             'func': Serializer.truncate(item.location.func, 1024),
             'line': item.location.line,
             'status': item.status,
-            'process_id': Serializer.truncate(item.process_id, 64),
+            'process_id': item.process_id,
+            'worker_id': item.worker_id,
             'started_at': item.started_at.strftime(ReportSerializer.date_format),
             'finished_at': item.finished_at.strftime(ReportSerializer.date_format),
         }
