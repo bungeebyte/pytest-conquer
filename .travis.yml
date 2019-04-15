@@ -34,8 +34,13 @@ install:
   - pip install coveralls
 
 script: |
-  # tox -e $TOX_ENV
+  # unit/integration tests
+  tox -e $TOX_ENV
 
+  # E2E test #1
+  (cd e2e/simple && tox -e $TOX_ENV)
+
+  # E2E test #2
   if [ $TOX_ENV != "flake8" ]; then
     (cd e2e/server_unreachable && tox -e $TOX_ENV)
     check="$?"

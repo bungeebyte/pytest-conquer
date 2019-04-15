@@ -201,6 +201,13 @@ def collect_test(item):
 
 
 @pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    item.__start_time = datetime.utcnow()
+    yield
+    item.__finish_time = datetime.utcnow()
+
+
+@pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
 
@@ -211,7 +218,8 @@ def pytest_runtest_makereport(item, call):
 
     def report_test(failure=None):
         status = report.outcome or 'passed'
-        report_item('test', location, status, call.start, call.stop, failure)
+        report_item('test', location, status,
+                    getattr(item, '__start_time', None), getattr(item, '__finish_time', None), failure)
 
     if report.when == 'call':
         failure = None
@@ -360,7 +368,7 @@ def report_item(type, location, status, start, end, failure):
         items = report_items[process_id]
     worker_id = threading.current_thread().id
     items.append(ReportItem(type, location, status, failure, start, end, worker_id, process_id))
-    report_items[process_id] = items  # only be reassigning will the data be synced
+    report_items[process_id] = items  # only by reassigning will the data be synced
 
 
 def func_to_location(func, obj=None):

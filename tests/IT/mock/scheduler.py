@@ -45,6 +45,7 @@ class MockScheduler(Scheduler):
     def __fixed_report(self, report_items):
         items = []
         for item in report_items:
+            print(item)
             item = item._replace(started_at=None, finished_at=None, process_id=None, worker_id=None)
             items.append(item)
         return items
