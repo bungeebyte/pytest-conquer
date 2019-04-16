@@ -37,11 +37,12 @@ script: |
   # unit/integration tests
   tox -e $TOX_ENV
 
+  # end-to-end tests
   if [ $TOX_ENV != "flake8" ]; then
     (cd e2e/server_unreachable && tox -e $TOX_ENV)
     check="$?"
     echo "got exit code $check"
-    if [ $check != "3" ]; then exit 1; fi
+    if [ $check != 3 ]; then exit 1; fi
   fi
 
 after_script:
