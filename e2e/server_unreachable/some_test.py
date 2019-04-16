@@ -2,4 +2,4 @@ import time
 
 
 def test_a():
-    time.sleep(20)
+    time.sleep(1)
