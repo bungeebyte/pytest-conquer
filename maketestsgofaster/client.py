@@ -3,8 +3,8 @@ import sys
 import time
 import zlib
 
-from maketestsgofaster.vendor.httplib2 import Http, HttpLib2Error
-from maketestsgofaster import logger
+from testandconquer.vendor.httplib2 import Http, HttpLib2Error
+from testandconquer import logger
 
 
 class Client():

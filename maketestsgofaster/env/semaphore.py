@@ -1,6 +1,6 @@
 import os
 
-from maketestsgofaster.env import Env
+from testandconquer.env import Env
 
 
 # https://semaphoreci.com/docs/available-environment-variables.html

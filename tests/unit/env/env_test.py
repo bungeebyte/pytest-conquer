@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
+from testandconquer.env import Env
 
 
 def test_get_default():
@@ -23,8 +23,8 @@ def test_get_from_override(custom_env):
 
 @pytest.fixture()
 def custom_env():
-    os.environ['mtgf_build_node'] = '42'
-    os.environ['MTGF_BUILD_ID'] = '42'
+    os.environ['conquer_build_node'] = '42'
+    os.environ['CONQUER_BUILD_ID'] = '42'
     yield
-    del os.environ['MTGF_BUILD_ID']
-    del os.environ['mtgf_build_node']
+    del os.environ['CONQUER_BUILD_ID']
+    del os.environ['conquer_build_node']

@@ -3,8 +3,8 @@ import os.path
 
 import pytest
 
-import maketestsgofaster.scheduler
-from maketestsgofaster.model import Failure, Location, ReportItem, SuiteItem
+import testandconquer.scheduler
+from testandconquer.model import Failure, Location, ReportItem, SuiteItem
 
 from tests.IT.mock.scheduler import MockScheduler
 
@@ -533,10 +533,10 @@ def test_load_failed(testdir):
 def test_settings(testdir):
     run_test(testdir, ['fixtures/test_class.py'])
 
-    settings = maketestsgofaster.plugin.settings
+    settings = testandconquer.plugin.settings
 
     assert settings.runner_name == 'pytest'
-    assert settings.runner_plugins == {('pytest-cov', '2.5.1'), ('pytest-mock', '1.6.3'), ('maketestsgofaster', '1.0.0')}
+    assert settings.runner_plugins == {('pytest-cov', '2.5.1'), ('pytest-mock', '1.6.3'), ('testandconquer', '1.0.0')}
     assert settings.runner_root == os.getcwd()
     assert settings.runner_version == pytest.__version__
 
@@ -550,10 +550,10 @@ def module_for(file):
 
 @pytest.fixture(scope='module', autouse=True)
 def mock_schedule():
-    previous = maketestsgofaster.scheduler.Scheduler
-    maketestsgofaster.scheduler.Scheduler = MockScheduler
+    previous = testandconquer.scheduler.Scheduler
+    testandconquer.scheduler.Scheduler = MockScheduler
     yield
-    maketestsgofaster.scheduler.Scheduler = previous
+    testandconquer.scheduler.Scheduler = previous
 
 
 def run_test(pyt, files, *args):
@@ -567,7 +567,7 @@ def run_test(pyt, files, *args):
             source_by_name[file] = f.readlines()
     pyt.makepyfile(**source_by_name)
     test_result = pyt.runpytest('-s', *args)
-    return (test_result, maketestsgofaster.plugin.scheduler)
+    return (test_result, testandconquer.plugin.scheduler)
 
 
 def assert_outcomes(result, passed=0, skipped=0, failed=0, error=0):

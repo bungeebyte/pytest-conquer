@@ -9,10 +9,10 @@ from datetime import datetime, timezone
 import psutil
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.scheduler import Scheduler
-from maketestsgofaster.settings import Settings
-from maketestsgofaster.model import Failure, Location, ReportItem, ScheduleItem, SuiteItem
+from testandconquer.env import Env
+from testandconquer.scheduler import Scheduler
+from testandconquer.settings import Settings
+from testandconquer.model import Failure, Location, ReportItem, ScheduleItem, SuiteItem
 
 from tests.IT.mock.server import Server
 

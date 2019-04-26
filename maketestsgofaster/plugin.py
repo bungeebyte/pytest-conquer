@@ -12,11 +12,11 @@ from datetime import datetime
 import pytest
 from _pytest import main
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.model import Failure, Location, SuiteItem, ReportItem
-from maketestsgofaster.scheduler import Scheduler
-from maketestsgofaster.settings import Settings
-from maketestsgofaster.terminal import ParallelTerminalReporter
+from testandconquer.env import Env
+from testandconquer.model import Failure, Location, SuiteItem, ReportItem
+from testandconquer.scheduler import Scheduler
+from testandconquer.settings import Settings
+from testandconquer.terminal import ParallelTerminalReporter
 
 
 failure = None
@@ -38,7 +38,7 @@ worker_id = None
 
 
 def pytest_addoption(parser):
-    group = parser.getgroup('pytest-mtgf')
+    group = parser.getgroup('pytest-conquer')
 
     workers_help = 'Set the number of workers. Default is 1, to use all CPU cores set to \'max\'.'
     group.addoption('--w', '--workers', action='store', default='1', dest='workers', help=workers_help)
@@ -52,7 +52,7 @@ def pytest_configure(config):
 
     if settings.plugin_enabled():
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
-            raise SystemExit('Sorry, maketestsgofaster requires at least pytest 3.0.5\n')
+            raise SystemExit('Sorry, testandconquer requires at least pytest 3.0.5\n')
 
         scheduler = Scheduler(settings)
 

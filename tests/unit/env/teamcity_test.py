@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.teamcity import TeamCity
+from testandconquer.env import Env
+from testandconquer.env.teamcity import TeamCity
 
 
 def test_create(teamcity_version):

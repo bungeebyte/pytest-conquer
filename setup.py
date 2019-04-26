@@ -5,27 +5,27 @@ import os
 from setuptools import setup
 
 setup(
-    name='maketestsgofaster',
+    name='testandconquer',
     version=os.environ.get('RELEASE_VERSION', '1.0.0'),
     author='Stephan Behnke',
-    author_email='maketestsgofaster@stephanbehnke.com',
+    author_email='hello@testandconquer.com',
     maintainer='Stephan Behnke',
-    maintainer_email='maketestsgofaster@stephanbehnke.com',
+    maintainer_email='hello@testandconquer.com',
     license='MIT',
-    url='https://github.com/maketestsgofaster/python',
+    url='https://github.com/testandconquer/pytest-conquer',
     description='Test framework plugin to parallize tests efficiently.',
     packages=[
-        'maketestsgofaster',
-        'maketestsgofaster.env',
-        'maketestsgofaster.vendor',
-        'maketestsgofaster.vendor.httplib2',
+        'testandconquer',
+        'testandconquer.env',
+        'testandconquer.vendor',
+        'testandconquer.vendor.httplib2',
     ],
     package_data={
-        'maketestsgofaster.vendor.httplib2': ['*.txt'],
+        'testandconquer.vendor.httplib2': ['*.txt'],
     },
     entry_points={
         'pytest11': [
-            'maketestsgofaster = maketestsgofaster.plugin',
+            'testandconquer = testandconquer.plugin',
         ],
     },
     install_requires=[

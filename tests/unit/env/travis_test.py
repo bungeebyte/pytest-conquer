@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.travis import Travis
+from testandconquer.env import Env
+from testandconquer.env.travis import Travis
 
 
 def test_create(travis_env):

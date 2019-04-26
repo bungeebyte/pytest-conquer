@@ -7,7 +7,7 @@ import sys
 import psutil
 
 from enum import Enum
-from maketestsgofaster import __version__
+from testandconquer import __version__
 
 
 class Capability(Enum):
@@ -29,7 +29,7 @@ class Settings():
         self.api_retries = self.__parse_int('api_retries', 6)
         self.api_retry_cap = self.__parse_int('api_retry_cap', 60)
         self.api_timeout = self.__parse_int('api_timeout', 10)
-        self.api_urls = self.__parse('api_url', ['https://scheduler.maketestsgofaster.com', 'https://scheduler.maketestsgofaster.co'])
+        self.api_urls = self.__parse('api_url', ['https://scheduler.testandconquer.com', 'https://scheduler.testandconquer.co'])
         if not isinstance(self.api_urls, list):
             self.api_urls = [self.api_urls]
 
@@ -53,7 +53,7 @@ class Settings():
         self.platform_name = 'python'
         self.platform_version = platform.python_version()
         if env.python_version() < (3, 4):
-            raise SystemExit('Sorry, maketestsgofaster requires at least Python 3.4\n')
+            raise SystemExit('Sorry, testandconquer requires at least Python 3.4\n')
 
         if self.__parse('workers', '').lower() == 'max':
             self.plugin_workers = multiprocessing.cpu_count()
@@ -86,7 +86,7 @@ class Settings():
 
     def __parse(self, name, default=None):
         return self.env.get(name) or \
-            self.config.get('maketestsgofaster', name, fallback=None) or \
+            self.config.get('conquer', name, fallback=None) or \
             self.cmd_args.get(name, None) or \
             default
 

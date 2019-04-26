@@ -1,6 +1,6 @@
 import os
 
-from maketestsgofaster.env import Env
+from testandconquer.env import Env
 
 
 # https://docs.travis-ci.com/user/environment-variables/#Default-Environment-Variables

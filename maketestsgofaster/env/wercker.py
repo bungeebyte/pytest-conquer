@@ -1,6 +1,6 @@
 import os
 
-from maketestsgofaster.env import Env
+from testandconquer.env import Env
 
 
 # http://devcenter.wercker.com/docs/environment-variables/available-env-vars

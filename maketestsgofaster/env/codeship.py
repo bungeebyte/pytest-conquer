@@ -1,6 +1,6 @@
 import os
 
-from maketestsgofaster.env import Env
+from testandconquer.env import Env
 
 
 # https://documentation.codeship.com/basic/builds-and-configuration/set-environment-variables/#default-environment-variables

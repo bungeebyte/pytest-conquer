@@ -4,6 +4,6 @@
 from setuptools import setup
 
 setup(
-    name='maketestsgofaster-server_unreachable',
+    name='testandconquer-server_unreachable',
     version='1.0.0',
 )

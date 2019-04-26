@@ -1,6 +1,6 @@
 import os
 
-from maketestsgofaster.env import Custom, Env
+from testandconquer.env import Custom, Env
 
 
 def test_create():

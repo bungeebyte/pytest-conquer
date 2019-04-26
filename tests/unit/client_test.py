@@ -1,8 +1,8 @@
 import pytest
 
-from maketestsgofaster.client import Client
-from maketestsgofaster.env import Env
-from maketestsgofaster.settings import Settings
+from testandconquer.client import Client
+from testandconquer.env import Env
+from testandconquer.settings import Settings
 
 
 MOCK_CONTENT = """{"message": "Hello world!"}""".encode()
