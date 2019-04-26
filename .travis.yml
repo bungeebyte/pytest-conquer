@@ -5,10 +5,10 @@ matrix:
     include:
       # oldest supported versions:
       - python: 3.4
-        env: TOX_ENV=py34 NOSE_VERSION===1.0.0 PYTEST_VERSION===3.0.5
+        env: TOX_ENV=py34 PYTEST_VERSION===3.0.5
       # previous major versions:
       - python: 3.4
-        env: TOX_ENV=py34 NOSE_VERSION===1.2.1 PYTEST_VERSION===3.10.1
+        env: TOX_ENV=py34 PYTEST_VERSION===3.10.1
       # latest:
       - python: 3.4
         env: TOX_ENV=py34
@@ -33,8 +33,21 @@ install:
   - pip install tox
   - pip install coveralls
 
-script:
-  - tox -e $TOX_ENV
+script: |
+  # unit/integration tests
+  tox -e $TOX_ENV
+
+  # end-to-end tests
+  if [ $TOX_ENV != "flake8" ]; then
+    cd e2e/server_unreachable
+    tox -e $TOX_ENV | tee tox.log
+    if grep -q "exited with code 3" tox.log; then
+      echo "found exit code 3"
+    else
+      echo "expected exit code 3"
+      exit 1
+    fi
+  fi
 
 after_script:
   - coveralls

@@ -25,7 +25,7 @@ class TestClient():
 
     def test_do_not_retry_on_400(self):
         client = MockClient([(MockResponse(400), MOCK_CONTENT)])
-        with pytest.raises(RuntimeError, match='server communication error - status code: 400, request id: REQ_ID'):
+        with pytest.raises(SystemExit, match='server communication error: status code=400, request id=REQ_ID'):
             client.send('/endpoint', {})
 
     def test_switch_api_url_for_connection_problems(self):
@@ -48,7 +48,7 @@ class TestClient():
             (MockResponse(500), MOCK_CONTENT),
         ])
 
-        with pytest.raises(RuntimeError, match='server communication error - status code: 500, request id: REQ_ID'):
+        with pytest.raises(SystemExit, match='server communication error: status code=500, request id=REQ_ID'):
             client.send('/endpoint', {})
 
     def test_give_up_when_persistent_connection_error(self):
@@ -59,7 +59,7 @@ class TestClient():
             IOError('unable to reach server'),
         ])
 
-        with pytest.raises(RuntimeError, match='server communication error - unable to reach server'):
+        with pytest.raises(SystemExit, match='server communication error: unable to reach server'):
             client.send('/endpoint', {})
 
 

@@ -1,4 +1,4 @@
-python
+pytest-conquer
 ====
 
-[![Build Status](https://travis-ci.org/speedrun/python.svg?branch=master)](https://travis-ci.org/speedrun/python) [![Coverage Status](https://coveralls.io/repos/github/speedrun/python/badge.svg?branch=master)](https://coveralls.io/github/speedrun/python?branch=master)
+[![Build Status](https://travis-ci.org/testandconquer/pytest-conquer.svg?branch=master)](https://travis-ci.org/testandconquer/pytest-conquer) [![Coverage Status](https://coveralls.io/repos/github/testandconquer/pytest-conquer/badge.svg?branch=master)](https://coveralls.io/github/testandconquer/pytest-conquer?branch=master)

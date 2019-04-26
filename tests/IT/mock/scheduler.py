@@ -1,4 +1,3 @@
-from collections import namedtuple
 from multiprocessing import Manager
 
 from maketestsgofaster.scheduler import Scheduler
@@ -30,11 +29,11 @@ class MockScheduler(Scheduler):
 
     @property
     def suite_items(self):
-        return self.__sorted(self.__fixed_file_size(self._suite_items))
+        return self.__sorted(self.__fixed_suite(self._suite_items))
 
     @property
     def report_items(self):
-        return self.__sorted(self.__fixed_time(self._report_items))
+        return self.__sorted(self.__fixed_report(self._report_items))
 
     def __next(self):
         with synchronization['lock']:
@@ -43,25 +42,25 @@ class MockScheduler(Scheduler):
                 items = [ScheduleItem(self._suite_files.pop(0))]
             return Schedule(items)
 
-    def __fixed_time(self, report_items):
+    def __fixed_report(self, report_items):
         items = []
         for item in report_items:
-            if item.time > 0.0:
-                asdict = item._asdict()
-                asdict['time'] = 0.1
-                items.append(namedtuple('ReportItem', asdict.keys())(**asdict))
-            else:
-                items.append(item)
+            item = item._replace(started_at=None, finished_at=None, process_id=None, worker_id=None)
+            items.append(item)
         return items
 
-    def __fixed_file_size(self, suite_items):
+    def __fixed_suite(self, suite_items):
         items = []
         for item in suite_items:
-            asdict = item._asdict()
-            asdict['file_size'] = 42
-            asdict['deps'] = self.__fixed_file_size(asdict['deps'])
-            items.append(namedtuple('SuiteItem', asdict.keys())(**asdict))
+            if item.type == 'file':
+                item = item._replace(size=42)
+            item = item._replace(deps=self.__fixed_suite(item.deps) if item.deps else None)
+            items.append(item)
         return items
 
     def __sorted(self, items):
-        return sorted(items, key=lambda item: (item.type, item.location.file.lower(), item.location.name.lower()))
+        return sorted(items, key=lambda item: (
+            item.type,
+            item.location.file.lower(),
+            (item.location.cls or '').lower(),
+            (item.location.func or '').lower()))
