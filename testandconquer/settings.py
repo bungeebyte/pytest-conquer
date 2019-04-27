@@ -29,7 +29,7 @@ class Settings():
         self.api_retries = self.__parse_int('api_retries', 6)
         self.api_retry_cap = self.__parse_int('api_retry_cap', 60)
         self.api_timeout = self.__parse_int('api_timeout', 10)
-        self.api_urls = self.__parse('api_url', ['https://scheduler.testandconquer.com', 'https://scheduler.testandconquer.co'])
+        self.api_urls = self.__parse('api_url', ['https://scheduler.testandconquer.com', 'https://scheduler.testconquer.com'])
         if not isinstance(self.api_urls, list):
             self.api_urls = [self.api_urls]
 

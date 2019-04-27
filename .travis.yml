@@ -35,7 +35,7 @@ install:
 
 script: |
   # unit/integration tests
-  tox -e $TOX_ENV
+  tox -e $TOX_ENV or exit 1
 
   # end-to-end tests
   if [ $TOX_ENV != "flake8" ]; then
