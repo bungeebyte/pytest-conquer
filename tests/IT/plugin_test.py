@@ -536,7 +536,7 @@ def test_settings(testdir):
     settings = testandconquer.plugin.settings
 
     assert settings.runner_name == 'pytest'
-    assert settings.runner_plugins == {('pytest-cov', '2.5.1'), ('pytest-mock', '1.6.3'), ('pytest-conquer-wrong', '1.0.0')}
+    assert settings.runner_plugins == {('pytest-cov', '2.5.1'), ('pytest-mock', '1.6.3'), ('pytest-conquer', '1.0.0')}
     assert settings.runner_root == os.getcwd()
     assert settings.runner_version == pytest.__version__
 
