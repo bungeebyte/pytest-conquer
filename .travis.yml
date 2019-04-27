@@ -33,21 +33,22 @@ install:
   - pip install tox
   - pip install coveralls
 
-script: |
+script:
   # unit/integration tests
-  tox -e $TOX_ENV
+  - tox -e $TOX_ENV
 
   # end-to-end tests
-  if [ $TOX_ENV != "flake8" ]; then
-    cd e2e/server_unreachable
-    tox -e $TOX_ENV | tee tox.log
-    if grep -q "exited with code 3" tox.log; then
-      echo "found exit code 3"
-    else
-      echo "expected exit code 3"
-      exit 1
+  - |
+    if [ $TOX_ENV != "flake8" ]; then
+      cd e2e/server_unreachable
+      tox -e $TOX_ENV | tee tox.log
+      if grep -q "exited with code 3" tox.log; then
+        echo "found exit code 3"
+      else
+        echo "expected exit code 3"
+        exit 1
+      fi
     fi
-  fi
 
 after_script:
   - coveralls
