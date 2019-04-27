@@ -25,7 +25,7 @@ setup(
     },
     entry_points={
         'pytest11': [
-            'testandconquer = testandconquer.plugin',
+            'pytest-conquer = testandconquer.plugin',
         ],
     },
     install_requires=[

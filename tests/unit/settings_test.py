@@ -51,7 +51,7 @@ class TestInitSettings():
 
     def test_api_url_default(self):
         settings = Settings(MockedEnv())
-        assert settings.api_urls == ['https://scheduler.testandconquer.com', 'https://scheduler.testandconquer.co']
+        assert settings.api_urls == ['https://scheduler.testandconquer.com', 'https://scheduler.testconquer.com']
 
     def test_build_id(self):
         settings = Settings(MockedEnv({
