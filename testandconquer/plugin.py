@@ -41,7 +41,7 @@ def pytest_addoption(parser):
     group = parser.getgroup('pytest-conquer')
 
     workers_help = 'Set the number of workers. Default is 1, to use all CPU cores set to \'max\'.'
-    group.addoption('--w', '--workers', action='store', default='1', dest='workers', help=workers_help)
+    group.addoption('--workers', action='store', default='1', dest='workers', help=workers_help)
 
 
 @pytest.hookimpl(trylast=True)  # we need to wait for the 'terminalreporter' to be loaded
