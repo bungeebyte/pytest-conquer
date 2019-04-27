@@ -3,5 +3,5 @@ omit =
   .tox/*
   tests/*
   setup.py
-  conquer/vendor/*
+  testandconquer/vendor/*
   /private/var/*

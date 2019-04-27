@@ -5,7 +5,7 @@ import os
 from setuptools import setup
 
 setup(
-    name='testandconquer',
+    name='pytest-conquer',
     version=os.environ.get('RELEASE_VERSION', '1.0.0'),
     author='Stephan Behnke',
     author_email='hello@testandconquer.com',
@@ -13,7 +13,7 @@ setup(
     maintainer_email='hello@testandconquer.com',
     license='MIT',
     url='https://github.com/testandconquer/pytest-conquer',
-    description='Test framework plugin to parallize tests efficiently.',
+    description='pytest plugin to parallize tests efficiently.',
     packages=[
         'testandconquer',
         'testandconquer.env',
