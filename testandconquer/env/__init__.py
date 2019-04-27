@@ -3,11 +3,11 @@ import os
 import uuid
 import sys
 
-from maketestsgofaster import logger
-from maketestsgofaster.git import Git
+from testandconquer import logger
+from testandconquer.git import Git
 
 
-ENV_PREFIX = 'MTGF_'
+ENV_PREFIX = 'CONQUER_'
 
 
 class Env:

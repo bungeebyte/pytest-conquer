@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.gitlab import GitLab
+from testandconquer.env import Env
+from testandconquer.env.gitlab import GitLab
 
 
 def test_create(gitlab9_env):

@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.appveyor import AppVeyor
+from testandconquer.env import Env
+from testandconquer.env.appveyor import AppVeyor
 
 
 def test_create(appveyor_env):

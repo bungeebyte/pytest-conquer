@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.semaphore import Semaphore
+from testandconquer.env import Env
+from testandconquer.env.semaphore import Semaphore
 
 
 def test_create(semaphore_env):

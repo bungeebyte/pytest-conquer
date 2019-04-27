@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.jenkins import Jenkins
+from testandconquer.env import Env
+from testandconquer.env.jenkins import Jenkins
 
 
 def test_create(jenkins_env):

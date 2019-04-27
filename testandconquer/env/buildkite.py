@@ -1,6 +1,6 @@
 import os
 
-from maketestsgofaster.env import Env
+from testandconquer.env import Env
 
 
 # https://buildkite.com/docs/guides/environment-variables

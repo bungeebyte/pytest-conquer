@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from maketestsgofaster.settings import Settings
+from testandconquer.settings import Settings
 
 
 class TestInitSettings():
@@ -51,7 +51,7 @@ class TestInitSettings():
 
     def test_api_url_default(self):
         settings = Settings(MockedEnv())
-        assert settings.api_urls == ['https://scheduler.maketestsgofaster.com', 'https://scheduler.maketestsgofaster.co']
+        assert settings.api_urls == ['https://scheduler.testandconquer.com', 'https://scheduler.testandconquer.co']
 
     def test_build_id(self):
         settings = Settings(MockedEnv({

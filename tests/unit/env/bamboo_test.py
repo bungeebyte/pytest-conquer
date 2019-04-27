@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.bamboo import Bamboo
+from testandconquer.env import Env
+from testandconquer.env.bamboo import Bamboo
 
 
 def test_create(bamboo_env):

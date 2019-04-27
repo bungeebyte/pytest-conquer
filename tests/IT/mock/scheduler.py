@@ -1,7 +1,7 @@
 from multiprocessing import Manager
 
-from maketestsgofaster.scheduler import Scheduler
-from maketestsgofaster.model import Schedule, ScheduleItem
+from testandconquer.scheduler import Scheduler
+from testandconquer.model import Schedule, ScheduleItem
 
 
 manager = Manager()

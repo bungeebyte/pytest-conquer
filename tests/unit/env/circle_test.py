@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.circle import Circle
+from testandconquer.env import Env
+from testandconquer.env.circle import Circle
 
 
 def test_create(circle_env):

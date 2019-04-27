@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.shippable import Shippable
+from testandconquer.env import Env
+from testandconquer.env.shippable import Shippable
 
 
 def test_create(shippable_env):

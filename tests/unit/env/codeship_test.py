@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.codeship import Codeship
+from testandconquer.env import Env
+from testandconquer.env.codeship import Codeship
 
 
 def test_create(codeship_basic_env):

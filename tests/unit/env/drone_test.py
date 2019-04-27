@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from maketestsgofaster.env import Env
-from maketestsgofaster.env.drone import Drone
+from testandconquer.env import Env
+from testandconquer.env.drone import Drone
 
 
 def test_create(drone_env):

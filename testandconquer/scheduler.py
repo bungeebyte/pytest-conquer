@@ -1,6 +1,6 @@
-from maketestsgofaster import logger
-from maketestsgofaster.client import Client
-from maketestsgofaster.model import Schedule, ScheduleItem
+from testandconquer import logger
+from testandconquer.client import Client
+from testandconquer.model import Schedule, ScheduleItem
 
 
 class Scheduler:

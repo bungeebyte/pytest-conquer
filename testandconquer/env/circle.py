@@ -1,6 +1,6 @@
 import os
 
-from maketestsgofaster.env import Env
+from testandconquer.env import Env
 
 
 # https://circleci.com/docs/2.0/env-vars/#circleci-built-in-environment-variables

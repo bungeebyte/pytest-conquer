@@ -1,6 +1,6 @@
 import os
 
-from maketestsgofaster.env import Env
+from testandconquer.env import Env
 
 
 # https://confluence.atlassian.com/bamboo/bamboo-variables-289277087.html
