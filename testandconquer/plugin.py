@@ -13,7 +13,7 @@ import pytest
 from _pytest import main
 
 from testandconquer.env import Env
-from testandconquer.model import Failure, Location, SuiteItem, ReportItem
+from testandconquer.model import Failure, Location, SuiteItem, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
 from testandconquer.settings import Settings
 from testandconquer.terminal import ParallelTerminalReporter
@@ -182,17 +182,29 @@ def pytest_collection_modifyitems(session, config, items):
 
 
 def collect_test(item):
+    location = item_to_location(item)
+    fixtures = collect_fixtures(item)
+    collect_item(SuiteItem('test', location, deps=fixtures, tags=parse_tags(item.iter_markers())))
+    tests_by_file[location.file].append(item)
+
+
+def collect_fixtures(item):
     fixtures = []
     for _, fixturedef in sorted(item._fixtureinfo.name2fixturedefs.items()):
         location = func_to_location(fixturedef[0].func)
         if is_artifical_fixture(fixturedef[0], location):
             continue
-        fixtures.append(collect_item(SuiteItem('fixture', location)))
 
-    location = item_to_location(item)
+        tags = None
+        if hasattr(fixturedef[0].func, 'pytestmark'):
+            tags = parse_tags(fixturedef[0].func.pytestmark)
 
-    collect_item(SuiteItem('test', location, deps=fixtures))
-    tests_by_file[location.file].append(item)
+        fixtures.append(collect_item(SuiteItem('fixture', location, tags=tags)))
+    return fixtures
+
+
+def parse_tags(marks):
+    return [Tag(mark.name, list(mark.args), mark.kwargs) for mark in marks if mark.name != 'parametrize']
 
 
 # ======================================================================================

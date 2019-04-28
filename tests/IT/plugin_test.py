@@ -4,7 +4,7 @@ import os.path
 import pytest
 
 import testandconquer.scheduler
-from testandconquer.model import Failure, Location, ReportItem, SuiteItem
+from testandconquer.model import Failure, Location, ReportItem, SuiteItem, Tag
 
 from tests.IT.mock.scheduler import MockScheduler
 
@@ -130,6 +130,21 @@ def test_function_parameterized(testdir):
         ReportItem('test', Location(test_file, module_for(test_file), None, 'test_param[2+4-6]', 4), 'passed'),
         ReportItem('test', Location(test_file, module_for(test_file), None, 'test_param[3+5-8]', 4), 'passed'),
         ReportItem('test', Location(test_file, module_for(test_file), None, 'test_param[6*9-54]', 4), 'passed'),
+    ]
+
+
+def test_function_tag(testdir):
+    test_file = 'fixtures/test_function_tag.py'
+    (result, scheduler) = run_test(testdir, [test_file])
+    assert_outcomes(result, passed=1)
+
+    assert scheduler.suite_items == [
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_pass', 4), tags=[Tag('tag', [], {})]),
+    ]
+
+    assert scheduler.report_items == [
+        ReportItem('test', Location(test_file, module_for(test_file), None, 'test_pass', 4), 'passed'),
     ]
 
 
@@ -308,7 +323,7 @@ def test_fixture_import(testdir):
         SuiteItem('file', Location('fixtures/fixture.py'), size=42),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('fixture', Location('fixtures/fixture.py', 'fixture', None, 'fixture_import', 4)),
-        SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_with_fixture', 5), deps=[
+        SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_with_fixture', 5), tags=[Tag('usefixtures', ['fixture_import'], {})], deps=[
             SuiteItem('fixture', Location('fixtures/fixture.py', 'fixture', None, 'fixture_import', 4)),
         ]),
     ]
@@ -338,6 +353,19 @@ def test_fixture_fail(testdir):
                    Failure('Exception', 'setup failed')),
         ReportItem('teardown', Location(test_file, module_for(test_file), None, 'fixture', 4), 'passed'),
         ReportItem('test', Location(test_file, module_for(test_file), None, 'test_with_fixture', 9), 'failed'),
+    ]
+
+
+def test_fixture_tag(testdir):
+    test_file = 'fixtures/test_fixture_tag.py'
+    (_, scheduler) = run_test(testdir, [test_file])
+
+    assert scheduler.suite_items == [
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('fixture', Location(test_file, module_for(test_file), None, 'fixture', 4), tags=[Tag('tag', [], {'arg1': '1', 'arg2': 2})]),
+        SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_with_fixture', 10), deps=[
+            SuiteItem('fixture', Location(test_file, module_for(test_file), None, 'fixture', 4), tags=[Tag('tag', [], {'arg1': '1', 'arg2': 2})]),
+        ]),
     ]
 
 

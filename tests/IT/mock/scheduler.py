@@ -54,6 +54,7 @@ class MockScheduler(Scheduler):
         for item in suite_items:
             if item.type == 'file':
                 item = item._replace(size=42)
+            item = item._replace(tags=item.tags if item.tags else None)
             item = item._replace(deps=self.__fixed_suite(item.deps) if item.deps else None)
             items.append(item)
         return items
