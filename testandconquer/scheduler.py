@@ -123,8 +123,19 @@ class SuiteSerializer:
             data['class'] = Serializer.truncate(item.location.cls, 1024)
         if item.location.line:
             data['line'] = item.location.line
+        if item.tags:
+            data['tags'] = [SuiteSerializer.serialize_tag(t) for t in item.tags]
         if item.deps:
             data['deps'] = [SuiteSerializer.serialize_fixture_ref(f) for f in item.deps]
+        return data
+
+    @staticmethod
+    def serialize_tag(tag):
+        data = {'name': Serializer.truncate(tag.name, 1024)}
+        if tag.args:
+            data['args'] = [Serializer.truncate(str(arg), 1024) for arg in tag.args]
+        if tag.kwargs:
+            data['kwargs'] = {Serializer.truncate(key, 1024): Serializer.truncate(str(value), 1024) for (key, value) in tag.kwargs.items()}
         return data
 
     @staticmethod

@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 SuiteItem = \
-    namedtuple('SuiteItem', ['type', 'location', 'details', 'size', 'scope', 'deps'])
+    namedtuple('SuiteItem', ['type', 'location', 'details', 'size', 'scope', 'tags', 'deps'])
 SuiteItem.__new__.__defaults__ = (None,) * len(SuiteItem._fields)
 
 ReportItem = \
@@ -17,6 +17,10 @@ ScheduleItem = \
 Location = \
     namedtuple('Location', ['file', 'module', 'cls', 'func', 'line'])
 Location.__new__.__defaults__ = (None,) * len(Location._fields)
+
+Tag = \
+    namedtuple('Tag', ['name', 'args', 'kwargs'])
+Tag.__new__.__defaults__ = (None,) * len(Tag._fields)
 
 Failure = \
     namedtuple('Failure', ['type', 'message'])
