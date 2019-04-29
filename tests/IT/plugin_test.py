@@ -140,7 +140,7 @@ def test_function_tag(testdir):
 
     assert scheduler.suite_items == [
         SuiteItem('file', Location(test_file), size=42),
-        SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_pass', 4), tags=[Tag('tag', [], {})]),
+        SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_pass', 4), tags=[Tag('test', False)]),
     ]
 
     assert scheduler.report_items == [
@@ -323,7 +323,7 @@ def test_fixture_import(testdir):
         SuiteItem('file', Location('fixtures/fixture.py'), size=42),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('fixture', Location('fixtures/fixture.py', 'fixture', None, 'fixture_import', 4)),
-        SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_with_fixture', 5), tags=[Tag('usefixtures', ['fixture_import'], {})], deps=[
+        SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_with_fixture', 5), deps=[
             SuiteItem('fixture', Location('fixtures/fixture.py', 'fixture', None, 'fixture_import', 4)),
         ]),
     ]
@@ -362,9 +362,9 @@ def test_fixture_tag(testdir):
 
     assert scheduler.suite_items == [
         SuiteItem('file', Location(test_file), size=42),
-        SuiteItem('fixture', Location(test_file, module_for(test_file), None, 'fixture', 4), tags=[Tag('tag', [], {'arg1': '1', 'arg2': 2})]),
+        SuiteItem('fixture', Location(test_file, module_for(test_file), None, 'fixture', 4), tags=[Tag('my_group', True)]),
         SuiteItem('test', Location(test_file, module_for(test_file), None, 'test_with_fixture', 10), deps=[
-            SuiteItem('fixture', Location(test_file, module_for(test_file), None, 'fixture', 4), tags=[Tag('tag', [], {'arg1': '1', 'arg2': 2})]),
+            SuiteItem('fixture', Location(test_file, module_for(test_file), None, 'fixture', 4), tags=[Tag('my_group', True)]),
         ]),
     ]
 
@@ -383,7 +383,7 @@ def test_class(testdir):
     assert_outcomes(result, passed=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject')),
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 1)),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test', 3)),
     ]
@@ -393,13 +393,26 @@ def test_class(testdir):
     ]
 
 
+@pytest.mark.wip
+def test_class_tags(testdir):
+    test_file = 'fixtures/test_class_tag.py'
+    (result, scheduler) = run_test(testdir, [test_file])
+    assert_outcomes(result, passed=1)
+
+    assert scheduler.suite_items == [
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 5), tags=[Tag('my_group', False)]),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test', 7)),
+    ]
+
+
 def test_class_inheritance(testdir):
     (result, scheduler) = run_test(testdir, ['fixtures/test_class_inheritance_1.py', 'fixtures/test_class_inheritance_2.py'])
     assert_outcomes(result, passed=3)
 
     assert scheduler.suite_items == [
-        SuiteItem('class', Location('fixtures/test_class_inheritance_1.py', 'test_class_inheritance_1', 'TestObject1')),
-        SuiteItem('class', Location('fixtures/test_class_inheritance_2.py', 'test_class_inheritance_2', 'TestObject2')),
+        SuiteItem('class', Location('fixtures/test_class_inheritance_1.py', 'test_class_inheritance_1', 'TestObject1', None, 1)),
+        SuiteItem('class', Location('fixtures/test_class_inheritance_2.py', 'test_class_inheritance_2', 'TestObject2', None, 4)),
         SuiteItem('file', Location('fixtures/test_class_inheritance_1.py'), size=42),
         SuiteItem('file', Location('fixtures/test_class_inheritance_2.py'), size=42),
         SuiteItem('setup', Location('fixtures/test_class_inheritance_1.py', 'test_class_inheritance_1', 'TestObject1', 'setup_class', 3), scope='class'),
@@ -428,7 +441,7 @@ def test_class_setup(testdir):
     assert_outcomes(result, passed=2)
 
     assert scheduler.suite_items == [
-        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject')),
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 4)),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('setup', Location(test_file, module_for(test_file), 'TestObject', 'setup_class', 6), scope='class'),
         SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test1', 11)),
@@ -442,14 +455,26 @@ def test_class_setup(testdir):
     ]
 
 
+@pytest.mark.wip
+def test_class_setup_tag(testdir):
+    test_file = 'fixtures/test_class_setup_tag.py'
+    (_, scheduler) = run_test(testdir, [test_file])
+
+    assert scheduler.suite_items == [
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 4)),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('setup', Location(test_file, module_for(test_file), 'TestObject', 'setup_class', 6), scope='class', tags=[Tag('my_group', False)]),
+    ]
+
+
 def test_class_nested(testdir):
     test_file = 'fixtures/test_class_nested.py'
     (result, scheduler) = run_test(testdir, [test_file])
     assert_outcomes(result, passed=2)
 
     assert scheduler.suite_items == [
-        SuiteItem('class', Location(test_file, module_for(test_file), 'TestOuter')),
-        SuiteItem('class', Location(test_file, module_for(test_file), 'TestOuter.TestInner')),
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestOuter', None, 1)),
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestOuter.TestInner', None, 3)),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('setup', Location(test_file, module_for(test_file), 'TestOuter', 'setup_class', 22), scope='class'),
         SuiteItem('setup', Location(test_file, module_for(test_file), 'TestOuter', 'setup_method', 30), scope='method'),
@@ -495,7 +520,7 @@ def test_class_method_setup_fail(testdir):
     assert_outcomes(result, error=1)
 
     assert scheduler.suite_items == [
-        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject')),
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 1)),
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('setup', Location(test_file, module_for(test_file), 'TestObject', 'setup_method', 3), scope='method'),
         SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test', 6)),

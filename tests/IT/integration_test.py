@@ -56,8 +56,8 @@ def test_successful_server_communication(config, server):
 
     assert scheduler.init([
         SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', 1)),
-        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_1', 1), tags=[Tag('tag', [1], {})]),
-        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_2', 2), tags=[Tag('tag', [], {'arg1': '1', 'arg2': 2})]),
+        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_1', 1), tags=[Tag('my_group', False)]),
+        SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_2', 2), tags=[Tag(999, True)]),
         SuiteItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 1)),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_A.py'),
@@ -79,14 +79,14 @@ def test_successful_server_communication(config, server):
             'class': 'TestClass',
             'func': 'test_B_1',
             'line': 1,
-            'tags': [{'name': 'tag', 'args': ['1']}],
+            'tags': [{'group': 'my_group'}],
         }, {
             'type': 'test',
             'file': 'tests/IT/stub/stub_B.py',
             'module': 'stub_B',
             'class': 'TestClass',
             'func': 'test_B_2',
-            'tags': [{'name': 'tag', 'kwargs': {'arg1': '1', 'arg2': '2'}}],
+            'tags': [{'group': '999', 'singleton': True}],
             'line': 2,
         }, {
             'type': 'test',
