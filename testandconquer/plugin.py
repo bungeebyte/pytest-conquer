@@ -418,8 +418,12 @@ def func_to_location(func, obj=None):
 def parse_tags(obj):
     marks = []
 
+    print(obj)
+
     if hasattr(obj, 'pytestmark'):
         marks.extend([m for m in obj.pytestmark if getattr(m, 'name', None) == 'conquer'])
+    elif hasattr(obj, 'conquer'):  # before pytest 3.6
+        marks.append(getattr(obj, 'conquer'))
 
     tags = []
     for mark in marks:
@@ -428,6 +432,13 @@ def parse_tags(obj):
         group = mark.kwargs.get('group', None)
         singleton = mark.kwargs.get('singleton', None) is True
         tags.append(Tag(group, singleton))
+
+    # special case for pytest before 3.6:
+    # remove tags from function if the class has the same
+    if inspect.ismethod(obj):
+        cls = obj.__self__
+        if parse_tags(cls) == tags:
+            return []
 
     return tags
 

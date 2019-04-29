@@ -393,6 +393,7 @@ def test_class(testdir):
     ]
 
 
+@pytest.mark.wip
 def test_class_tags(testdir):
     test_file = 'fixtures/test_class_tag.py'
     (result, scheduler) = run_test(testdir, [test_file])
@@ -454,6 +455,7 @@ def test_class_setup(testdir):
     ]
 
 
+@pytest.mark.wip
 def test_class_setup_tag(testdir):
     test_file = 'fixtures/test_class_setup_tag.py'
     (_, scheduler) = run_test(testdir, [test_file])
