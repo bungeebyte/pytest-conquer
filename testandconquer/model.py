@@ -19,7 +19,7 @@ Location = \
 Location.__new__.__defaults__ = (None,) * len(Location._fields)
 
 Tag = \
-    namedtuple('Tag', ['name', 'args', 'kwargs'])
+    namedtuple('Tag', ['group', 'singleton'])
 Tag.__new__.__defaults__ = (None,) * len(Tag._fields)
 
 Failure = \

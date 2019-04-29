@@ -171,40 +171,43 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 @pytest.hookimpl(hookwrapper=True)
+def pytest_pycollect_makeitem(collector, name, obj):
+    node = (yield).get_result()  # let other plugins go first
+
+    if settings.plugin_enabled():
+        if inspect.isclass(obj):
+            location = func_to_location(None, obj)
+            collect_item(SuiteItem('class', location, tags=parse_tags(obj)))
+
+    return node
+
+
+@pytest.hookimpl(hookwrapper=True)
 def pytest_collection_modifyitems(session, config, items):
     yield  # let other plugins go first
 
-    if not settings.plugin_enabled():
-        return
-
-    for item in items:
-        collect_test(item)
+    if settings.plugin_enabled():
+        for node in items:
+            collect_test(node)
 
 
-def collect_test(item):
-    location = item_to_location(item)
-    fixtures = collect_fixtures(item)
-    collect_item(SuiteItem('test', location, deps=fixtures, tags=parse_tags(item.iter_markers())))
-    tests_by_file[location.file].append(item)
+def collect_test(node):
+    location = node_to_location(node)
+    fixtures = collect_fixtures(node)
+    collect_item(SuiteItem('test', location, deps=fixtures, tags=parse_tags(node.obj)))
+    tests_by_file[location.file].append(node)
 
 
-def collect_fixtures(item):
+def collect_fixtures(node):
     fixtures = []
-    for _, fixturedef in sorted(item._fixtureinfo.name2fixturedefs.items()):
-        location = func_to_location(fixturedef[0].func)
-        if is_artifical_fixture(fixturedef[0], location):
-            continue
-
-        tags = None
-        if hasattr(fixturedef[0].func, 'pytestmark'):
-            tags = parse_tags(fixturedef[0].func.pytestmark)
-
-        fixtures.append(collect_item(SuiteItem('fixture', location, tags=tags)))
+    if hasattr(node, '_fixtureinfo'):
+        for _, fixturedef in sorted(node._fixtureinfo.name2fixturedefs.items()):
+            fixture_fn = fixturedef[0].func
+            location = func_to_location(fixture_fn)
+            if is_artifical_fixture(fixturedef[0], location):
+                continue
+            fixtures.append(collect_item(SuiteItem('fixture', location, tags=parse_tags(fixture_fn))))
     return fixtures
-
-
-def parse_tags(marks):
-    return [Tag(mark.name, list(mark.args), mark.kwargs) for mark in marks if mark.name != 'parametrize']
 
 
 # ======================================================================================
@@ -226,7 +229,7 @@ def pytest_runtest_makereport(item, call):
     if not settings.plugin_enabled():
         return report
 
-    location = item_to_location(item)
+    location = node_to_location(item)
 
     def report_test(failure=None):
         status = report.outcome or 'passed'
@@ -280,7 +283,7 @@ def report_fixture_step(type, started_at, fixturedef, result):
 
 
 # ======================================================================================
-# SETUP / TEARDOWN REPORTING
+# SETUP / TEARDOWN COLLECTION & REPORTING
 # ======================================================================================
 
 
@@ -314,7 +317,7 @@ def add_introspection(obj, names, type, scope):
         if hasattr(func, '__wrapped__'):
             func = func.__wrapped__
         func_loc = func_to_location(func, obj)
-        collect_item(SuiteItem(type, func_loc, scope=scope))
+        collect_item(SuiteItem(type, func_loc, scope=scope, tags=parse_tags(func)))
         wrapped_func = wrap_with_report_func(func, func_loc, type)
         wrapped_func.__wrapped__ = func
         setattr(obj, name, wrapped_func)
@@ -365,10 +368,6 @@ def collect_item(item):
             suite_item_file_size_by_file[file] = file_size
         collect(SuiteItem('file', Location(file), size=file_size))
 
-        cls = item.location.cls
-        if cls:
-            collect(SuiteItem('class', Location(file, item.location.module, cls)))
-
     return item
 
 
@@ -383,10 +382,26 @@ def report_item(type, location, status, start, end, failure):
     report_items[process_id] = items  # only by reassigning will the data be synced
 
 
+def node_to_location(node):
+    func = node.obj
+    if inspect.ismethod(func):
+        obj = node.parent.parent.obj
+    else:
+        obj = node.parent.obj
+    location = func_to_location(func, obj)
+
+    nodeid = node.nodeid \
+        .replace('::()::', '::') \
+        .split('::')
+    name = nodeid.pop()
+
+    return location._replace(func=name)
+
+
 def func_to_location(func, obj=None):
     abs_file = inspect.getfile(obj) if obj else inspect.getfile(func)
     rel_file = os.path.relpath(abs_file, settings.runner_root)
-    name = func.__name__
+    name = func.__name__ if func else None
     classes = []
     if inspect.isclass(obj):
         for cls in obj.__qualname__.split('.')[::-1]:
@@ -394,26 +409,27 @@ def func_to_location(func, obj=None):
     elif inspect.ismethod(obj):
         for cls in obj.__qualname__.split('.')[:-1][::-1]:
             classes.append(cls)
-    _, line = inspect.getsourcelines(func)
+    _, line = inspect.getsourcelines(func or obj)
     cls = '.'.join(classes[::-1]) if classes else None
     module = inspect.getmodule(obj or func).__name__
     return Location(rel_file, module, cls, name, line)
 
 
-def item_to_location(item):
-    func = item.obj
-    if inspect.ismethod(func):
-        obj = item.parent.parent.obj
-    else:
-        obj = item.parent.obj
-    location = func_to_location(func, obj)
+def parse_tags(obj):
+    marks = []
 
-    # names can can contain extra parameters
-    nodeid = item.nodeid \
-        .replace('::()::', '::') \
-        .split('::')
-    name = nodeid.pop()
-    return location._replace(func=name)
+    if hasattr(obj, 'pytestmark'):
+        marks.extend([m for m in obj.pytestmark if getattr(m, 'name', None) == 'conquer'])
+
+    tags = []
+    for mark in marks:
+        if mark is None:
+            continue
+        group = mark.kwargs.get('group', None)
+        singleton = mark.kwargs.get('singleton', None) is True
+        tags.append(Tag(group, singleton))
+
+    return tags
 
 
 def to_failure(exc_info):
