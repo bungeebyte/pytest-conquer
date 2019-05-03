@@ -1,8 +1,8 @@
 import pytest
 
 from testandconquer.client import Client
-from testandconquer.env import Env
-from testandconquer.settings import Settings
+
+from tests.IT.mock.settings import MockSettings
 
 
 MOCK_CONTENT = """{"message": "Hello world!"}""".encode()
@@ -12,7 +12,7 @@ class TestClient():
 
     def test_send_successfully(self):
         client = MockClient([(MockResponse(200), MOCK_CONTENT)])
-        res = client.send('/endpoint', {})
+        res = client.post('/endpoint', {})
         assert res == {'message': 'Hello world!'}
 
     def test_retry_on_404(self):
@@ -20,13 +20,13 @@ class TestClient():
             (MockResponse(404), MOCK_CONTENT),
             (MockResponse(200), MOCK_CONTENT),
         ])
-        res = client.send('/endpoint', {})
+        res = client.post('/endpoint', {})
         assert res == {'message': 'Hello world!'}
 
     def test_do_not_retry_on_400(self):
         client = MockClient([(MockResponse(400), MOCK_CONTENT)])
         with pytest.raises(SystemExit, match='server communication error: status code=400, request id=REQ_ID'):
-            client.send('/endpoint', {})
+            client.post('/endpoint', {})
 
     def test_switch_api_url_for_connection_problems(self):
         client = MockClient([
@@ -35,7 +35,7 @@ class TestClient():
             IOError('unable to reach server'),
             (MockResponse(200), MOCK_CONTENT),
         ])
-        client.send('/endpoint', {})
+        client.post('/endpoint', {})
         assert client.requests[0]['url'] != client.requests[1]['url']  # switch URL for connection issue
         assert client.requests[1]['url'] == client.requests[2]['url']  # keep URL for API error
         assert client.requests[2]['url'] != client.requests[3]['url']  # switch again for connection issue
@@ -49,7 +49,7 @@ class TestClient():
         ])
 
         with pytest.raises(SystemExit, match='server communication error: status code=500, request id=REQ_ID'):
-            client.send('/endpoint', {})
+            client.post('/endpoint', {})
 
     def test_give_up_when_persistent_connection_error(self):
         client = MockClient([
@@ -60,20 +60,22 @@ class TestClient():
         ])
 
         with pytest.raises(SystemExit, match='server communication error: unable to reach server'):
-            client.send('/endpoint', {})
+            client.post('/endpoint', {})
 
 
 class MockClient(Client):
-    def __init__(self, responses, settings=Settings(Env.create({
-        'api_retries': '3',
-        'api_retry_cap': '0',
-        'api_timeout': '0',
-    }))):
-        super().__init__(settings)
+    def __init__(self, responses):
+        super().__init__(MockSettings({
+            'api_key': 'API_KEY',
+            'api_retries': '3',
+            'api_retry_cap': '0',
+            'api_timeout': '0',
+            'api_urls': ['API_URL'],
+        }))
         self.responses = responses
         self.requests = []
 
-    def request(self, url, headers, body, timeout):
+    def _do_request(self, url, headers, body, timeout):
         self.requests.append({'url': url, 'headers': headers, 'body': body})
         head, tail = self.responses[0], self.responses[1:]
         self.responses = tail

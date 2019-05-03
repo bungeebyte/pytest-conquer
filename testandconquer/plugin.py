@@ -12,17 +12,14 @@ from datetime import datetime
 import pytest
 from _pytest import main
 
-from testandconquer.env import Env
 from testandconquer.model import Failure, Location, SuiteItem, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
-from testandconquer.settings import Settings
 from testandconquer.terminal import ParallelTerminalReporter
 
 
 failure = None
 manager = multiprocessing.Manager()
 report_items = manager.dict()
-settings = None
 scheduler = None
 suite_items = []
 suite_item_locations = set()
@@ -46,15 +43,13 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl(trylast=True)  # we need to wait for the 'terminalreporter' to be loaded
 def pytest_configure(config):
-    global reporter, scheduler, settings
+    global reporter, scheduler
 
-    settings = create_settings(config)
+    scheduler = Scheduler(generate_args(config))
 
-    if settings.plugin_enabled():
+    if scheduler.settings.plugin_enabled():
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
             raise SystemExit('Sorry, testandconquer requires at least pytest 3.0.5\n')
-
-        scheduler = Scheduler(settings)
 
         # replace the builtin reporter with our own that handles concurrency better
         builtin_reporter = config.pluginmanager.get_plugin('terminalreporter')
@@ -64,20 +59,14 @@ def pytest_configure(config):
             config.pluginmanager.register(reporter, 'terminalreporter')
 
 
-def create_settings(config):
-    plugin_args = {
+def generate_args(config):
+    return {
+        'runner_name': 'pytest',
+        'runner_plugins': [(dist.project_name, dist.version) for plugin, dist in config.pluginmanager.list_plugin_distinfo()],
+        'runner_root': str(config.rootdir),
+        'runner_version': pytest.__version__,
         'workers': config.option.workers,
     }
-
-    res = Settings(Env.create(), plugin_args)
-
-    res.runner_name = 'pytest'
-    for plugin, dist in config.pluginmanager.list_plugin_distinfo():
-        res.runner_plugins.add((dist.project_name, dist.version))
-    res.runner_root = str(config.rootdir)
-    res.runner_version = pytest.__version__
-
-    return res
 
 
 # ======================================================================================
@@ -86,11 +75,11 @@ def create_settings(config):
 
 
 def pytest_runtestloop(session):
-    if not settings.plugin_enabled():
+    if not scheduler.settings.plugin_enabled():
         return main.pytest_runtestloop(session)
 
     threads = []
-    no_of_workers = settings.plugin_workers
+    no_of_workers = scheduler.settings.client_workers
     for i in range(no_of_workers):
         t = Worker(args=[session])
         threads.append(t)
@@ -174,7 +163,7 @@ def pytest_sessionfinish(session, exitstatus):
 def pytest_pycollect_makeitem(collector, name, obj):
     node = (yield).get_result()  # let other plugins go first
 
-    if settings.plugin_enabled():
+    if scheduler.settings.plugin_enabled():
         if inspect.isclass(obj):
             location = func_to_location(None, obj)
             collect_item(SuiteItem('class', location, tags=parse_tags(obj)))
@@ -186,7 +175,7 @@ def pytest_pycollect_makeitem(collector, name, obj):
 def pytest_collection_modifyitems(session, config, items):
     yield  # let other plugins go first
 
-    if settings.plugin_enabled():
+    if scheduler.settings.plugin_enabled():
         for node in items:
             collect_test(node)
 
@@ -226,7 +215,7 @@ def pytest_runtest_call(item):
 def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
 
-    if not settings.plugin_enabled():
+    if not scheduler.settings.plugin_enabled():
         return report
 
     location = node_to_location(item)
@@ -269,7 +258,7 @@ def pytest_fixture_post_finalizer(fixturedef):
 
 
 def report_fixture_step(type, started_at, fixturedef, result):
-    if not settings.plugin_enabled():
+    if not scheduler.settings.plugin_enabled():
         return
 
     location = func_to_location(fixturedef.func)
@@ -289,7 +278,7 @@ def report_fixture_step(type, started_at, fixturedef, result):
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_make_collect_report(collector):
-    if not settings.plugin_enabled():
+    if not scheduler.settings.plugin_enabled():
         return
 
     if not hasattr(collector, 'obj'):
@@ -400,7 +389,7 @@ def node_to_location(node):
 
 def func_to_location(func, obj=None):
     abs_file = inspect.getfile(obj) if obj else inspect.getfile(func)
-    rel_file = os.path.relpath(abs_file, settings.runner_root)
+    rel_file = os.path.relpath(abs_file, scheduler.settings.runner_root)
     name = func.__name__ if func else None
     classes = []
     if inspect.isclass(obj):
@@ -417,8 +406,6 @@ def func_to_location(func, obj=None):
 
 def parse_tags(obj):
     marks = []
-
-    print(obj)
 
     if hasattr(obj, 'pytestmark'):
         marks.extend([m for m in obj.pytestmark if getattr(m, 'name', None) == 'conquer'])

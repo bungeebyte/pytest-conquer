@@ -15,21 +15,29 @@ class Client():
         self.api_retry_cap = settings.api_retry_cap
         self.api_timeout = settings.api_timeout
         self.api_urls = settings.api_urls
-        self.build_id = settings.build_id
-        self.build_node = settings.build_node
+        self.build_id = getattr(settings, 'build_id', None)  # might not be initialized yet
+        self.build_node = getattr(settings, 'build_node', None)  # might not be initialized yet
         self.user_agent = settings.client_name + '/' + settings.client_version
 
-    def send(self, path, data):
+    def get(self, path):
+        return self._request(path)
+
+    def post(self, path, data):
         body = zlib.compress(json.dumps(data).encode('utf8'))
+        return self._request(path, body)
+
+    def _request(self, path, body=None):
         headers = {
             'Accept': 'application/json',
             'Authorization': self.api_key,
             'Content-Encoding': 'gzip',
             'Content-Type': 'application/json; charset=UTF-8',
             'User-Agent': self.user_agent,
-            'X-Build-Id': self.build_id,
-            'X-Build-Node': self.build_node,
         }
+        if self.build_id:
+            headers['X-Build-Id'] = self.build_id
+        if self.build_node:
+            headers['X-Build-Node'] = self.build_node
 
         attempts = 0
         result = None
@@ -45,7 +53,7 @@ class Client():
 
             try:
                 headers['X-Attempt'] = str(attempts)
-                response, content = self.request(url, headers, body, max(0.01, self.api_timeout))  # since zero means 'no timeout'
+                response, content = self._do_request(url, headers, body, max(0.01, self.api_timeout))  # since zero means 'no timeout'
                 log_msg = 'status code=' + str(response.status) + ', request id=' + str(response.get('x-request-id'))
                 if 200 <= response.status < 300:
                     result = json.loads(content.decode('utf-8'))
@@ -68,8 +76,8 @@ class Client():
 
         return result
 
-    def request(self, url, headers, body, timeout):
+    def _do_request(self, url, headers, body, timeout):
         http = Http(timeout=timeout)
-        response, content = http.request(
-            url, 'POST', headers=headers, body=body)
-        return response, content
+        if body:
+            return http.request(url, 'POST', headers=headers, body=body)
+        return http.request(url, 'GET', headers=headers)

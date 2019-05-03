@@ -1,4 +1,3 @@
-import configparser
 import multiprocessing
 import os
 import platform
@@ -7,6 +6,7 @@ import sys
 import psutil
 
 from enum import Enum
+from testandconquer.env import Env
 from testandconquer import __version__
 
 
@@ -18,12 +18,8 @@ class Capability(Enum):
 
 
 class Settings():
-    def __init__(self, env, cmd_args={}):
-        self.env = env
-        self.cmd_args = cmd_args
-
-        self.config = configparser.ConfigParser()
-        self.config.read('pytest.ini')
+    def __init__(self, args={}):
+        self.env = Env(args)
 
         self.api_key = self.__parse('api_key')
         self.api_retries = self.__parse_int('api_retries', 6)
@@ -33,14 +29,6 @@ class Settings():
         if not isinstance(self.api_urls, list):
             self.api_urls = [self.api_urls]
 
-        self.build_dir = self.__parse('build_dir', os.getcwd())
-        self.build_id = self.__parse('build_id')
-        self.build_job = self.__parse('build_job')
-        self.build_node = self.__parse('build_node')
-        self.build_pool = self.__parse_int('build_pool', 0)
-        self.build_project = self.__parse('build_project')
-        self.build_url = self.__parse('build_url')
-
         self.client_capabilities = [
             Capability.Fixtures,
             Capability.IsolatedProcess,
@@ -49,28 +37,37 @@ class Settings():
         ]
         self.client_name = 'python-official'
         self.client_version = __version__
+        if self.__parse('workers', '').lower() == 'max':
+            self.client_workers = multiprocessing.cpu_count()
+        else:
+            self.client_workers = self.__parse_int('workers', 1)
+
+        self.init_env()
+
+        self.build_dir = self.__parse('build_dir', os.getcwd())
+        self.build_id = self.__parse('build_id')
+        self.build_job = self.__parse('build_job')
+        self.build_node = self.__parse('build_node')
+        self.build_pool = self.__parse_int('build_pool', 0)
+        self.build_project = self.__parse('build_project')
+        self.build_url = self.__parse('build_url')
 
         self.platform_name = 'python'
         self.platform_version = platform.python_version()
-        if env.python_version() < (3, 4):
+        if self.env.python_version() < (3, 4):
             raise SystemExit('Sorry, testandconquer requires at least Python 3.4\n')
 
-        if self.__parse('workers', '').lower() == 'max':
-            self.plugin_workers = multiprocessing.cpu_count()
-        else:
-            self.plugin_workers = self.__parse_int('workers', 1)
-
         self.runner_args = sys.argv
-        self.runner_name = None
-        self.runner_plugins = set()
-        self.runner_root = None
-        self.runner_version = None
+        self.runner_name = args.get('runner_name')
+        self.runner_plugins = args.get('runner_plugins')
+        self.runner_root = args.get('runner_root')
+        self.runner_version = args.get('runner_version')
 
-        self.system_name = self.env.name()
-        self.system_context = self.env.context()
+        self.system_context = self.env.system_context()
         self.system_cpus = psutil.cpu_count()
         self.system_os_name = platform.system()
         self.system_os_version = platform.release()
+        self.system_provider = self.__parse('system_provider')
         self.system_ram = psutil.virtual_memory().total
 
         self.vcs_branch = self.__parse('vcs_branch')
@@ -81,14 +78,14 @@ class Settings():
         self.vcs_tag = self.__parse('vcs_tag')
         self.vcs_type = self.__parse('vcs_type')
 
+    def init_env(self):
+        self.env.init_mapping(self)
+
     def plugin_enabled(self):
         return True  # TODO
 
     def __parse(self, name, default=None):
-        return self.env.get(name) or \
-            self.config.get('conquer', name, fallback=None) or \
-            self.cmd_args.get(name, None) or \
-            default
+        return self.env.get(name) or default
 
     def __parse_int(self, name, default=None):
         val = self.__parse(name, default)
