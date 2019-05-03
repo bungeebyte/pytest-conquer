@@ -393,7 +393,6 @@ def test_class(testdir):
     ]
 
 
-@pytest.mark.wip
 def test_class_tags(testdir):
     test_file = 'fixtures/test_class_tag.py'
     (result, scheduler) = run_test(testdir, [test_file])
@@ -455,7 +454,6 @@ def test_class_setup(testdir):
     ]
 
 
-@pytest.mark.wip
 def test_class_setup_tag(testdir):
     test_file = 'fixtures/test_class_setup_tag.py'
     (_, scheduler) = run_test(testdir, [test_file])
@@ -586,10 +584,11 @@ def test_load_failed(testdir):
 def test_settings(testdir):
     run_test(testdir, ['fixtures/test_class.py'])
 
-    settings = testandconquer.plugin.settings
+    settings = testandconquer.plugin.scheduler.settings
 
+    assert settings.client_workers == 1
     assert settings.runner_name == 'pytest'
-    assert settings.runner_plugins == {('pytest-cov', '2.5.1'), ('pytest-mock', '1.6.3'), ('pytest-conquer', '1.0.0')}
+    assert settings.runner_plugins == [('pytest-mock', '1.6.3'), ('pytest-cov', '2.5.1'), ('pytest-conquer', '1.0.0')]
     assert settings.runner_root == os.getcwd()
     assert settings.runner_version == pytest.__version__
 

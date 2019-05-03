@@ -16,7 +16,6 @@ setup(
     description='pytest plugin to parallize tests efficiently.',
     packages=[
         'testandconquer',
-        'testandconquer.env',
         'testandconquer.vendor',
         'testandconquer.vendor.httplib2',
     ],

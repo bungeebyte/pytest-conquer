@@ -1,25 +1,27 @@
 from testandconquer import logger
 from testandconquer.client import Client
 from testandconquer.model import Schedule, ScheduleItem
+from testandconquer.settings import Settings
 
 
 class Scheduler:
-    def __init__(self, settings):
-        self.validate_settings(settings)
-        self.config = ConfigSerializer.serialize(settings)
+    def __init__(self, args):
+        self.settings = Settings(args)
+        self.settings.validate()
+        self.config = ConfigSerializer.serialize(self.settings)
         logger.debug('generated config: %s', self.config)
-        self.client = Client(settings)
+        self.client = Client(self.settings)
 
     def init(self, suite_items):
         logger.debug('initialising suite with %s item(s)', len(suite_items))
         suite_data = SuiteSerializer.serialize(self.config, suite_items)
-        schedule_data = self.client.send('/suites', suite_data)
+        schedule_data = self.client.post('/suites', suite_data)
         return self.__parse_schedule(schedule_data)
 
     def next(self, report_items):
         logger.debug('submitting report with %s item(s)', len(report_items))
         report_data = ReportSerializer.serialize(self.config, report_items)
-        schedule_data = self.client.send('/reports', report_data)
+        schedule_data = self.client.post('/reports', report_data)
         return self.__parse_schedule(schedule_data)
 
     def __parse_schedule(self, data):
@@ -28,9 +30,6 @@ class Scheduler:
             schedule_items.append(ScheduleItem(item['file']))
         logger.debug('received schedule with %s item(s)', len(schedule_items))
         return Schedule(schedule_items)
-
-    def validate_settings(self, settings):
-        settings.validate()
 
 
 class Serializer:
@@ -60,7 +59,7 @@ class ConfigSerializer:
                 'capabilities': [c.value for c in settings.client_capabilities],
                 'name': Serializer.truncate(settings.client_name, 64),
                 'version': Serializer.truncate(settings.client_version, 32),
-                'workers': settings.plugin_workers,
+                'workers': settings.client_workers,
             },
             'platform': {
                 'name': Serializer.truncate(settings.platform_name, 64),
@@ -72,18 +71,18 @@ class ConfigSerializer:
                 'plugins': [{
                     'name': Serializer.truncate(p[0], 64),
                     'version': Serializer.truncate(p[1], 64),
-                } for p in settings.runner_plugins],
+                } for p in (settings.runner_plugins or [])],
                 'root': Serializer.truncate(settings.runner_root, 1024),
                 'version': Serializer.truncate(settings.runner_version, 32),
             },
             'system': {
                 'context': settings.system_context,
                 'cpus': settings.system_cpus,
-                'name': Serializer.truncate(settings.system_name, 64),
                 'os': {
                     'name': Serializer.truncate(settings.system_os_name, 64),
                     'version': Serializer.truncate(settings.system_os_version, 32),
                 },
+                'provider': Serializer.truncate(settings.system_provider, 64),
                 'ram': settings.system_ram,
             },
             'vcs': {
