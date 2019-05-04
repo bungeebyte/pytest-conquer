@@ -195,7 +195,29 @@ def test_successful_server_communication(config, server):
 
 
 @pytest.mark.e2e
-def test_retry_on_server_error(config, server):
+def test_retry_env_on_server_error(config, server):
+    server.next_response(500, {})
+    server.next_response(500, {})
+    server.next_response(200, {})
+
+    env = Env({
+        'api_key': '42',
+        'api_retry_cap': '0',
+        'api_timeout': '0',
+        'api_url': server.url,
+        'build_id': '4242',
+        'vcs_branch': 'master',
+        'vcs_revision': 'asd43da',
+    })
+    Scheduler(env)
+
+    reqs = server.last_requests
+    assert len(reqs) == 3
+    assert [r[2]['X-Attempt'] for r in reqs] == ['0', '1', '2']
+
+
+@pytest.mark.e2e
+def test_retry_init_on_server_error(config, server):
     server.next_response(200, {})
     env = Env({
         'api_key': '42',
