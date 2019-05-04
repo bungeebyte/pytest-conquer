@@ -74,7 +74,7 @@ class Env:
     def system_context(self):
         res = {}
         if hasattr(self, 'mapping'):
-            for key in self.mapping['system_context']:
+            for key in self.mapping.get('system_context', {}):
                 if key.upper() in self.upcased_environ:
                     res[key] = self.upcased_environ[key.upper()]
         return res
