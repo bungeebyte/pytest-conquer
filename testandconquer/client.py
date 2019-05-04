@@ -30,12 +30,13 @@ class Client():
         headers = {
             'Accept': 'application/json',
             'Authorization': self.api_key,
-            'Content-Encoding': 'gzip',
-            'Content-Type': 'application/json; charset=UTF-8',
             'User-Agent': self.user_agent,
             'X-Build-Id': self.build_id,
             'X-Build-Node': self.build_node,
         }
+        if body:
+            headers['Content-Encoding'] = 'gzip'
+            headers['Content-Type'] = 'application/json; charset=UTF-8'
 
         attempts = 0
         result = None

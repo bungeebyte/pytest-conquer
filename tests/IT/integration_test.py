@@ -40,8 +40,6 @@ def test_successful_server_communication(config, server):
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip, deflate',
         'Authorization': '42',
-        'Content-Encoding': 'gzip',
-        'Content-Type': 'application/json; charset=UTF-8',
         'Host': server.url.replace('http://', ''),
         'User-Agent': 'python-official/1.0',
         'X-Attempt': '0',
@@ -53,6 +51,9 @@ def test_successful_server_communication(config, server):
     assert server.last_requests == [('GET', '/envs', headers, None)]
 
     # Round 1: init schedule
+
+    headers['Content-Encoding'] = 'gzip'
+    headers['Content-Type'] = 'application/json; charset=UTF-8'
     headers['X-Build-Id'] = config['build']['id']
     headers['X-Build-Node'] = 'build-node'
 
