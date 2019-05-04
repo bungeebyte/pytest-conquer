@@ -45,13 +45,14 @@ def test_successful_server_communication(config, server):
         'Host': server.url.replace('http://', ''),
         'User-Agent': 'python-official/1.0',
         'X-Attempt': '0',
+        'X-Build-Id': 'unknown',
+        'X-Build-Node': 'unknown',
     }
     scheduler = Scheduler(env)
 
     assert server.last_requests == [('GET', '/envs', headers, None)]
 
     # Round 1: init schedule
-
     headers['X-Build-Id'] = config['build']['id']
     headers['X-Build-Node'] = 'build-node'
 
