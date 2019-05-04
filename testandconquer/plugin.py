@@ -12,6 +12,7 @@ from datetime import datetime
 import pytest
 from _pytest import main
 
+from testandconquer.env import Env
 from testandconquer.model import Failure, Location, SuiteItem, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
 from testandconquer.terminal import ParallelTerminalReporter
@@ -45,7 +46,7 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     global reporter, scheduler
 
-    scheduler = Scheduler(generate_args(config))
+    scheduler = Scheduler(generate_env(config))
 
     if scheduler.settings.plugin_enabled():
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
@@ -59,19 +60,20 @@ def pytest_configure(config):
             config.pluginmanager.register(reporter, 'terminalreporter')
 
 
-def generate_args(config):
-    return {
+def generate_env(config):
+    env = Env({
         'runner_name': 'pytest',
         'runner_plugins': [(dist.project_name, dist.version) for plugin, dist in config.pluginmanager.list_plugin_distinfo()],
         'runner_root': str(config.rootdir),
         'runner_version': pytest.__version__,
         'workers': config.option.workers,
-    }
+    })
+    env.init_file('pytest.ini')
+    return env
 
 
 # ======================================================================================
 # EXECUTION
-# ======================================================================================
 
 
 def pytest_runtestloop(session):

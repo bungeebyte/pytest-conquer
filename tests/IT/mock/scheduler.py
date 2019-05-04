@@ -11,8 +11,8 @@ synchronization = dict(manager=manager)
 
 
 class MockScheduler(Scheduler):
-    def __init__(self, args):
-        self.settings = MockSettings(args)
+    def __init__(self, env):
+        self.settings = MockSettings(env)
         self._suite_items = []
         self._suite_files = manager.list()
         self._report_items = manager.list()

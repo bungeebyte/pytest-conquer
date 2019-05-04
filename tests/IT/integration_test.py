@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import psutil
 import pytest
 
+from testandconquer.env import Env
 from testandconquer.scheduler import Scheduler
 from testandconquer.model import Failure, Location, ReportItem, ScheduleItem, SuiteItem, Tag
 
@@ -21,7 +22,7 @@ time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 @pytest.mark.e2e
 def test_successful_server_communication(config, server):
     server.next_response(200, {})
-    args = {
+    env = Env({
         'api_key': '42',
         'api_retries': '0',
         'api_retry_cap': '0',
@@ -34,7 +35,7 @@ def test_successful_server_communication(config, server):
         'vcs_repo': 'github.com/myrepo',
         'vcs_revision': 'asd43da',
         'vcs_revision_message': 'my commit',
-    }
+    })
     headers = {
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip, deflate',
@@ -45,7 +46,7 @@ def test_successful_server_communication(config, server):
         'User-Agent': 'python-official/1.0',
         'X-Attempt': '0',
     }
-    scheduler = Scheduler(args)
+    scheduler = Scheduler(env)
 
     assert server.last_requests == [('GET', '/envs', headers, None)]
 
@@ -196,7 +197,7 @@ def test_successful_server_communication(config, server):
 @pytest.mark.e2e
 def test_retry_on_server_error(config, server):
     server.next_response(200, {})
-    args = {
+    env = Env({
         'api_key': '42',
         'api_retry_cap': '0',
         'api_timeout': '0',
@@ -204,8 +205,8 @@ def test_retry_on_server_error(config, server):
         'build_id': '4242',
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
-    }
-    scheduler = Scheduler(args)
+    })
+    scheduler = Scheduler(env)
 
     server.next_response(500, {})
     server.next_response(500, {})
@@ -225,7 +226,7 @@ def test_retry_on_server_error(config, server):
 @pytest.mark.e2e
 def test_give_up_when_receiving_400s_from_server(config, server):
     with pytest.raises(SystemExit, match='server communication error: status code=400, request id=<unique-request-id>'):
-        args = {
+        env = Env({
             'api_key': '42',
             'api_retries': '0',
             'api_retry_cap': '0',
@@ -234,18 +235,18 @@ def test_give_up_when_receiving_400s_from_server(config, server):
             'build_id': '4242',
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
-        }
+        })
 
         server.next_response(400, {})
 
-        scheduler = Scheduler(args)
+        scheduler = Scheduler(env)
         scheduler.init([])
 
 
 @pytest.mark.e2e
 def test_give_up_when_server_unreachable(config):
     with pytest.raises(SystemExit, match='server communication error: (.*) Connection refused'):
-        args = {
+        env = Env({
             'api_key': '42',
             'api_retries': '2',
             'api_retry_cap': '0',
@@ -254,8 +255,8 @@ def test_give_up_when_server_unreachable(config):
             'build_id': '4242',
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
-        }
-        scheduler = Scheduler(args)
+        })
+        scheduler = Scheduler(env)
         scheduler.init([])
 
 

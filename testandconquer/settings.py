@@ -6,8 +6,8 @@ import sys
 import psutil
 
 from enum import Enum
-from testandconquer.env import Env
 from testandconquer import __version__
+from testandconquer.client import Client
 
 
 class Capability(Enum):
@@ -18,8 +18,8 @@ class Capability(Enum):
 
 
 class Settings():
-    def __init__(self, args={}):
-        self.env = Env(args)
+    def __init__(self, env):
+        self.env = env
 
         self.api_key = self.__parse('api_key')
         self.api_retries = self.__parse_int('api_retries', 6)
@@ -42,6 +42,8 @@ class Settings():
         else:
             self.client_workers = self.__parse_int('workers', 1)
 
+        # we need to get the env variable mappings from the server first
+        # in order to resolve some of the other
         self.init_env()
 
         self.build_dir = self.__parse('build_dir', os.getcwd())
@@ -58,12 +60,12 @@ class Settings():
             raise SystemExit('Sorry, testandconquer requires at least Python 3.4\n')
 
         self.runner_args = sys.argv
-        self.runner_name = args.get('runner_name')
-        self.runner_plugins = args.get('runner_plugins')
-        self.runner_root = args.get('runner_root')
-        self.runner_version = args.get('runner_version')
+        self.runner_name = self.__parse('runner_name')
+        self.runner_plugins = self.__parse('runner_plugins')
+        self.runner_root = self.__parse('runner_root')
+        self.runner_version = self.__parse('runner_version')
 
-        self.system_context = self.env.system_context()
+        self.system_context = self.__parse('system_context')
         self.system_cpus = psutil.cpu_count()
         self.system_os_name = platform.system()
         self.system_os_version = platform.release()
@@ -79,13 +81,16 @@ class Settings():
         self.vcs_type = self.__parse('vcs_type')
 
     def init_env(self):
-        self.env.init_mapping(self)
+        self.env.init_mapping(Client(self))
 
     def plugin_enabled(self):
         return True  # TODO
 
     def __parse(self, name, default=None):
-        return self.env.get(name) or default
+        res = self.env.get(name)
+        if res is None:
+            return default
+        return res
 
     def __parse_int(self, name, default=None):
         val = self.__parse(name, default)
