@@ -4,7 +4,6 @@ import uuid
 import sys
 
 from testandconquer.git import Git
-from testandconquer.client import Client
 
 
 CONFIG_SECTION = 'conquer'
@@ -15,15 +14,16 @@ class Env:
 
     def __init__(self, args={}):
         self.args = args
-        self.config = configparser.ConfigParser()
-        self.config.read('pytest.ini')
-        self.mapping = {}
         self.upcased_environ = dict()
         for key in os.environ:
             self.upcased_environ[key.upper()] = os.environ[key]
 
-    def init_mapping(self, settings):
-        envs = Client(settings).get('/envs')
+    def init_file(self, path):
+        self.config = configparser.ConfigParser()
+        self.config.read(path)
+
+    def init_mapping(self, client):
+        envs = client.get('/envs')
         for env in envs:
             is_match = True
             for condition in env['conditions']:
@@ -32,7 +32,7 @@ class Env:
                     break
             if is_match:
                 self.mapping = env['mapping']
-                self.mapping['system_provider'] = env['name']
+                self.args['system_provider'] = env['name']
                 break
 
     def get(self, name):
@@ -46,11 +46,11 @@ class Env:
             return self.upcased_environ[env_name]
 
         # 3) local config file
-        if self.config.has_option(CONFIG_SECTION, name):
+        if hasattr(self, 'config') and self.config.has_option(CONFIG_SECTION, name):
             return self.config.get(CONFIG_SECTION, name)
 
         # 4) provider variables
-        if name in self.mapping:
+        if hasattr(self, 'mapping') and name in self.mapping:
             env_key = self.mapping[name]
             if env_key in self.upcased_environ:
                 return self.upcased_environ[env_key]
@@ -73,8 +73,8 @@ class Env:
 
     def system_context(self):
         res = {}
-        if self.mapping:
-            for key in self.mapping['build_context']:
+        if hasattr(self, 'mapping'):
+            for key in self.mapping['system_context']:
                 if key.upper() in self.upcased_environ:
                     res[key] = self.upcased_environ[key.upper()]
         return res

@@ -5,8 +5,8 @@ from testandconquer.settings import Settings
 
 
 class Scheduler:
-    def __init__(self, args):
-        self.settings = Settings(args)
+    def __init__(self, env):
+        self.settings = Settings(env)
         self.settings.validate()
         self.config = ConfigSerializer.serialize(self.settings)
         logger.debug('generated config: %s', self.config)
