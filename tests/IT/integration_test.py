@@ -77,47 +77,47 @@ def test_successful_server_communication(config, server):
     assert server.last_requests == [
         ('GET', '/envs', get_headers, None),
         ('POST', '/suites', post_headers, {
-        'config': config,
-        'items': [{
-            'type': 'test',
-            'file': 'tests/IT/stub/stub_A.py',
-            'module': 'stub_A',
-            'class': 'TestClass',
-            'func': 'test_A',
-            'line': 1,
-        }, {
-            'type': 'test',
-            'file': 'tests/IT/stub/stub_B.py',
-            'module': 'stub_B',
-            'class': 'TestClass',
-            'func': 'test_B_1',
-            'line': 1,
-            'tags': [{'group': 'my_group'}],
-        }, {
-            'type': 'test',
-            'file': 'tests/IT/stub/stub_B.py',
-            'module': 'stub_B',
-            'class': 'TestClass',
-            'func': 'test_B_2',
-            'tags': [{'group': '999', 'singleton': True}],
-            'line': 2,
-        }, {
-            'type': 'test',
-            'file': 'tests/IT/stub/stub_C.py',
-            'module': 'stub_C',
-            'class': 'TestClass',
-            'func': 'test_C',
-            'line': 1,
-            'deps': [{
-                'class': 'FixtureClass',
-                'file': 'tests/IT/stub/stub_fixture.py',
+            'config': config,
+            'items': [{
+                'type': 'test',
+                'file': 'tests/IT/stub/stub_A.py',
+                'module': 'stub_A',
+                'class': 'TestClass',
+                'func': 'test_A',
+                'line': 1,
+            }, {
+                'type': 'test',
+                'file': 'tests/IT/stub/stub_B.py',
+                'module': 'stub_B',
+                'class': 'TestClass',
+                'func': 'test_B_1',
+                'line': 1,
+                'tags': [{'group': 'my_group'}],
+            }, {
+                'type': 'test',
+                'file': 'tests/IT/stub/stub_B.py',
+                'module': 'stub_B',
+                'class': 'TestClass',
+                'func': 'test_B_2',
+                'tags': [{'group': '999', 'singleton': True}],
+                'line': 2,
+            }, {
+                'type': 'test',
+                'file': 'tests/IT/stub/stub_C.py',
+                'module': 'stub_C',
+                'class': 'TestClass',
                 'func': 'test_C',
-                'line': 0,
-                'module': 'fixtures',
-                'type': 'fixture',
+                'line': 1,
+                'deps': [{
+                    'class': 'FixtureClass',
+                    'file': 'tests/IT/stub/stub_fixture.py',
+                    'func': 'test_C',
+                    'line': 0,
+                    'module': 'fixtures',
+                    'type': 'fixture',
+                }],
             }],
-        }],
-    })]
+        })]
 
     # Round 2: send report and receive next schedule items
 
