@@ -31,6 +31,7 @@ def test_successful_server_communication(config, server):
         'build_dir': '/app',
         'build_id': config['build']['id'],
         'build_job': 'job',
+        'enabled': True,
         'vcs_branch': 'master',
         'vcs_repo': 'github.com/myrepo',
         'vcs_revision': 'asd43da',
@@ -218,6 +219,7 @@ def test_retry_env_on_server_error(config, server):
         'api_timeout': '0',
         'api_url': server.url,
         'build_id': '4242',
+        'enabled': True,
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
     })
@@ -237,6 +239,7 @@ def test_retry_init_on_server_error(config, server):
         'api_timeout': '0',
         'api_url': server.url,
         'build_id': '4242',
+        'enabled': True,
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
     })
@@ -267,6 +270,7 @@ def test_give_up_when_receiving_400s_from_server(config, server):
             'api_timeout': '0',
             'api_url': server.url,
             'build_id': '4242',
+            'enabled': True,
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
         })
@@ -287,6 +291,7 @@ def test_give_up_when_server_unreachable(config):
             'api_timeout': '0',
             'api_url': 'http://localhost:12345',
             'build_id': '4242',
+            'enabled': True,
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
         })

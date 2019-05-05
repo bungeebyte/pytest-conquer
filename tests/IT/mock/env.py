@@ -3,6 +3,8 @@ from testandconquer.env import Env
 
 class MockEnv(Env):
     def __init__(self, args={}):
+        if 'enabled' not in args:
+            args['enabled'] = True
         super().__init__(args)
 
     def init_mapping(self, settings):

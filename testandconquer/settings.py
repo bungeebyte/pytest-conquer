@@ -6,7 +6,7 @@ import sys
 import psutil
 
 from enum import Enum
-from testandconquer import __version__, debug_logger
+from testandconquer import __version__, debug_logger, logger
 from testandconquer.client import Client
 
 
@@ -23,6 +23,16 @@ class Settings():
 
         if self.__parse('debug') is not None:
             debug_logger()
+
+        self.client_enabled = self.__parse_bool('enabled', False)
+        if self.client_enabled is True:
+            logger.debug('conquer plugin is enabled')
+        else:
+            logger.debug('conquer plugin is disabled')
+
+        # no need to go any further if the client is disabled
+        if not self.client_enabled:
+            return
 
         self.api_key = self.__parse('api_key')
         self.api_retries = self.__parse_int('api_retries', 6)
@@ -45,8 +55,20 @@ class Settings():
         else:
             self.client_workers = self.__parse_int('workers', 1)
 
+        self.runner_args = sys.argv
+        self.runner_name = self.__parse('runner_name')
+        self.runner_plugins = self.__parse('runner_plugins')
+        self.runner_root = self.__parse('runner_root')
+        self.runner_version = self.__parse('runner_version')
+
+        self.platform_name = 'python'
+        self.platform_version = platform.python_version()
+        if self.env.python_version() < (3, 4):
+            raise SystemExit('Sorry, testandconquer requires at least Python 3.4\n')
+
+    def init(self):
         # we need to get the env variable mappings from the server first
-        # in order to resolve some of the other
+        # in order to resolve some of the other settings
         self.init_env()
 
         self.build_dir = self.__parse('build_dir', os.getcwd())
@@ -56,17 +78,6 @@ class Settings():
         self.build_pool = self.__parse_int('build_pool', 0)
         self.build_project = self.__parse('build_project')
         self.build_url = self.__parse('build_url')
-
-        self.platform_name = 'python'
-        self.platform_version = platform.python_version()
-        if self.env.python_version() < (3, 4):
-            raise SystemExit('Sorry, testandconquer requires at least Python 3.4\n')
-
-        self.runner_args = sys.argv
-        self.runner_name = self.__parse('runner_name')
-        self.runner_plugins = self.__parse('runner_plugins')
-        self.runner_root = self.__parse('runner_root')
-        self.runner_version = self.__parse('runner_version')
 
         self.system_context = self.__parse('system_context')
         self.system_cpus = psutil.cpu_count()
@@ -86,9 +97,6 @@ class Settings():
     def init_env(self):
         self.env.init_mapping(Client(self))
 
-    def plugin_enabled(self):
-        return True  # TODO
-
     def __parse(self, name, default=None):
         res = self.env.get(name)
         if res is None:
@@ -101,6 +109,12 @@ class Settings():
             return int(val)
         except ValueError:
             raise ValueError('config parameter "' + name + '" must be an integer, but is "' + val + "'")
+
+    def __parse_bool(self, name, default):
+        val = self.__parse(name, default)
+        if val is True or val is False:
+            return val
+        return val.lower() == 'true'
 
     def validate(self):
         if self.api_key is None:

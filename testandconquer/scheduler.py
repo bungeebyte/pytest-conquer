@@ -7,14 +7,22 @@ from testandconquer.settings import Settings
 class Scheduler:
     def __init__(self, env):
         self.settings = Settings(env)
-        self.settings.validate()
-        self.config = ConfigSerializer.serialize(self.settings)
-        logger.debug('generated config: %s', self.config)
-        self.client = Client(self.settings)
 
     def init(self, suite_items):
+        # init settings
+        self.settings.init()
+        self.settings.validate()
+
+        # init config
+        self.config = ConfigSerializer.serialize(self.settings)
+        logger.debug('generated config: %s', self.config)
+
+        # init suite
         logger.debug('initialising suite with %s item(s)', len(suite_items))
         suite_data = SuiteSerializer.serialize(self.config, suite_items)
+
+        # init schedule
+        self.client = Client(self.settings)
         schedule_data = self.client.post('/suites', suite_data)
         return self.__parse_schedule(schedule_data)
 

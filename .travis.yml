@@ -49,6 +49,17 @@ script:
         exit 1
       fi
     fi
+  - |
+    if [ $TOX_ENV != "flake8" ]; then
+      cd e2e/plugin_disabled
+      tox -e $TOX_ENV | tee tox.log
+      if grep -q "1 errors during collection" tox.log; then
+        echo "found collection errors"
+      else
+        echo "expected collection errors"
+        exit 1
+      fi
+    fi
 
 after_script:
   - coveralls
