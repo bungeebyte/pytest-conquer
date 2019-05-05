@@ -8,7 +8,7 @@ class Scheduler:
     def __init__(self, env):
         self.settings = Settings(env)
 
-    def init(self, suite_items):
+    def init(self):
         # init settings
         self.settings.init()
         self.settings.validate()
@@ -17,6 +17,7 @@ class Scheduler:
         self.config = ConfigSerializer.serialize(self.settings)
         logger.debug('generated config: %s', self.config)
 
+    def start(self, suite_items):
         # init suite
         logger.debug('initialising suite with %s item(s)', len(suite_items))
         suite_data = SuiteSerializer.serialize(self.config, suite_items)

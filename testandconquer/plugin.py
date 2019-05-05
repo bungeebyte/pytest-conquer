@@ -91,6 +91,8 @@ def pytest_runtestloop(session):
     if session.config.option.collectonly:
         return True
 
+    scheduler.init()
+
     threads = []
     no_of_workers = scheduler.settings.client_workers
     for i in range(no_of_workers):
@@ -112,7 +114,7 @@ class Worker(threading.Thread):
     def run(self):
         global failure
         try:
-            schedule = scheduler.init(suite_items)
+            schedule = scheduler.start(suite_items)
             while schedule.items:
                 pid = self.run_schedule(schedule)
                 schedule = scheduler.next(report_items.get(pid, []))

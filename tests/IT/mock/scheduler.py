@@ -18,7 +18,10 @@ class MockScheduler(Scheduler):
         self._report_items = manager.list()
         synchronization['lock'] = manager.Lock()
 
-    def init(self, suite_items):
+    def init(self):
+        pass
+
+    def start(self, suite_items):
         with synchronization['lock']:
             if not self._suite_files:
                 self._suite_items = suite_items

@@ -55,15 +55,20 @@ def test_successful_server_communication(config, server):
         'vcs_revision_message': 'my commit',
     }))
 
+    server.next_response(200, {})  # GET /envs
+    scheduler.init()
+
+    assert server.last_requests == [
+        ('GET', '/envs', get_headers, None)]
+
     # Round 1: init schedule
 
-    server.next_response(200, {})  # GET /envs
     server.next_response(200, {
         'items': [
             {'file': 'tests/IT/stub/stub_A.py'},
         ]})
 
-    assert scheduler.init([
+    assert scheduler.start([
         SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', 1)),
         SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_1', 1), tags=[Tag('my_group', False)]),
         SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_2', 2), tags=[Tag(999, True)]),
@@ -74,50 +79,48 @@ def test_successful_server_communication(config, server):
         ScheduleItem('tests/IT/stub/stub_A.py'),
     ]
 
-    assert server.last_requests == [
-        ('GET', '/envs', get_headers, None),
-        ('POST', '/suites', post_headers, {
-            'config': config,
-            'items': [{
-                'type': 'test',
-                'file': 'tests/IT/stub/stub_A.py',
-                'module': 'stub_A',
-                'class': 'TestClass',
-                'func': 'test_A',
-                'line': 1,
-            }, {
-                'type': 'test',
-                'file': 'tests/IT/stub/stub_B.py',
-                'module': 'stub_B',
-                'class': 'TestClass',
-                'func': 'test_B_1',
-                'line': 1,
-                'tags': [{'group': 'my_group'}],
-            }, {
-                'type': 'test',
-                'file': 'tests/IT/stub/stub_B.py',
-                'module': 'stub_B',
-                'class': 'TestClass',
-                'func': 'test_B_2',
-                'tags': [{'group': '999', 'singleton': True}],
-                'line': 2,
-            }, {
-                'type': 'test',
-                'file': 'tests/IT/stub/stub_C.py',
-                'module': 'stub_C',
-                'class': 'TestClass',
+    assert server.last_requests == [('POST', '/suites', post_headers, {
+        'config': config,
+        'items': [{
+            'type': 'test',
+            'file': 'tests/IT/stub/stub_A.py',
+            'module': 'stub_A',
+            'class': 'TestClass',
+            'func': 'test_A',
+            'line': 1,
+        }, {
+            'type': 'test',
+            'file': 'tests/IT/stub/stub_B.py',
+            'module': 'stub_B',
+            'class': 'TestClass',
+            'func': 'test_B_1',
+            'line': 1,
+            'tags': [{'group': 'my_group'}],
+        }, {
+            'type': 'test',
+            'file': 'tests/IT/stub/stub_B.py',
+            'module': 'stub_B',
+            'class': 'TestClass',
+            'func': 'test_B_2',
+            'tags': [{'group': '999', 'singleton': True}],
+            'line': 2,
+        }, {
+            'type': 'test',
+            'file': 'tests/IT/stub/stub_C.py',
+            'module': 'stub_C',
+            'class': 'TestClass',
+            'func': 'test_C',
+            'line': 1,
+            'deps': [{
+                'class': 'FixtureClass',
+                'file': 'tests/IT/stub/stub_fixture.py',
                 'func': 'test_C',
-                'line': 1,
-                'deps': [{
-                    'class': 'FixtureClass',
-                    'file': 'tests/IT/stub/stub_fixture.py',
-                    'func': 'test_C',
-                    'line': 0,
-                    'module': 'fixtures',
-                    'type': 'fixture',
-                }],
+                'line': 0,
+                'module': 'fixtures',
+                'type': 'fixture',
             }],
-        })]
+        }],
+    })]
 
     # Round 2: send report and receive next schedule items
 
@@ -225,15 +228,15 @@ def test_retry_env_on_server_error(config, server):
         'enabled': True,
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
-    })).init([])
+    })).init()
 
     reqs = server.last_requests
-    assert len(reqs) == 4
-    assert [r[2]['X-Attempt'] for r in reqs] == ['0', '1', '2', '0']
+    assert len(reqs) == 3
+    assert [r[2]['X-Attempt'] for r in reqs] == ['0', '1', '2']
 
 
 @pytest.mark.e2e
-def test_retry_init_on_server_error(config, server):
+def test_retry_scheduling_on_server_error(config, server):
     scheduler = Scheduler(Env({
         'api_key': '42',
         'api_retry_cap': '0',
@@ -246,11 +249,13 @@ def test_retry_init_on_server_error(config, server):
     }))
 
     server.next_response(200, {})  # for GET /envs
+    scheduler.init()
+
     server.next_response(500, {})
     server.next_response(500, {})
     server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py'}]})
 
-    assert scheduler.init([
+    assert scheduler.start([
         SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', None), '42', []),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_A.py'),
@@ -276,7 +281,7 @@ def test_give_up_when_receiving_400s_from_server(config, server):
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
         }))
-        scheduler.init([])
+        scheduler.init()
 
 
 @pytest.mark.e2e
@@ -293,7 +298,7 @@ def test_give_up_when_server_unreachable(config):
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
         }))
-        scheduler.init([])
+        scheduler.init()
 
 
 @pytest.fixture

@@ -5,7 +5,6 @@ from testandconquer.settings import Settings
 from tests.IT.mock.env import MockEnv
 
 
-@pytest.mark.wip
 class TestSettings():
 
     def test_enabled_default(self):
