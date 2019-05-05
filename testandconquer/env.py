@@ -38,7 +38,9 @@ class Env:
     def get(self, name):
         # 1) plugin arguments
         if name in self.args:
-            return self.args.get(name)
+            val = self.args.get(name)
+            if val is not None:
+                return val
 
         # 2) environment variables
         env_name = (ENV_PREFIX + name).upper()
@@ -96,3 +98,6 @@ class Env:
 
     def vcs_type(self):
         return 'git'
+
+    def workers(self):
+        return '1'

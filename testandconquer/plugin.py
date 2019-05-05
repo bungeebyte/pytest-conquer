@@ -39,10 +39,10 @@ def pytest_addoption(parser):
     group = parser.getgroup('pytest-conquer')
 
     conquer_help = 'Divide and conquer tests.'
-    group.addoption('--conquer', action='store_true', default=False, dest='enabled', help=conquer_help)
+    group.addoption('--conquer', action='store_true', default=None, dest='enabled', help=conquer_help)
 
     workers_help = 'Set the number of workers. Default is 1, to use all CPU cores set to \'max\'.'
-    group.addoption('--w', '--workers', action='store', default='1', dest='workers', help=workers_help)
+    group.addoption('--w', '--workers', action='store', default=None, dest='workers', help=workers_help)
 
 
 @pytest.hookimpl(trylast=True)  # we need to wait for the 'terminalreporter' to be loaded

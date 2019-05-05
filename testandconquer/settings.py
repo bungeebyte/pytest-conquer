@@ -67,7 +67,7 @@ class Settings():
             raise SystemExit('Sorry, testandconquer requires at least Python 3.4\n')
 
     def init(self):
-        # no need to go any further if the client is disabled
+        # no need if the client is disabled
         if not self.client_enabled:
             return
 
