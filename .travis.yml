@@ -40,7 +40,7 @@ script:
   # end-to-end tests
   - |
     if [ $TOX_ENV != "flake8" ]; then
-      cd e2e/server_unreachable
+      cd ${TRAVIS_BUILD_DIR}/e2e/server_unreachable
       tox -e $TOX_ENV | tee tox.log
       if grep -q "exited with code 3" tox.log; then
         echo "found exit code 3"
@@ -51,7 +51,7 @@ script:
     fi
   - |
     if [ $TOX_ENV != "flake8" ]; then
-      cd e2e/plugin_disabled
+      cd ${TRAVIS_BUILD_DIR}/e2e/plugin_disabled
       tox -e $TOX_ENV | tee tox.log
       if grep -q "1 errors during collection" tox.log; then
         echo "found collection errors"
