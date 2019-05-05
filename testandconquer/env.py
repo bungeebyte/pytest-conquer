@@ -52,7 +52,7 @@ class Env:
         # 4) provider variables
         if hasattr(self, 'mapping') and name in self.mapping:
             env_key = self.mapping[name]
-            if env_key in self.upcased_environ:
+            if env_key and isinstance(env_key, str) and env_key in self.upcased_environ:
                 return self.upcased_environ[env_key]
 
         # 5) defaults
