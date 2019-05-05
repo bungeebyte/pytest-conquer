@@ -21,8 +21,25 @@ time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 @pytest.mark.e2e
 def test_successful_server_communication(config, server):
-    server.next_response(200, {})
-    env = Env({
+    get_headers = {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+        'Authorization': '42',
+        'Host': server.url.replace('http://', ''),
+        'User-Agent': 'python-official/1.0',
+        'X-Attempt': '0',
+        'X-Build-Id': 'unknown',
+        'X-Build-Node': 'unknown',
+    }
+    post_headers = {
+        **get_headers,
+        'Content-Encoding': 'gzip',
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Build-Id': config['build']['id'],
+        'X-Build-Node': 'build-node',
+    }
+
+    scheduler = Scheduler(Env({
         'api_key': '42',
         'api_retries': '0',
         'api_retry_cap': '0',
@@ -36,28 +53,11 @@ def test_successful_server_communication(config, server):
         'vcs_repo': 'github.com/myrepo',
         'vcs_revision': 'asd43da',
         'vcs_revision_message': 'my commit',
-    })
-    headers = {
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
-        'Authorization': '42',
-        'Host': server.url.replace('http://', ''),
-        'User-Agent': 'python-official/1.0',
-        'X-Attempt': '0',
-        'X-Build-Id': 'unknown',
-        'X-Build-Node': 'unknown',
-    }
-    scheduler = Scheduler(env)
-
-    assert server.last_requests == [('GET', '/envs', headers, None)]
+    }))
 
     # Round 1: init schedule
 
-    headers['Content-Encoding'] = 'gzip'
-    headers['Content-Type'] = 'application/json; charset=UTF-8'
-    headers['X-Build-Id'] = config['build']['id']
-    headers['X-Build-Node'] = 'build-node'
-
+    server.next_response(200, {})  # GET /envs
     server.next_response(200, {
         'items': [
             {'file': 'tests/IT/stub/stub_A.py'},
@@ -74,7 +74,9 @@ def test_successful_server_communication(config, server):
         ScheduleItem('tests/IT/stub/stub_A.py'),
     ]
 
-    assert server.last_requests == [('POST', '/suites', headers, {
+    assert server.last_requests == [
+        ('GET', '/envs', get_headers, None),
+        ('POST', '/suites', post_headers, {
         'config': config,
         'items': [{
             'type': 'test',
@@ -133,7 +135,7 @@ def test_successful_server_communication(config, server):
         ScheduleItem('tests/IT/stub/stub_C.py'),
     ]
 
-    assert server.last_requests == [('POST', '/reports', headers, {
+    assert server.last_requests == [('POST', '/reports', post_headers, {
         'config': config,
         'items': [{
             'file': 'tests/IT/stub/stub_A.py',
@@ -163,7 +165,7 @@ def test_successful_server_communication(config, server):
         ReportItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_2', 2), 'passed', None, time, time, 'wid', 'pid'),
         ReportItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 4), 'skipped', None, time, time, 'wid', 'pid'),
     ]).items == []
-    assert server.last_requests == [('POST', '/reports', headers, {
+    assert server.last_requests == [('POST', '/reports', post_headers, {
         'config': config,
         'items': [
             {
@@ -212,8 +214,9 @@ def test_retry_env_on_server_error(config, server):
     server.next_response(500, {})
     server.next_response(500, {})
     server.next_response(200, {})
+    server.next_response(200, {'items': []})
 
-    env = Env({
+    Scheduler(Env({
         'api_key': '42',
         'api_retry_cap': '0',
         'api_timeout': '0',
@@ -222,18 +225,16 @@ def test_retry_env_on_server_error(config, server):
         'enabled': True,
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
-    })
-    Scheduler(env)
+    })).init([])
 
     reqs = server.last_requests
-    assert len(reqs) == 3
-    assert [r[2]['X-Attempt'] for r in reqs] == ['0', '1', '2']
+    assert len(reqs) == 4
+    assert [r[2]['X-Attempt'] for r in reqs] == ['0', '1', '2', '0']
 
 
 @pytest.mark.e2e
 def test_retry_init_on_server_error(config, server):
-    server.next_response(200, {})
-    env = Env({
+    scheduler = Scheduler(Env({
         'api_key': '42',
         'api_retry_cap': '0',
         'api_timeout': '0',
@@ -242,9 +243,9 @@ def test_retry_init_on_server_error(config, server):
         'enabled': True,
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
-    })
-    scheduler = Scheduler(env)
+    }))
 
+    server.next_response(200, {})  # for GET /envs
     server.next_response(500, {})
     server.next_response(500, {})
     server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py'}]})
@@ -263,7 +264,8 @@ def test_retry_init_on_server_error(config, server):
 @pytest.mark.e2e
 def test_give_up_when_receiving_400s_from_server(config, server):
     with pytest.raises(SystemExit, match='server communication error: status code=400, request id=<unique-request-id>'):
-        env = Env({
+        server.next_response(400, {})
+        scheduler = Scheduler(Env({
             'api_key': '42',
             'api_retries': '0',
             'api_retry_cap': '0',
@@ -273,18 +275,14 @@ def test_give_up_when_receiving_400s_from_server(config, server):
             'enabled': True,
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
-        })
-
-        server.next_response(400, {})
-
-        scheduler = Scheduler(env)
+        }))
         scheduler.init([])
 
 
 @pytest.mark.e2e
 def test_give_up_when_server_unreachable(config):
     with pytest.raises(SystemExit, match='server communication error: (.*) Connection refused'):
-        env = Env({
+        scheduler = Scheduler(Env({
             'api_key': '42',
             'api_retries': '2',
             'api_retry_cap': '0',
@@ -294,8 +292,7 @@ def test_give_up_when_server_unreachable(config):
             'enabled': True,
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
-        })
-        scheduler = Scheduler(env)
+        }))
         scheduler.init([])
 
 
