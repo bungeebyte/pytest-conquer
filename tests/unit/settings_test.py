@@ -191,7 +191,6 @@ class TestSettingsValidation():
     def test_valid_settings(self):
         Settings(MockEnv(self.valid_settings)).validate()
 
-    @pytest.mark.wip
     @pytest.mark.parametrize('fn,expected', [
         (lambda data: data.pop('api_key'), "missing API key, please set 'api_key'"),
         (lambda data: data.pop('build_id'), "missing build ID, please set 'build_id'"),

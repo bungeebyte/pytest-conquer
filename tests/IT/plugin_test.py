@@ -465,6 +465,19 @@ def test_class_setup_tag(testdir):
     ]
 
 
+def test_class_param(testdir):
+    test_file = 'fixtures/test_class_param.py'
+    (result, scheduler) = run_test(testdir, [test_file])
+    assert_outcomes(result, passed=2)
+
+    assert scheduler.suite_items == [
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 4)),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test_param[2+4-6]', 6)),
+        SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test_param[3+5-8]', 6)),
+    ]
+
+
 def test_class_nested(testdir):
     test_file = 'fixtures/test_class_nested.py'
     (result, scheduler) = run_test(testdir, [test_file])

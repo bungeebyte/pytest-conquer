@@ -375,10 +375,11 @@ def report_item(type, location, status, start, end, failure):
 
 def node_to_location(node):
     func = node.obj
-    if inspect.ismethod(func):
-        obj = node.parent.parent.obj
-    else:
-        obj = node.parent.obj
+    parent = node
+    obj = None
+    while parent is not None and not inspect.ismodule(obj) and not inspect.isclass(obj):
+        parent = parent.parent
+        obj = parent.obj
     location = func_to_location(func, obj)
 
     nodeid = node.nodeid \
