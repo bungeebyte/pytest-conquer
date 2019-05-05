@@ -186,7 +186,7 @@ def pytest_make_collect_report(collector):
         if not hasattr(collector, 'obj'):
             return
         obj = collector.obj
-    except:
+    except:  # noqa: E722
         pass  # we'll let pytest deal with it
 
     if inspect.isclass(obj):
