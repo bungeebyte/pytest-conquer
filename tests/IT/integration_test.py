@@ -309,7 +309,7 @@ def config(mocker):
                    'name': 'python-official', 'version': '1.0', 'workers': 1},
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},
-        'system': {'context': {}, 'provider': 'custom', 'os': {'name': 'Linux', 'version': '1.42'}, 'cpus': 3, 'ram': 17179869184},
+        'system': {'context': {}, 'provider': 'custom', 'os': 'Linux', 'os_version': '1.42', 'cpus': 3, 'ram': 17179869184},
         'vcs': {'branch': 'master', 'pr': None, 'repo': 'github.com/myrepo',
                 'revision': 'asd43da', 'revision_message': 'my commit', 'tag': None, 'type': 'git'},
     }

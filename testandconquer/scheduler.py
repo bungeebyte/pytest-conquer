@@ -78,10 +78,8 @@ class ConfigSerializer:
             'system': {
                 'context': settings.system_context,
                 'cpus': settings.system_cpus,
-                'os': {
-                    'name': Serializer.truncate(settings.system_os_name, 64),
-                    'version': Serializer.truncate(settings.system_os_version, 32),
-                },
+                'os': Serializer.truncate(settings.system_os_name, 64),
+                'os_version': Serializer.truncate(settings.system_os_version, 32),
                 'provider': Serializer.truncate(settings.system_provider, 64),
                 'ram': settings.system_ram,
             },
