@@ -180,9 +180,14 @@ def pytest_make_collect_report(collector):
     if not scheduler.settings.client_enabled:
         return
 
-    if not hasattr(collector, 'obj'):
-        return
-    obj = collector.obj
+    obj = None
+    try:
+        # this can fail if there is a syntax error in the module for example
+        if not hasattr(collector, 'obj'):
+            return
+        obj = collector.obj
+    except:
+        pass  # we'll let pytest deal with it
 
     if inspect.isclass(obj):
         collect_class(obj)
