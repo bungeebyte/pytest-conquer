@@ -5,7 +5,26 @@ from testandconquer.settings import Settings
 from tests.IT.mock.env import MockEnv
 
 
+@pytest.mark.wip
 class TestSettings():
+
+    def test_enabled_default(self):
+        settings = self.create_settings({
+            'enabled': False,
+        })
+        assert settings.client_enabled is False
+
+    def test_enabled(self):
+        settings = self.create_settings({
+            'enabled': True,
+        })
+        assert settings.client_enabled is True
+
+    def test_enabled_string(self):
+        settings = self.create_settings({
+            'enabled': 'true',
+        })
+        assert settings.client_enabled is True
 
     def test_api_key(self):
         settings = self.create_settings({
