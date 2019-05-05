@@ -139,14 +139,14 @@ class SuiteSerializer:
     def serialize_fixture_ref(item):
         data = {
             'type': item.type,
-            'file': Serializer.truncate(item.file, 1024),
-            'func': Serializer.truncate(item.func, 1024),
-            'line': item.line,
+            'file': Serializer.truncate(item.location.file, 1024),
+            'func': Serializer.truncate(item.location.func, 1024),
+            'line': item.location.line,
         }
-        if item.module:
-            data['module'] = Serializer.truncate(item.module, 1024)
-        if item.cls:
-            data['class'] = Serializer.truncate(item.cls, 1024)
+        if item.location.module:
+            data['module'] = Serializer.truncate(item.location.module, 1024)
+        if item.location.cls:
+            data['class'] = Serializer.truncate(item.location.cls, 1024)
         return data
 
 

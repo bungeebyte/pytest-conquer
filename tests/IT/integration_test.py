@@ -66,7 +66,9 @@ def test_successful_server_communication(config, server):
         SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', 1)),
         SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_1', 1), tags=[Tag('my_group', False)]),
         SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_2', 2), tags=[Tag(999, True)]),
-        SuiteItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 1)),
+        SuiteItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 1), deps=[
+            SuiteItem('fixture', Location('tests/IT/stub/stub_fixture.py', 'fixtures', 'FixtureClass', 'test_C', 0)),
+        ]),
     ]).items == [
         ScheduleItem('tests/IT/stub/stub_A.py'),
     ]
@@ -103,6 +105,14 @@ def test_successful_server_communication(config, server):
             'class': 'TestClass',
             'func': 'test_C',
             'line': 1,
+            'deps': [{
+                'class': 'FixtureClass',
+                'file': 'tests/IT/stub/stub_fixture.py',
+                'func': 'test_C',
+                'line': 0,
+                'module': 'fixtures',
+                'type': 'fixture',
+            }],
         }],
     })]
 
