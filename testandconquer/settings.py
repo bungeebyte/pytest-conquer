@@ -6,7 +6,7 @@ import sys
 import psutil
 
 from enum import Enum
-from testandconquer import __version__
+from testandconquer import __version__, debug_logger
 from testandconquer.client import Client
 
 
@@ -20,6 +20,9 @@ class Capability(Enum):
 class Settings():
     def __init__(self, env):
         self.env = env
+
+        if self.__parse('debug') is not None:
+            debug_logger()
 
         self.api_key = self.__parse('api_key')
         self.api_retries = self.__parse_int('api_retries', 6)
