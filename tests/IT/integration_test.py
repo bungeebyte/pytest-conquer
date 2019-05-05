@@ -31,13 +31,13 @@ def test_successful_server_communication(config, server):
         'X-Build-Id': 'unknown',
         'X-Build-Node': 'unknown',
     }
-    post_headers = {
-        **get_headers,
+    post_headers = get_headers.copy()
+    post_headers.update({
         'Content-Encoding': 'gzip',
         'Content-Type': 'application/json; charset=UTF-8',
         'X-Build-Id': config['build']['id'],
         'X-Build-Node': 'build-node',
-    }
+    })
 
     scheduler = Scheduler(Env({
         'api_key': '42',
