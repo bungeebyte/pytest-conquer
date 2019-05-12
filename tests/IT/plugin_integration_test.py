@@ -38,7 +38,6 @@ def test_function_fail(testdir):
     ]
 
 
-@pytest.mark.wip
 def test_function_skip(testdir):
     test_file = 'fixtures/test_function_skip.py'
     (result, scheduler) = run_test(testdir, [test_file])
@@ -60,6 +59,7 @@ def test_function_xfail(testdir):
     ]
 
 
+@pytest.mark.wip
 def test_function_setup(testdir):
     test_file = 'fixtures/test_function_setup.py'
     (result, scheduler) = run_test(testdir, [test_file])
