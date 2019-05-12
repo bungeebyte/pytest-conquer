@@ -9,11 +9,11 @@ from datetime import datetime, timezone
 import psutil
 import pytest
 
-from testandconquer.env import Env
 from testandconquer.scheduler import Scheduler
 from testandconquer.model import Failure, Location, ReportItem, ScheduleItem, SuiteItem, Tag
 
-from tests.IT.mock.server import Server
+from tests.mock.settings import MockSettings
+from tests.mock.server import Server
 
 
 time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
@@ -24,23 +24,21 @@ def test_successful_server_communication(config, server):
     get_headers = {
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip, deflate',
-        'Authorization': '42',
+        'Authorization': 'api_key',
         'Host': server.url.replace('http://', ''),
-        'User-Agent': 'python-official/1.0',
+        'User-Agent': 'pytest-conquer/1.0',
         'X-Attempt': '0',
-        'X-Build-Id': 'unknown',
-        'X-Build-Node': 'unknown',
+        'X-Build-Id': config['build']['id'],
+        'X-Build-Node': 'build-node',
     }
     post_headers = get_headers.copy()
     post_headers.update({
         'Content-Encoding': 'gzip',
         'Content-Type': 'application/json; charset=UTF-8',
-        'X-Build-Id': config['build']['id'],
-        'X-Build-Node': 'build-node',
     })
 
-    scheduler = Scheduler(Env({
-        'api_key': '42',
+    scheduler = Scheduler(MockSettings({
+        'api_key': 'api_key',
         'api_retries': '0',
         'api_retry_cap': '0',
         'api_timeout': '0',
@@ -54,12 +52,6 @@ def test_successful_server_communication(config, server):
         'vcs_revision': 'asd43da',
         'vcs_revision_message': 'my commit',
     }))
-
-    server.next_response(200, {})  # GET /envs
-    scheduler.init()
-
-    assert server.last_requests == [
-        ('GET', '/envs', get_headers, None)]
 
     # Round 1: init schedule
 
@@ -213,22 +205,27 @@ def test_successful_server_communication(config, server):
 
 
 @pytest.mark.e2e
-def test_retry_env_on_server_error(config, server):
-    server.next_response(500, {})
-    server.next_response(500, {})
-    server.next_response(200, {})
-    server.next_response(200, {'items': []})
-
-    Scheduler(Env({
-        'api_key': '42',
+def test_retry_scheduling_on_server_error(config, server):
+    scheduler = Scheduler(MockSettings({
+        'api_key': 'api_key',
         'api_retry_cap': '0',
         'api_timeout': '0',
         'api_url': server.url,
-        'build_id': '4242',
+        'build_id': 'build_id',
         'enabled': True,
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
-    })).init()
+    }))
+
+    server.next_response(500, {})
+    server.next_response(500, {})
+    server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py'}]})
+
+    assert scheduler.start([
+        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', None), 'api_key', []),
+    ]).items == [
+        ScheduleItem('tests/IT/stub/stub_A.py'),
+    ]
 
     reqs = server.last_requests
     assert len(reqs) == 3
@@ -236,69 +233,38 @@ def test_retry_env_on_server_error(config, server):
 
 
 @pytest.mark.e2e
-def test_retry_scheduling_on_server_error(config, server):
-    scheduler = Scheduler(Env({
-        'api_key': '42',
-        'api_retry_cap': '0',
-        'api_timeout': '0',
-        'api_url': server.url,
-        'build_id': '4242',
-        'enabled': True,
-        'vcs_branch': 'master',
-        'vcs_revision': 'asd43da',
-    }))
-
-    server.next_response(200, {})  # for GET /envs
-    scheduler.init()
-
-    server.next_response(500, {})
-    server.next_response(500, {})
-    server.next_response(200, {'items': [{'file': 'tests/IT/stub/stub_A.py'}]})
-
-    assert scheduler.start([
-        SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', None), '42', []),
-    ]).items == [
-        ScheduleItem('tests/IT/stub/stub_A.py'),
-    ]
-
-    reqs = server.last_requests
-    assert len(reqs) == 4
-    assert [r[2]['X-Attempt'] for r in reqs] == ['0', '0', '1', '2']
-
-
-@pytest.mark.e2e
 def test_give_up_when_receiving_400s_from_server(config, server):
     with pytest.raises(SystemExit, match='server communication error: status code=400, request id=<unique-request-id>'):
         server.next_response(400, {})
-        scheduler = Scheduler(Env({
-            'api_key': '42',
+        scheduler = Scheduler(MockSettings({
+            'api_key': 'api_key',
             'api_retries': '0',
             'api_retry_cap': '0',
             'api_timeout': '0',
             'api_url': server.url,
-            'build_id': '4242',
+            'build_id': 'build_id',
             'enabled': True,
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
         }))
-        scheduler.init()
+        scheduler.start([])
 
 
 @pytest.mark.e2e
 def test_give_up_when_server_unreachable(config):
     with pytest.raises(SystemExit, match='server communication error: (.*) Connection refused'):
-        scheduler = Scheduler(Env({
-            'api_key': '42',
+        scheduler = Scheduler(MockSettings({
+            'api_key': 'api_key',
             'api_retries': '2',
             'api_retry_cap': '0',
             'api_timeout': '0',
             'api_url': 'http://localhost:12345',
-            'build_id': '4242',
+            'build_id': 'build_id',
             'enabled': True,
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
         }))
-        scheduler.init()
+        scheduler.start([])
 
 
 @pytest.fixture
@@ -323,7 +289,7 @@ def config(mocker):
     return {
         'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'node': 'build-node'},
         'client': {'capabilities': ['fixtures', 'isolated_process', 'lifecycle_timings', 'split_by_file'],
-                   'name': 'python-official', 'version': '1.0', 'workers': 1},
+                   'name': 'pytest-conquer', 'version': '1.0', 'workers': 1},
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},
         'system': {'context': {}, 'provider': 'custom', 'os': 'Linux', 'os_version': '1.42', 'cpus': 3, 'ram': 17179869184},

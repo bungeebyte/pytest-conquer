@@ -12,9 +12,9 @@ from datetime import datetime
 import pytest
 from _pytest import main
 
-from testandconquer.env import Env
 from testandconquer.model import Failure, Location, SuiteItem, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
+from testandconquer.settings import Settings
 from testandconquer.terminal import ParallelTerminalReporter
 
 
@@ -49,11 +49,14 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     global reporter, scheduler
 
-    scheduler = Scheduler(generate_env(config))
+    scheduler = create_scheduler(config)
 
-    if scheduler.settings.client_enabled:
+    if scheduler.enabled:
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
-            raise SystemExit('Sorry, testandconquer requires at least pytest 3.0.5\n')
+            raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.0.5\n')
+
+        if sys.version_info.major <= 3 and sys.version_info.minor < 4:
+            raise SystemExit('Sorry, pytest-conquer requires at least Python 3.4\n')
 
         # replace the builtin reporter with our own that handles concurrency better
         builtin_reporter = config.pluginmanager.get_plugin('terminalreporter')
@@ -63,8 +66,8 @@ def pytest_configure(config):
             config.pluginmanager.register(reporter, 'terminalreporter')
 
 
-def generate_env(config):
-    env = Env({
+def create_scheduler(config):
+    settings = Settings({
         'enabled': config.option.enabled,
         'runner_name': 'pytest',
         'runner_plugins': [(dist.project_name, dist.version) for plugin, dist in config.pluginmanager.list_plugin_distinfo()],
@@ -72,8 +75,9 @@ def generate_env(config):
         'runner_version': pytest.__version__,
         'workers': config.option.workers,
     })
-    env.init_file('pytest.ini')
-    return env
+    settings.init_file('pytest.ini')
+    settings.init_env()
+    return Scheduler(settings)
 
 
 # ======================================================================================
@@ -82,7 +86,7 @@ def generate_env(config):
 
 
 def pytest_runtestloop(session):
-    if not scheduler.settings.client_enabled:
+    if not scheduler.enabled:
         return main.pytest_runtestloop(session)
 
     if session.testsfailed and not session.config.option.continue_on_collection_errors:
@@ -90,8 +94,6 @@ def pytest_runtestloop(session):
 
     if session.config.option.collectonly:
         return True
-
-    scheduler.init()
 
     threads = []
     no_of_workers = scheduler.settings.client_workers
@@ -177,7 +179,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.hookimpl(tryfirst=True)  # has to be first or the introspection doesn't work
 def pytest_make_collect_report(collector):
-    if not scheduler.settings.client_enabled:
+    if not scheduler.enabled:
         return
 
     obj = None
@@ -199,7 +201,7 @@ def pytest_make_collect_report(collector):
 def pytest_collection_modifyitems(session, config, items):
     yield  # let other plugins go first
 
-    if not scheduler.settings.client_enabled:
+    if not scheduler.enabled:
         return
 
     for node in items:
@@ -297,7 +299,7 @@ def pytest_runtest_call(item):
 def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
 
-    if not scheduler.settings.client_enabled:
+    if not scheduler.enabled:
         return report
 
     location = node_to_location(item)
@@ -337,7 +339,7 @@ def pytest_fixture_post_finalizer(fixturedef):
 
 
 def report_fixture_step(type, started_at, fixturedef, result):
-    if not scheduler.settings.client_enabled:
+    if not scheduler.enabled:
         return
 
     location = func_to_location(fixturedef.func)

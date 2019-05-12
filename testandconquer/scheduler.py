@@ -1,29 +1,22 @@
 from testandconquer import logger
 from testandconquer.client import Client
 from testandconquer.model import Schedule, ScheduleItem
-from testandconquer.settings import Settings
 
 
 class Scheduler:
-    def __init__(self, env):
-        self.settings = Settings(env)
-
-    def init(self):
-        # init settings
-        self.settings.init()
-        self.settings.validate()
-
-        # init config
+    def __init__(self, settings):
+        self.settings = settings
         self.config = ConfigSerializer.serialize(self.settings)
         logger.debug('generated config: %s', self.config)
 
-    def start(self, suite_items):
-        # init suite
-        logger.debug('initialising suite with %s item(s)', len(suite_items))
-        suite_data = SuiteSerializer.serialize(self.config, suite_items)
+    @property
+    def enabled(self):
+        return self.settings.client_enabled
 
-        # init schedule
+    def start(self, suite_items):
+        logger.debug('initialising suite with %s item(s)', len(suite_items))
         self.client = Client(self.settings)
+        suite_data = SuiteSerializer.serialize(self.config, suite_items)
         schedule_data = self.client.post('/suites', suite_data)
         return self.__parse_schedule(schedule_data)
 

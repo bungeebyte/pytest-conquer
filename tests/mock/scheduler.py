@@ -3,23 +3,18 @@ from multiprocessing import Manager
 from testandconquer.scheduler import Scheduler
 from testandconquer.model import Schedule, ScheduleItem
 
-from tests.IT.mock.settings import MockSettings
-
 
 manager = Manager()
 synchronization = dict(manager=manager)
 
 
 class MockScheduler(Scheduler):
-    def __init__(self, env):
-        self.settings = MockSettings(env)
+    def __init__(self, settings):
+        super().__init__(settings)
         self._suite_items = []
         self._suite_files = manager.list()
         self._report_items = manager.list()
         synchronization['lock'] = manager.Lock()
-
-    def init(self):
-        pass
 
     def start(self, suite_items):
         with synchronization['lock']:
