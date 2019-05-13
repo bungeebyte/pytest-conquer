@@ -75,8 +75,9 @@ def create_scheduler(config):
         'runner_version': pytest.__version__,
         'workers': config.option.workers,
     })
-    settings.init_file('pytest.ini')
-    settings.init_env()
+    if settings.enabled:
+        settings.init_file('pytest.ini')
+        settings.init_env()
     return Scheduler(settings)
 
 

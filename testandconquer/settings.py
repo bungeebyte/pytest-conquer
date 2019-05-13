@@ -47,11 +47,6 @@ class Settings():
         if self.debug is True:
             debug_logger()
 
-        if self.client_enabled:
-            logger.debug('conquer plugin is enabled')
-        else:
-            logger.debug('conquer plugin is disabled')
-
     def __init_mapping(self, client):
         envs = client.get('/envs')
         for env in envs:
