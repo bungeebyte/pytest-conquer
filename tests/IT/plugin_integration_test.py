@@ -3,7 +3,6 @@ import os.path
 
 import pytest
 
-import testandconquer.plugin
 import testandconquer.scheduler
 from testandconquer.model import Failure, Location, ReportItem, SuiteItem, Tag
 
@@ -26,7 +25,6 @@ def test_function_pass(testdir):
     ]
 
 
-@pytest.mark.wip
 def test_function_fail(testdir):
     test_file = 'fixtures/test_function_fail.py'
     (result, scheduler) = run_test(testdir, [test_file])
@@ -640,15 +638,23 @@ def module_for(file):
     return file.replace('fixtures/', '').replace('.py', '')
 
 
-@pytest.fixture(scope='function', autouse=True)
-def mock_scheduler():
-    previous = testandconquer.plugin.create_scheduler
-    testandconquer.plugin.create_scheduler = lambda config: MockScheduler(MockSettings({'enabled': True}))
-    yield  # run test
-    testandconquer.plugin.create_scheduler = previous
+@pytest.fixture(scope='module', autouse=True)
+def mock_schedule():
+    previous = testandconquer.scheduler.Scheduler
+    testandconquer.scheduler.Scheduler = MockScheduler
+    yield
+    testandconquer.scheduler.Scheduler = previous
 
 
-def run_test(pyt, files, args=[]):
+@pytest.fixture(scope='module', autouse=True)
+def mock_settings():
+    previous = testandconquer.settings.Settings
+    testandconquer.settings.Settings = MockSettings
+    yield
+    testandconquer.settings.Settings = previous
+
+
+def run_test(pyt, files, args=['--conquer']):
     source_by_name = {}
     here = os.path.abspath(os.path.dirname(__file__))
     files.append('fixtures/conftest.py')
