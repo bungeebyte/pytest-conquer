@@ -8,7 +8,7 @@ import sys
 import psutil
 from enum import Enum
 
-from testandconquer import __version__, debug_logger, logger
+from testandconquer import __version__, debug_logger
 from testandconquer.client import Client
 from testandconquer.git import Git
 
