@@ -42,7 +42,7 @@ class Settings():
 
     def init_file(self, path):
         self.config = configparser.ConfigParser()
-        self.config.read(path)
+        self.config.read(path)  # ignores non-existing file
 
         if self.debug is True:
             debug_logger()

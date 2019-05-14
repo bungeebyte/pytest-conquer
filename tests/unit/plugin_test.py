@@ -4,8 +4,6 @@ import pytest
 from unittest import mock
 from unittest.mock import patch
 
-from testandconquer.scheduler import Scheduler
-
 from tests.mock.settings import MockSettings
 
 
@@ -28,7 +26,7 @@ def test_fails_for_old_pytest_version():
 @pytest.fixture(scope='module', autouse=True)
 def mock_generate_settings():
     import testandconquer.plugin  # has to be inline since the module can't be loaded upfront due to pytester
-    previous = testandconquer.plugin.create_scheduler
-    testandconquer.plugin.create_scheduler = lambda config: Scheduler(MockSettings({'enabled': True}))
+    previous = testandconquer.plugin.create_settings
+    testandconquer.plugin.create_settings = lambda config: MockSettings({'enabled': True})
     yield  # run test
-    testandconquer.plugin.create_scheduler = previous
+    testandconquer.plugin.create_settings = previous

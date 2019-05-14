@@ -375,8 +375,7 @@ def test_multiple_test_files(testdir):
     (result, scheduler) = run_test(testdir, ['fixtures/test_function_fail.py', 'fixtures/test_function_pass.py', 'fixtures/test_function_skip.py'])
     assert_outcomes(result, failed=1, passed=1, skipped=1)
 
-    items = scheduler.report_items
-    assert len(items) == 3
+    assert len(scheduler.report_items) == 3
 
 
 def test_class(testdir):
@@ -606,7 +605,7 @@ def test_collect_only_mode(testdir):
     assert_outcomes(result)
 
     assert len(testandconquer.plugin.suite_items) == 3
-    assert scheduler.report_items == []
+    assert scheduler is None
 
 
 def test_disabled_plugin(testdir):
@@ -615,8 +614,7 @@ def test_disabled_plugin(testdir):
     assert_outcomes(result, passed=1)
 
     assert testandconquer.plugin.suite_items == []
-    assert scheduler.suite_items == []
-    assert scheduler.report_items == []
+    assert scheduler is None
 
 
 def test_settings(testdir):

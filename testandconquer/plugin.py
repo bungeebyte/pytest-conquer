@@ -22,6 +22,7 @@ failure = None
 manager = multiprocessing.Manager()
 report_items = manager.dict()
 scheduler = None
+settings = None
 suite_items = []
 suite_item_locations = set()
 suite_item_file_size_by_file = {}
@@ -47,11 +48,11 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl(trylast=True)  # we need to wait for the 'terminalreporter' to be loaded
 def pytest_configure(config):
-    global reporter, scheduler
+    global reporter, settings
 
-    scheduler = create_scheduler(config)
+    settings = create_settings(config)
 
-    if scheduler.enabled:
+    if settings.client_enabled:
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
             raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.0.5\n')
 
@@ -66,7 +67,7 @@ def pytest_configure(config):
             config.pluginmanager.register(reporter, 'terminalreporter')
 
 
-def create_scheduler(config):
+def create_settings(config):
     settings = Settings({
         'enabled': config.option.enabled,
         'runner_name': 'pytest',
@@ -75,10 +76,8 @@ def create_scheduler(config):
         'runner_version': pytest.__version__,
         'workers': config.option.workers,
     })
-    if settings.enabled:
-        settings.init_file('pytest.ini')
-        settings.init_env()
-    return Scheduler(settings)
+    settings.init_file('pytest.ini')
+    return settings
 
 
 # ======================================================================================
@@ -87,7 +86,9 @@ def create_scheduler(config):
 
 
 def pytest_runtestloop(session):
-    if not scheduler.enabled:
+    global scheduler
+
+    if not settings.client_enabled:
         return main.pytest_runtestloop(session)
 
     if session.testsfailed and not session.config.option.continue_on_collection_errors:
@@ -96,8 +97,14 @@ def pytest_runtestloop(session):
     if session.config.option.collectonly:
         return True
 
+    # final step to initializing the settings
+    # we do it here since we don't want to do it if the plugin is disabled/we fail to collect
+    settings.init_env()
+
+    scheduler = Scheduler(settings)
+
     threads = []
-    no_of_workers = scheduler.settings.client_workers
+    no_of_workers = settings.client_workers
     for i in range(no_of_workers):
         t = Worker(args=[session])
         threads.append(t)
@@ -180,7 +187,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.hookimpl(tryfirst=True)  # has to be first or the introspection doesn't work
 def pytest_make_collect_report(collector):
-    if not scheduler.enabled:
+    if not settings.client_enabled:
         return
 
     obj = None
@@ -202,7 +209,7 @@ def pytest_make_collect_report(collector):
 def pytest_collection_modifyitems(session, config, items):
     yield  # let other plugins go first
 
-    if not scheduler.enabled:
+    if not settings.client_enabled:
         return
 
     for node in items:
@@ -300,7 +307,7 @@ def pytest_runtest_call(item):
 def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
 
-    if not scheduler.enabled:
+    if not settings.client_enabled:
         return report
 
     location = node_to_location(item)
@@ -340,7 +347,7 @@ def pytest_fixture_post_finalizer(fixturedef):
 
 
 def report_fixture_step(type, started_at, fixturedef, result):
-    if not scheduler.enabled:
+    if not settings.client_enabled:
         return
 
     location = func_to_location(fixturedef.func)
@@ -407,7 +414,7 @@ def node_to_location(node):
 
 def func_to_location(func, obj=None):
     abs_file = inspect.getfile(obj) if obj else inspect.getfile(func)
-    rel_file = os.path.relpath(abs_file, scheduler.settings.runner_root)
+    rel_file = os.path.relpath(abs_file, settings.runner_root)
     name = func.__name__ if func else None
     classes = []
     if inspect.isclass(obj):
