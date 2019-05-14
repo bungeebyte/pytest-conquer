@@ -14,9 +14,9 @@ class Client():
         self.api_retries = settings.api_retries
         self.api_retry_cap = settings.api_retry_cap
         self.api_timeout = settings.api_timeout
-        self.api_urls = settings.api_urls
-        self.build_id = getattr(settings, 'build_id', 'unknown')  # might not be initialized yet
-        self.build_node = getattr(settings, 'build_node', 'unknown')  # might not be initialized yet
+        self.api_urls = [settings.api_url, settings.api_url_fallback]
+        self.build_id = settings.build_id or 'unknown'  # might not be initialized yet
+        self.build_node = settings.build_node or 'unknown'  # might not be initialized yet
         self.user_agent = settings.client_name + '/' + settings.client_version
 
     def get(self, path):
@@ -29,10 +29,10 @@ class Client():
     def _request(self, path, body=None):
         headers = {
             'Accept': 'application/json',
-            'Authorization': self.api_key,
-            'User-Agent': self.user_agent,
-            'X-Build-Id': self.build_id,
-            'X-Build-Node': self.build_node,
+            'Authorization': str(self.api_key),
+            'User-Agent': str(self.user_agent),
+            'X-Build-Id': str(self.build_id),
+            'X-Build-Node': str(self.build_node),
         }
         if body:
             headers['Content-Encoding'] = 'gzip'

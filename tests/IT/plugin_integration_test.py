@@ -6,7 +6,8 @@ import pytest
 import testandconquer.scheduler
 from testandconquer.model import Failure, Location, ReportItem, SuiteItem, Tag
 
-from tests.IT.mock.scheduler import MockScheduler
+from tests.mock.settings import MockSettings
+from tests.mock.scheduler import MockScheduler
 
 
 def test_function_pass(testdir):
@@ -373,8 +374,7 @@ def test_multiple_test_files(testdir):
     (result, scheduler) = run_test(testdir, ['fixtures/test_function_fail.py', 'fixtures/test_function_pass.py', 'fixtures/test_function_skip.py'])
     assert_outcomes(result, failed=1, passed=1, skipped=1)
 
-    items = scheduler.report_items
-    assert len(items) == 3
+    assert len(scheduler.report_items) == 3
 
 
 def test_class(testdir):
@@ -475,6 +475,18 @@ def test_class_param(testdir):
         SuiteItem('file', Location(test_file), size=42),
         SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test_param[2+4-6]', 6)),
         SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test_param[3+5-8]', 6)),
+    ]
+
+
+def test_class_decorator(testdir):
+    test_file = 'fixtures/test_class_decorator.py'
+    (result, scheduler) = run_test(testdir, [test_file])
+    assert_outcomes(result, passed=1)
+
+    assert scheduler.suite_items == [
+        SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 4)),
+        SuiteItem('file', Location(test_file), size=42),
+        SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test', 6)),
     ]
 
 
@@ -586,12 +598,22 @@ def test_package(testdir):
     assert_outcomes(result, passed=1)
 
 
-def test_load_failed(testdir):
-    test_file = 'fixtures/load_failed.py'
-    (_, scheduler) = run_test(testdir, [test_file])
+def test_collect_only_mode(testdir):
+    test_file = 'fixtures/test_class.py'
+    (result, scheduler) = run_test(testdir, [test_file], ['--conquer', '--collect-only'])
+    assert_outcomes(result)
 
-    assert scheduler.suite_items == []
-    assert scheduler.report_items == []
+    assert len(testandconquer.plugin.suite_items) == 3
+    assert scheduler is None
+
+
+def test_disabled_plugin(testdir):
+    test_file = 'fixtures/test_class.py'
+    (result, scheduler) = run_test(testdir, [test_file], [])
+    assert_outcomes(result, passed=1)
+
+    assert testandconquer.plugin.suite_items == []
+    assert scheduler is None
 
 
 def test_settings(testdir):
@@ -621,7 +643,15 @@ def mock_schedule():
     testandconquer.scheduler.Scheduler = previous
 
 
-def run_test(pyt, files, *args):
+@pytest.fixture(scope='module', autouse=True)
+def mock_settings():
+    previous = testandconquer.settings.Settings
+    testandconquer.settings.Settings = MockSettings
+    yield
+    testandconquer.settings.Settings = previous
+
+
+def run_test(pyt, files, args=['--conquer']):
     source_by_name = {}
     here = os.path.abspath(os.path.dirname(__file__))
     files.append('fixtures/conftest.py')

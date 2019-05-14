@@ -12,9 +12,9 @@ from datetime import datetime
 import pytest
 from _pytest import main
 
-from testandconquer.env import Env
 from testandconquer.model import Failure, Location, SuiteItem, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
+from testandconquer.settings import Settings
 from testandconquer.terminal import ParallelTerminalReporter
 
 
@@ -22,6 +22,7 @@ failure = None
 manager = multiprocessing.Manager()
 report_items = manager.dict()
 scheduler = None
+settings = None
 suite_items = []
 suite_item_locations = set()
 suite_item_file_size_by_file = {}
@@ -38,19 +39,25 @@ worker_id = None
 def pytest_addoption(parser):
     group = parser.getgroup('pytest-conquer')
 
+    conquer_help = 'Divide and conquer tests.'
+    group.addoption('--conquer', action='store_true', default=None, dest='enabled', help=conquer_help)
+
     workers_help = 'Set the number of workers. Default is 1, to use all CPU cores set to \'max\'.'
-    group.addoption('--w', '--workers', action='store', default='1', dest='workers', help=workers_help)
+    group.addoption('--w', '--workers', action='store', default=None, dest='workers', help=workers_help)
 
 
 @pytest.hookimpl(trylast=True)  # we need to wait for the 'terminalreporter' to be loaded
 def pytest_configure(config):
-    global reporter, scheduler
+    global reporter, settings
 
-    scheduler = Scheduler(generate_env(config))
+    settings = create_settings(config)
 
-    if scheduler.settings.plugin_enabled():
+    if settings.client_enabled:
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
-            raise SystemExit('Sorry, testandconquer requires at least pytest 3.0.5\n')
+            raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.0.5\n')
+
+        if sys.version_info < (3, 5):
+            raise SystemExit('Sorry, pytest-conquer requires at least Python 3.5\n')
 
         # replace the builtin reporter with our own that handles concurrency better
         builtin_reporter = config.pluginmanager.get_plugin('terminalreporter')
@@ -60,28 +67,44 @@ def pytest_configure(config):
             config.pluginmanager.register(reporter, 'terminalreporter')
 
 
-def generate_env(config):
-    env = Env({
+def create_settings(config):
+    settings = Settings({
+        'enabled': config.option.enabled,
         'runner_name': 'pytest',
         'runner_plugins': [(dist.project_name, dist.version) for plugin, dist in config.pluginmanager.list_plugin_distinfo()],
         'runner_root': str(config.rootdir),
         'runner_version': pytest.__version__,
         'workers': config.option.workers,
     })
-    env.init_file('pytest.ini')
-    return env
+    settings.init_file('pytest.ini')
+    return settings
 
 
 # ======================================================================================
 # EXECUTION
+# ======================================================================================
 
 
 def pytest_runtestloop(session):
-    if not scheduler.settings.plugin_enabled():
+    global scheduler
+
+    if not settings.client_enabled:
         return main.pytest_runtestloop(session)
 
+    if session.testsfailed and not session.config.option.continue_on_collection_errors:
+        raise session.Interrupted('{} errors during collection'.format(session.testsfailed))
+
+    if session.config.option.collectonly:
+        return True
+
+    # final step to initializing the settings
+    # we do it here since we don't want to do it if the plugin is disabled/we fail to collect
+    settings.init_env()
+
+    scheduler = Scheduler(settings)
+
     threads = []
-    no_of_workers = scheduler.settings.client_workers
+    no_of_workers = settings.client_workers
     for i in range(no_of_workers):
         t = Worker(args=[session])
         threads.append(t)
@@ -101,7 +124,7 @@ class Worker(threading.Thread):
     def run(self):
         global failure
         try:
-            schedule = scheduler.init(suite_items)
+            schedule = scheduler.start(suite_items)
             while schedule.items:
                 pid = self.run_schedule(schedule)
                 schedule = scheduler.next(report_items.get(pid, []))
@@ -148,6 +171,7 @@ class Process(multiprocessing.Process):
         return self.err
 
 
+# report internal error properly
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
     global failure
@@ -161,25 +185,35 @@ def pytest_sessionfinish(session, exitstatus):
 # ======================================================================================
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_pycollect_makeitem(collector, name, obj):
-    node = (yield).get_result()  # let other plugins go first
+@pytest.hookimpl(tryfirst=True)  # has to be first or the introspection doesn't work
+def pytest_make_collect_report(collector):
+    if not settings.client_enabled:
+        return
 
-    if scheduler.settings.plugin_enabled():
-        if inspect.isclass(obj):
-            location = func_to_location(None, obj)
-            collect_item(SuiteItem('class', location, tags=parse_tags(obj)))
+    obj = None
+    try:
+        # this can fail if there is a syntax error in the module for example
+        if not hasattr(collector, 'obj'):
+            return
+        obj = collector.obj
+    except:  # noqa: E722
+        pass  # we'll let pytest deal with it
 
-    return node
+    if inspect.isclass(obj):
+        collect_class(obj)
+    elif inspect.ismodule(obj):
+        collect_module(obj)
 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_collection_modifyitems(session, config, items):
     yield  # let other plugins go first
 
-    if scheduler.settings.plugin_enabled():
-        for node in items:
-            collect_test(node)
+    if not settings.client_enabled:
+        return
+
+    for node in items:
+        collect_test(node)
 
 
 def collect_test(node):
@@ -201,103 +235,21 @@ def collect_fixtures(node):
     return fixtures
 
 
-# ======================================================================================
-# TEST REPORTING
-# ======================================================================================
+def collect_class(obj):
+    location = func_to_location(None, obj)
+    collect_item(SuiteItem('class', location, tags=parse_tags(obj)))
+
+    add_introspection(obj, ['setup_class'], 'setup', 'class')
+    add_introspection(obj, ['setup_method'], 'setup', 'method')
+    add_introspection(obj, ['teardown_class'], 'teardown', 'class')
+    add_introspection(obj, ['teardown_method'], 'teardown', 'method')
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_call(item):
-    item.__start_time = datetime.utcnow()
-    yield
-    item.__finish_time = datetime.utcnow()
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    report = (yield).get_result()
-
-    if not scheduler.settings.plugin_enabled():
-        return report
-
-    location = node_to_location(item)
-
-    def report_test(failure=None):
-        status = report.outcome or 'passed'
-        report_item('test', location, status,
-                    getattr(item, '__start_time', None), getattr(item, '__finish_time', None), failure)
-
-    if report.when == 'call':
-        failure = None
-        if call.excinfo:
-            exc_info = (call.excinfo.type, call.excinfo.value, call.excinfo.tb)
-            failure = to_failure(exc_info)
-        report_test(failure)
-    elif report.when == 'setup':
-        if report.skipped:
-            report_test()
-        elif report.failed:
-            report_test()
-
-
-# ======================================================================================
-# FIXTURE REPORTING
-# ======================================================================================
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_fixture_setup(fixturedef):
-    start = datetime.utcnow()
-    result = yield  # actual setup
-    report_fixture_step('setup', start, fixturedef, result)
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_fixture_post_finalizer(fixturedef):
-    start = datetime.utcnow()
-    result = yield  # actual teardown
-    report_fixture_step('teardown', start, fixturedef, result)
-
-
-def report_fixture_step(type, started_at, fixturedef, result):
-    if not scheduler.settings.plugin_enabled():
-        return
-
-    location = func_to_location(fixturedef.func)
-
-    if is_artifical_fixture(fixturedef, location):
-        return
-
-    status = 'error' if result.excinfo else 'passed'
-    failure = to_failure(result.excinfo)
-    report_item(type, location, status, started_at, datetime.utcnow(), failure)
-
-
-# ======================================================================================
-# SETUP / TEARDOWN COLLECTION & REPORTING
-# ======================================================================================
-
-
-@pytest.hookimpl(tryfirst=True)
-def pytest_make_collect_report(collector):
-    if not scheduler.settings.plugin_enabled():
-        return
-
-    if not hasattr(collector, 'obj'):
-        return
-    obj = collector.obj
-
-    if inspect.isclass(obj):
-        add_introspection(obj, ['setup_class'], 'setup', 'class')
-        add_introspection(obj, ['setup_method'], 'setup', 'method')
-        add_introspection(obj, ['teardown_class'], 'teardown', 'class')
-        add_introspection(obj, ['teardown_method'], 'teardown', 'method')
-
-    if inspect.ismodule(obj):
-        add_introspection(obj, ['setup_function'], 'setup', 'function')
-        add_introspection(obj, ['setUpModule', 'setup_module'], 'setup', 'module')
-        add_introspection(obj, ['teardown_function'], 'teardown', 'function')
-        add_introspection(obj, ['tearDownModule', 'teardown_module'], 'teardown', 'module')
+def collect_module(obj):
+    add_introspection(obj, ['setup_function'], 'setup', 'function')
+    add_introspection(obj, ['setUpModule', 'setup_module'], 'setup', 'module')
+    add_introspection(obj, ['teardown_function'], 'teardown', 'function')
+    add_introspection(obj, ['tearDownModule', 'teardown_module'], 'teardown', 'module')
 
 
 def add_introspection(obj, names, type, scope):
@@ -336,6 +288,76 @@ def wrap_with_report_func(func, func_loc, type):
         if func_loc:
             report_item(type, func_loc, 'passed', start, datetime.utcnow(), None)
     return wrapper
+
+
+# ======================================================================================
+# REPORTING
+# ======================================================================================
+
+
+# we wrap the test run so we know when it started/finished
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    item.__start_time = datetime.utcnow()
+    yield
+    item.__finish_time = datetime.utcnow()
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    report = (yield).get_result()
+
+    if not settings.client_enabled:
+        return report
+
+    location = node_to_location(item)
+
+    def report_test(failure=None):
+        status = report.outcome or 'passed'
+        report_item('test', location, status,
+                    getattr(item, '__start_time', None), getattr(item, '__finish_time', None), failure)
+
+    if report.when == 'call':
+        failure = None
+        if call.excinfo:
+            exc_info = (call.excinfo.type, call.excinfo.value, call.excinfo.tb)
+            failure = to_failure(exc_info)
+        report_test(failure)
+    elif report.when == 'setup':
+        if report.skipped:
+            report_test()
+        elif report.failed:
+            report_test()
+
+
+# we wrap the setup so we know when it started
+@pytest.hookimpl(hookwrapper=True)
+def pytest_fixture_setup(fixturedef):
+    start = datetime.utcnow()
+    result = yield  # actual setup
+    report_fixture_step('setup', start, fixturedef, result)
+
+
+# we wrap the teardown so we know when it started
+@pytest.hookimpl(hookwrapper=True)
+def pytest_fixture_post_finalizer(fixturedef):
+    start = datetime.utcnow()
+    result = yield  # actual teardown
+    report_fixture_step('teardown', start, fixturedef, result)
+
+
+def report_fixture_step(type, started_at, fixturedef, result):
+    if not settings.client_enabled:
+        return
+
+    location = func_to_location(fixturedef.func)
+
+    if is_artifical_fixture(fixturedef, location):
+        return
+
+    status = 'error' if result.excinfo else 'passed'
+    failure = to_failure(result.excinfo)
+    report_item(type, location, status, started_at, datetime.utcnow(), failure)
 
 
 # ======================================================================================
@@ -392,7 +414,7 @@ def node_to_location(node):
 
 def func_to_location(func, obj=None):
     abs_file = inspect.getfile(obj) if obj else inspect.getfile(func)
-    rel_file = os.path.relpath(abs_file, scheduler.settings.runner_root)
+    rel_file = os.path.relpath(abs_file, settings.runner_root)
     name = func.__name__ if func else None
     classes = []
     if inspect.isclass(obj):

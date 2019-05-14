@@ -2,8 +2,7 @@ import pytest
 
 from testandconquer.client import Client
 
-from tests.IT.mock.env import MockEnv
-from tests.IT.mock.settings import MockSettings
+from tests.mock.settings import MockSettings
 
 
 MOCK_CONTENT = """{"message": "Hello world!"}""".encode()
@@ -66,13 +65,13 @@ class TestClient():
 
 class MockClient(Client):
     def __init__(self, responses):
-        super().__init__(MockSettings(MockEnv({
+        super().__init__(MockSettings({
             'api_key': 'API_KEY',
             'api_retries': '3',
             'api_retry_cap': '0',
             'api_timeout': '0',
             'api_urls': ['API_URL'],
-        })))
+        }))
         self.responses = responses
         self.requests = []
 

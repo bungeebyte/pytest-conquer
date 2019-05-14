@@ -18,6 +18,7 @@ var/
 .pytest_cache/
 .installed.cfg
 *.egg
+*.log
 
 pip-log.txt
 pip-delete-this-directory.txt
