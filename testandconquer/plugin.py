@@ -53,8 +53,8 @@ def pytest_configure(config):
     settings = create_settings(config)
 
     if settings.client_enabled:
-        if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
-            raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.0.5\n')
+        # if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
+        #     raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.0.5\n')
 
         if sys.version_info.major <= 3 and sys.version_info.minor < 4:
             raise SystemExit('Sorry, pytest-conquer requires at least Python 3.4\n')

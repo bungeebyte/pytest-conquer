@@ -16,11 +16,11 @@ def test_fails_for_old_python_version():
             testandconquer.plugin.pytest_configure(None)
 
 
-@patch.object(pytest, '__version__', '3.0.4')
-def test_fails_for_old_pytest_version():
-    import testandconquer.plugin  # has to be inline since the module can't be loaded upfront due to pytester
-    with pytest.raises(SystemExit):
-        testandconquer.plugin.pytest_configure(None)
+# @patch.object(pytest, '__version__', '3.0.4')
+# def test_fails_for_old_pytest_version():
+#     import testandconquer.plugin  # has to be inline since the module can't be loaded upfront due to pytester
+#     with pytest.raises(SystemExit):
+#         testandconquer.plugin.pytest_configure(None)
 
 
 @pytest.fixture(scope='module', autouse=True)
