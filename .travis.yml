@@ -4,14 +4,12 @@ language: python
 matrix:
     include:
       # oldest supported versions:
-      - python: 3.4
-        env: TOX_ENV=py34 PYTEST_VERSION===3.0.5
+      - python: 3.5
+        env: TOX_ENV=py35 PYTEST_VERSION===3.0.5
       # previous major versions:
-      - python: 3.4
-        env: TOX_ENV=py34 PYTEST_VERSION===3.10.1
+      - python: 3.5
+        env: TOX_ENV=py35 PYTEST_VERSION===3.10.1
       # latest:
-      - python: 3.4
-        env: TOX_ENV=py34
       - python: 3.5
         env: TOX_ENV=py35
       - python: 3.6

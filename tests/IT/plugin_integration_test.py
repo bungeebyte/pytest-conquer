@@ -485,11 +485,10 @@ def test_class_decorator(testdir):
     (result, scheduler) = run_test(testdir, [test_file])
     assert_outcomes(result, passed=1)
 
-    test_line = 1126 if sys.version_info.major == 3 and sys.version_info.minor <= 4 else 6  # not sure why, but we'll just accept it
     assert scheduler.suite_items == [
         SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 4)),
         SuiteItem('file', Location(test_file), size=42),
-        SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test', test_line)),
+        SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test', 6)),
     ]
 
 
