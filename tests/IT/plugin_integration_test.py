@@ -487,7 +487,7 @@ def test_class_decorator(testdir):
     assert scheduler.suite_items == [
         SuiteItem('class', Location(test_file, module_for(test_file), 'TestObject', None, 4)),
         SuiteItem('file', Location(test_file), size=42),
-        SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test', 6)),
+        SuiteItem('test', Location(test_file, module_for(test_file), 'TestObject', 'test', 5)),
     ]
 
 
