@@ -56,7 +56,7 @@ def pytest_configure(config):
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
             raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.0.5\n')
 
-        if sys.version_info.major <= 3 and sys.version_info.minor < 5:
+        if sys.version_info < (3, 5):
             raise SystemExit('Sorry, pytest-conquer requires at least Python 3.5\n')
 
         # replace the builtin reporter with our own that handles concurrency better

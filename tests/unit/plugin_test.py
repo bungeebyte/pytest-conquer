@@ -1,19 +1,15 @@
-import sys
-
 import pytest
-from unittest import mock
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 
 from tests.mock.settings import MockSettings
 
 
-def test_fails_for_old_python_version():
+@patch('testandconquer.plugin.sys')
+def test_fails_for_old_python_version(mock_sys):
     import testandconquer.plugin  # has to be inline since the module can't be loaded upfront due to pytester
-    with mock.patch.object(sys, 'version_info') as version_mock:
-        version_mock.major = 3
-        version_mock.minor = 4
-        with pytest.raises(SystemExit):
-            testandconquer.plugin.pytest_configure(None)
+    type(mock_sys).version_info = PropertyMock(return_value=(3, 4))
+    with pytest.raises(SystemExit):
+        testandconquer.plugin.pytest_configure(None)
 
 
 @patch.object(pytest, '__version__', '3.0.4')
