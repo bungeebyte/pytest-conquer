@@ -20,7 +20,8 @@ from testandconquer.terminal import ParallelTerminalReporter
 
 failure = None
 manager = multiprocessing.Manager()
-report_items = manager.dict()
+report_items = []
+report_items_by_process = manager.dict()
 scheduler = None
 settings = None
 suite_items = []
@@ -127,7 +128,8 @@ class Worker(threading.Thread):
             schedule = scheduler.start(suite_items)
             while schedule.items:
                 pid = self.run_schedule(schedule)
-                schedule = scheduler.next(report_items.get(pid, []))
+                report_items = report_items_by_process[pid]  # we pick them up where the process left them
+                schedule = scheduler.next(report_items)
         except SystemExit as e:
             failure = e
             raise e
@@ -161,6 +163,7 @@ class Process(multiprocessing.Process):
             for i, test in enumerate(self.tests):
                 next_test = self.tests[i + 1] if i + 1 < len(self.tests) else None
                 test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
+            report_items_by_process[multiprocessing.current_process().id] = report_items  # batch write to share data to main process
         except Exception:
             self.writer.send(traceback.format_exc())
 
@@ -386,13 +389,9 @@ def collect_item(item):
 
 # This is called from multiple subprocesses, so we need to manage the data by process ID.
 def report_item(type, location, status, start, end, failure):
-    items = []
     process_id = multiprocessing.current_process().id
-    if process_id in report_items:
-        items = report_items[process_id]
     worker_id = threading.current_thread().id
-    items.append(ReportItem(type, location, status, failure, start, end, worker_id, process_id))
-    report_items[process_id] = items  # only by reassigning will the data be synced
+    report_items.append(ReportItem(type, location, status, failure, start, end, worker_id, process_id))
 
 
 def node_to_location(node):
