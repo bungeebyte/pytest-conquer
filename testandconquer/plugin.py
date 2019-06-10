@@ -1,3 +1,4 @@
+import functools
 import os.path
 import os
 import inspect
@@ -353,6 +354,7 @@ def report_fixture_step(type, started_at, fixturedef, result):
     if not settings.client_enabled:
         return
 
+    finished_at = datetime.utcnow()
     location = func_to_location(fixturedef.func)
 
     if is_artifical_fixture(fixturedef, location):
@@ -360,7 +362,7 @@ def report_fixture_step(type, started_at, fixturedef, result):
 
     status = 'error' if result.excinfo else 'passed'
     failure = to_failure(result.excinfo)
-    report_item(type, location, status, started_at, datetime.utcnow(), failure)
+    report_item(type, location, status, started_at, finished_at, failure)
 
 
 # ======================================================================================
@@ -411,6 +413,8 @@ def node_to_location(node):
     return location._replace(func=name)
 
 
+# This function is rather expensive so we only want to run it once per function
+@functools.lru_cache(maxsize=None)
 def func_to_location(func, obj=None):
     abs_file = inspect.getfile(obj) if obj else inspect.getfile(func)
     rel_file = os.path.relpath(abs_file, settings.runner_root)
