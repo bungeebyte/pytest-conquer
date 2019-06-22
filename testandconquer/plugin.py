@@ -146,7 +146,7 @@ class Worker(threading.Thread):
         if proc.exception:
             print('\033[91m' + 'INTERNAL ERROR:')
             print(proc.exception + '\033[0m')
-        reporter.pytest_runtest_logreport(None)  # force logs of the process to print
+        reporter.flush()  # force logs of the process to print
         return proc.id
 
 

@@ -6,23 +6,23 @@ class ParallelTerminalReporter(TerminalReporter):
 
     def __init__(self, builtin_reporter, manager):
         TerminalReporter.__init__(self, builtin_reporter.config)
-        self.report_log = manager.list()
         self.report_log_lock = manager.Lock()
+        self.report_log = manager.list()
+
+    def pytest_runtest_logstart(self, nodeid, location):
+        # this would otherwise print the test path twice
+        pass
 
     def pytest_runtest_logreport(self, report):
-        reports_to_log = []
+        rep = report
+        res = self.config.hook.pytest_report_teststatus(report=rep)
+        cat, letter, word = res
+
         with self.report_log_lock:
-            if self.is_child_process:
-                self.report_log.append(report)
-            else:
-                reports_to_log.extend(self.report_log)
-                self.report_log[:] = []
+            self.report_log.append(rep)
 
-        # we're calling the terminal reporter outside of the lock
-        # to block as short as possible
-        for rep in reports_to_log:
-            TerminalReporter.pytest_runtest_logreport(self, rep)
-
-    @property
-    def is_child_process(self):
-        return multiprocessing.current_process().name != 'MainProcess'
+    def flush(self):
+        with self.report_log_lock:
+            for rep in self.report_log:
+                TerminalReporter.pytest_runtest_logreport(self, rep)
+            self.report_log[:] = []
