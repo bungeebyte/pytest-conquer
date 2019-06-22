@@ -70,10 +70,12 @@ def pytest_configure(config):
 
 
 def create_settings(config):
+    plugins = config.pluginmanager.list_plugin_distinfo()
+    plugins.sort(key=lambda item: item[1].project_name)
     settings = Settings({
         'enabled': config.option.enabled,
         'runner_name': 'pytest',
-        'runner_plugins': [(dist.project_name, dist.version) for plugin, dist in config.pluginmanager.list_plugin_distinfo()],
+        'runner_plugins': [(dist.project_name, dist.version) for plugin, dist in plugins],
         'runner_root': str(config.rootdir),
         'runner_version': pytest.__version__,
         'workers': config.option.workers,
@@ -146,7 +148,7 @@ class Worker(threading.Thread):
         if proc.exception:
             print('\033[91m' + 'INTERNAL ERROR:')
             print(proc.exception + '\033[0m')
-        reporter.pytest_runtest_logreport(None)  # force logs of the process to print
+        reporter.flush()  # force logs of the process to print
         return proc.id
 
 
