@@ -1,4 +1,3 @@
-import multiprocessing
 from _pytest.terminal import TerminalReporter
 
 
