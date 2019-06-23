@@ -103,17 +103,6 @@ class TestSettings():
         settings = Settings({})
         assert settings.client_version == '1.0'
 
-    def test_platform_name(self):
-        settings = Settings({})
-        assert settings.platform_name == 'python'
-
-    def test_platform_version(self, mocker):
-        py_version = mocker.patch('platform.python_version')
-        py_version.return_value = '_VERSION_'
-
-        settings = Settings({})
-        assert settings.platform_version == '_VERSION_'
-
     def test_client_workers(self, mocker):
         cpu_count = mocker.patch('multiprocessing.cpu_count')
         cpu_count.return_value = 8
@@ -124,6 +113,17 @@ class TestSettings():
     def test_client_workers_default(self, mocker):
         settings = Settings({})
         assert settings.client_workers == 1
+
+    def test_platform_name(self):
+        settings = Settings({})
+        assert settings.platform_name == 'python'
+
+    def test_platform_version(self, mocker):
+        py_version = mocker.patch('platform.python_version')
+        py_version.return_value = '_VERSION_'
+
+        settings = Settings({})
+        assert settings.platform_version == '_VERSION_'
 
     def test_system_context(self):
         settings = Settings({'system_context': {'env': 'var'}})
