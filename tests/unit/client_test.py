@@ -71,6 +71,7 @@ class MockClient(Client):
             'api_retry_cap': '0',
             'api_timeout': '0',
             'api_urls': ['API_URL'],
+            'build_id': 'ID',
         }))
         self.responses = responses
         self.requests = []

@@ -24,6 +24,10 @@ class TestSettings():
         settings = Settings({'api_key': 'MY API KEY'})
         assert settings.api_key == 'MY API KEY'
 
+    def test_api_key_missing(self):
+        with pytest.raises(ValueError, match="missing API key, please set 'api_key'"):
+            Settings({}).api_key
+
     def test_api_retries_default(self):
         settings = Settings({})
         assert settings.api_retries == 6
@@ -59,6 +63,10 @@ class TestSettings():
     def test_build_id(self):
         settings = Settings({'build_id': 'ABCD'})
         assert settings.build_id == 'ABCD'
+
+    def test_build_id_missing(self):
+        with pytest.raises(ValueError, match="missing build ID, please set 'build_id'"):
+            Settings({}).build_id
 
     def test_build_job(self):
         settings = Settings({'build_job': 'JOB#1'})
@@ -145,6 +153,13 @@ class TestSettings():
         settings = Settings({'vcs_tag': '1.0'})
         assert settings.vcs_tag == '1.0'
 
+    def test_get_nonexistent_variable(self):
+        settings = Settings({})
+        assert settings.nonexistent is None
+
+
+class TestSettingsInit():
+
     def test_get_variable_from_args(self):
         settings = Settings({'system_provider': 'args-provider'})
         assert settings.system_provider == 'args-provider'
@@ -155,6 +170,10 @@ class TestSettings():
         assert settings.system_provider == 'env-provider'
         del os.environ['CONQUER_SYSTEM_PROVIDER']
 
+    def test_validate_variables_from_env(self, invalid_env):
+        with pytest.raises(ValueError, match="unsupported key 'CONQUER_NON_EXISTING_VAR' in environment variables"):
+            Settings({})
+
     def test_get_variable_from_file(self):
         settings = Settings({})
         settings.init_file('pytest.ini')
@@ -162,7 +181,7 @@ class TestSettings():
 
     def test_get_variable_from_mapping(self):
         os.environ['CI_NAME'] = 'mapping-provider'
-        os.environ['CI_NODE'] = 'node'
+        os.environ['ci_node'] = 'node'  # NOTE: lowercase name
         settings = Settings({})
         client_mock = mock.Mock()
         client_mock.get = lambda _url: [{'name': 'mapping-provider', 'conditions': ['CI_NAME'], 'mapping': {'build_node': 'CI_NODE'}}]
@@ -170,37 +189,19 @@ class TestSettings():
         assert settings.system_provider == 'mapping-provider'
         assert settings.build_node == 'node'
         del os.environ['CI_NAME']
-        del os.environ['CI_NODE']
+        del os.environ['ci_node']
 
     def test_get_variable_from_defaults(self):
         settings = Settings({})
         assert settings.system_provider == 'custom'
 
-    def test_get_nonexistent_variable(self):
-        settings = Settings({})
-        assert settings.nonexistent is None
+    def test_validate_config_file_entries(self):
+        with pytest.raises(ValueError, match="unsupported key 'wrong_var' in config file pytest.invalid.ini"):
+            settings = Settings({})
+            settings.init_file('pytest.invalid.ini')
 
-    valid_settings = {
-        'api_key': 'MY API KEY',
-        'build_id': '12',
-        'vcs_branch': 'master',
-        'vcs_revision': '0572ida1',
-    }
-
-    def test_valid_settings(self):
-        settings = Settings(self.valid_settings)
-        client_mock = mock.Mock()
-        client_mock.get = lambda _url: []
-        settings.init_env(client_mock)
-
-    @pytest.mark.parametrize('fn,expected', [
-        (lambda data: data.pop('api_key'), "missing API key, please set 'api_key'"),
-        (lambda data: data.pop('build_id'), "missing build ID, please set 'build_id'"),
-    ])
-    def test_validation(self, fn, expected):
-        with pytest.raises(ValueError, match=expected):
-            data = self.valid_settings.copy()
-            fn(data)
-            client_mock = mock.Mock()
-            client_mock.get = lambda _url: []
-            Settings(data).init_env(client_mock)
+    @pytest.fixture
+    def invalid_env(self):
+        os.environ['CONQUER_NON_EXISTING_VAR'] = 'nonsense'
+        yield
+        del os.environ['CONQUER_NON_EXISTING_VAR']

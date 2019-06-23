@@ -29,20 +29,30 @@ class Settings():
         self.args = args
         self.config = None
         self.mapping = None
-        self.upcased_environ = dict()
-        for key in os.environ:
-            self.upcased_environ[key.upper()] = os.environ[key]
         self.static_settings = StaticSettings()
         self.default_settings = DefaultSettings()
+        self.init_env()
 
-    def init_env(self, client=None):
-        self.__pre_init_validate()
+    def init_env(self):
+        self.upcased_environ = dict()
+        for key in os.environ:
+            upper_key = key.upper()
+            upper_key_without_prefix = upper_key.replace(ENV_PREFIX, '', 1)
+            if upper_key.startswith(ENV_PREFIX) and not hasattr(self.default_settings, upper_key_without_prefix.lower()):
+                raise ValueError("unsupported key '" + key + "' in environment variables")
+            self.upcased_environ[upper_key_without_prefix] = os.environ[key]
+
+    def init_provider(self, client=None):
         self.__init_mapping(client or Client(self))  # we need to get the env variable mappings from the server first
-        self.__post_init_validate()
 
     def init_file(self, path):
         self.config = configparser.ConfigParser()
         self.config.read(path)  # ignores non-existing file
+
+        if self.config.has_section(CONFIG_SECTION):
+            for key in self.config[CONFIG_SECTION]:
+                if not hasattr(self.default_settings, key):
+                    raise ValueError("unsupported key '" + key + "' in config file " + path)
 
         if self.debug is True:
             debug_logger()
@@ -59,18 +69,6 @@ class Settings():
                 self.mapping = env['mapping']
                 self.args['system_provider'] = env['name']
                 break
-
-    def __pre_init_validate(self):
-        if self.api_key is None:
-            raise ValueError("missing API key, please set 'api_key'")
-
-    def __post_init_validate(self):
-        if self.build_id is None:
-            raise ValueError("missing build ID, please set 'build_id'")
-        if self.vcs_branch is None:
-            raise ValueError("missing repository branch, please set 'vcs_branch'")
-        if self.vcs_revision is None:
-            raise ValueError("missing repository revision, please set 'vcs_revision'")
 
     @property
     def client_enabled(self):
@@ -101,13 +99,12 @@ class Settings():
             return method()
 
         # 2) plugin arguments
-        if name in self.args:
-            val = self.args.get(name)
-            if val is not None:
-                return self.__convert(val, default_val)
+        arg_val = self.args.get(name, None)
+        if arg_val is not None:
+            return self.__convert(arg_val, default_val)
 
         # 3) environment variables
-        env_name = (ENV_PREFIX + name).upper()
+        env_name = name.upper()
         if env_name in self.upcased_environ:
             return self.__convert(self.upcased_environ[env_name], default_val)
 
@@ -117,11 +114,13 @@ class Settings():
 
         # 5) provider variables
         if self.mapping and name in self.mapping:
-            env_key = self.mapping[name]
+            env_key = self.mapping[name].upper()
             if env_key and isinstance(env_key, str) and env_key in self.upcased_environ:
                 return self.__convert(self.upcased_environ[env_key], default_val)
 
         # 6) defaults
+        if isinstance(default_val, Exception):
+            raise default_val
         return default_val
 
     def __convert(self, val, default_val):
@@ -162,6 +161,9 @@ class StaticSettings():
 
 class DefaultSettings():
 
+    def api_key(self):
+        return ValueError("missing API key, please set 'api_key'")
+
     def api_retries(self):
         return 6
 
@@ -180,6 +182,9 @@ class DefaultSettings():
     def build_dir(self):
         return os.getcwd()
 
+    def build_id(self):
+        return ValueError("missing build ID, please set 'build_id'")
+
     def build_node(self):
         return str(uuid.uuid4())
 
@@ -194,6 +199,12 @@ class DefaultSettings():
             Capability.SplitByFile,
         ]
 
+    def debug(self):
+        return False
+
+    def enabled(self):
+        return False
+
     def system_context(self):
         res = {}
         if hasattr(self, 'mapping'):
@@ -206,13 +217,19 @@ class DefaultSettings():
         return 'custom'
 
     def vcs_branch(self, cwd=None):
-        return Git.branch(cwd)
+        res = Git.branch(cwd)
+        if res:
+            return res
+        return ValueError("missing repository branch, please set 'vcs_branch'")
 
     def vcs_repo(self, cwd=None):
         return Git.repo(cwd)
 
     def vcs_revision(self, cwd=None):
-        return Git.revision(cwd)
+        res = Git.revision(cwd)
+        if res:
+            return res
+        return ValueError("missing repository revision, please set 'vcs_revision'")
 
     def vcs_revision_message(self, cwd=None):
         return Git.revision_message(cwd)
