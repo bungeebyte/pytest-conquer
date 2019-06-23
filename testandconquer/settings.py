@@ -79,13 +79,10 @@ class Settings():
 
     @property
     def client_workers(self):
-        val = self.__getattr__('workers') or '1'
+        val = self.__getattr__('workers')
         if val == 'max':
             return multiprocessing.cpu_count()
-        elif not val.isdigit():
-            raise ValueError("'workers' must be an integer")
-        else:
-            return int(val)
+        return val
 
     def __getattr__(self, name):
         default_val = None
@@ -236,3 +233,6 @@ class DefaultSettings():
 
     def vcs_type(self):
         return 'git'
+
+    def workers(self):
+        return 1
