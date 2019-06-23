@@ -103,7 +103,7 @@ def pytest_runtestloop(session):
 
     # final step to initializing the settings
     # we do it here since we don't want to do it if the plugin is disabled/we fail to collect
-    settings.init_env()
+    settings.init_provider()
 
     scheduler = Scheduler(settings)
 

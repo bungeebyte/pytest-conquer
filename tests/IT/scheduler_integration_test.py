@@ -19,7 +19,6 @@ from tests.mock.server import Server
 time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
-@pytest.mark.e2e
 def test_successful_server_communication(config, server):
     get_headers = {
         'Accept': 'application/json',
@@ -204,7 +203,6 @@ def test_successful_server_communication(config, server):
     })]
 
 
-@pytest.mark.e2e
 def test_retry_scheduling_on_server_error(config, server):
     scheduler = Scheduler(MockSettings({
         'api_key': 'api_key',
@@ -232,7 +230,6 @@ def test_retry_scheduling_on_server_error(config, server):
     assert [r[2]['X-Attempt'] for r in reqs] == ['0', '1', '2']
 
 
-@pytest.mark.e2e
 def test_give_up_when_receiving_400s_from_server(config, server):
     with pytest.raises(SystemExit, match='server communication error: status code=400, request id=<unique-request-id>'):
         server.next_response(400, {})
@@ -250,7 +247,6 @@ def test_give_up_when_receiving_400s_from_server(config, server):
         scheduler.start([])
 
 
-@pytest.mark.e2e
 def test_give_up_when_server_unreachable(config):
     with pytest.raises(SystemExit, match='server communication error: (.*) Connection refused'):
         scheduler = Scheduler(MockSettings({
