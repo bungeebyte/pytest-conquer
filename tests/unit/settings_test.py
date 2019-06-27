@@ -123,6 +123,8 @@ class TestSettings():
     def test_enabled_string(self):
         settings = Settings({'enabled': 'true'})
         assert settings.enabled is True
+        settings = Settings({'enabled': 'TRUE'})
+        assert settings.enabled is True
 
     def test_platform_name(self):
         settings = Settings({})
