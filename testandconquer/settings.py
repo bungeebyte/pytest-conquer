@@ -71,13 +71,6 @@ class Settings():
                 break
 
     @property
-    def client_enabled(self):
-        val = self.__getattr__('enabled') or False
-        if val is True or val is False:
-            return val
-        return val.lower() == 'true'
-
-    @property
     def client_workers(self):
         val = self.__getattr__('workers')
         if val == 'max':
@@ -123,6 +116,8 @@ class Settings():
     def __convert(self, val, default_val):
         if isinstance(val, str) and isinstance(default_val, int) and val.isdigit():
             return int(val)
+        if isinstance(val, str) and isinstance(default_val, bool):
+            return val.lower() == 'true'
         return val
 
 

@@ -9,10 +9,6 @@ class Scheduler:
         self.config = ConfigSerializer.serialize(self.settings)
         logger.debug('generated config: %s', self.config)
 
-    @property
-    def enabled(self):
-        return self.settings.client_enabled
-
     def start(self, suite_items):
         logger.debug('initialising suite with %s item(s)', len(suite_items))
         self.client = Client(self.settings)

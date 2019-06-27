@@ -8,18 +8,6 @@ from testandconquer.settings import Settings
 
 class TestSettings():
 
-    def test_enabled_default(self):
-        settings = Settings({'enabled': False})
-        assert settings.client_enabled is False
-
-    def test_enabled(self):
-        settings = Settings({'enabled': True})
-        assert settings.client_enabled is True
-
-    def test_enabled_string(self):
-        settings = Settings({'enabled': 'true'})
-        assert settings.client_enabled is True
-
     def test_api_key(self):
         settings = Settings({'api_key': 'MY API KEY'})
         assert settings.api_key == 'MY API KEY'
@@ -113,6 +101,30 @@ class TestSettings():
     def test_client_workers_default(self, mocker):
         settings = Settings({})
         assert settings.client_workers == 1
+
+    def test_debug(self):
+        settings = Settings({'debug': True})
+        assert settings.debug is True
+        settings = Settings({'debug': 'true'})
+        assert settings.debug is True
+        settings = Settings({'debug': 'TRUE'})
+        assert settings.debug is True
+
+    def test_debug_default(self):
+        settings = Settings({})
+        assert settings.debug is False
+
+    def test_enabled(self):
+        settings = Settings({'enabled': True})
+        assert settings.enabled is True
+        settings = Settings({'enabled': 'true'})
+        assert settings.enabled is True
+        settings = Settings({'enabled': 'TRUE'})
+        assert settings.enabled is True
+
+    def test_enabled_default(self):
+        settings = Settings({'enabled': False})
+        assert settings.enabled is False
 
     def test_platform_name(self):
         settings = Settings({})
