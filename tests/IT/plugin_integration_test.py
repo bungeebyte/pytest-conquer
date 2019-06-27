@@ -619,7 +619,7 @@ def test_disabled_plugin(testdir):
 def test_settings(testdir):
     run_test(testdir, ['fixtures/test_class.py'])
 
-    settings = testandconquer.plugin.scheduler.settings
+    settings = testandconquer.plugin.schedulers[0].settings
 
     assert settings.client_workers == 1
     assert settings.runner_name == 'pytest'
@@ -662,7 +662,7 @@ def run_test(pyt, files, args=['--conquer']):
             source_by_name[file] = f.readlines()
     pyt.makepyfile(**source_by_name)
     test_result = pyt.runpytest('-s', *args)
-    return (test_result, testandconquer.plugin.scheduler)
+    return (test_result, (testandconquer.plugin.schedulers or [None])[0])
 
 
 def assert_outcomes(result, passed=0, skipped=0, failed=0, error=0):
