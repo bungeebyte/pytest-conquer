@@ -54,7 +54,7 @@ def pytest_configure(config):
 
     settings = create_settings(config)
 
-    if settings.client_enabled:
+    if settings.enabled:
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
             raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.0.5\n')
 
@@ -92,7 +92,7 @@ def create_settings(config):
 def pytest_runtestloop(session):
     global scheduler
 
-    if not settings.client_enabled:
+    if not settings.enabled:
         return main.pytest_runtestloop(session)
 
     if session.testsfailed and not session.config.option.continue_on_collection_errors:
@@ -193,7 +193,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.hookimpl(tryfirst=True)  # has to be first or the introspection doesn't work
 def pytest_make_collect_report(collector):
-    if not settings.client_enabled:
+    if not settings.enabled:
         return
 
     obj = None
@@ -215,7 +215,7 @@ def pytest_make_collect_report(collector):
 def pytest_collection_modifyitems(session, config, items):
     yield  # let other plugins go first
 
-    if not settings.client_enabled:
+    if not settings.enabled:
         return
 
     for node in items:
@@ -313,7 +313,7 @@ def pytest_runtest_call(item):
 def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
 
-    if not settings.client_enabled:
+    if not settings.enabled:
         return report
 
     location = node_to_location(item)
@@ -353,7 +353,7 @@ def pytest_fixture_post_finalizer(fixturedef):
 
 
 def report_fixture_step(type, started_at, fixturedef, result):
-    if not settings.client_enabled:
+    if not settings.enabled:
         return
 
     finished_at = datetime.utcnow()
