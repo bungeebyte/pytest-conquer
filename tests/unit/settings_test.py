@@ -103,6 +103,8 @@ class TestSettings():
         assert settings.client_workers == 1
 
     def test_debug(self):
+        settings = Settings({'debug': True})
+        assert settings.debug is True
         settings = Settings({'debug': 'true'})
         assert settings.debug is True
         settings = Settings({'debug': 'TRUE'})
@@ -119,8 +121,6 @@ class TestSettings():
     def test_enabled(self):
         settings = Settings({'enabled': True})
         assert settings.enabled is True
-
-    def test_enabled_string(self):
         settings = Settings({'enabled': 'true'})
         assert settings.enabled is True
         settings = Settings({'enabled': 'TRUE'})
