@@ -114,10 +114,6 @@ class TestSettings():
         settings = Settings({})
         assert settings.debug is False
 
-    def test_enabled_default(self):
-        settings = Settings({'enabled': False})
-        assert settings.enabled is False
-
     def test_enabled(self):
         settings = Settings({'enabled': True})
         assert settings.enabled is True
@@ -125,6 +121,10 @@ class TestSettings():
         assert settings.enabled is True
         settings = Settings({'enabled': 'TRUE'})
         assert settings.enabled is True
+
+    def test_enabled_default(self):
+        settings = Settings({'enabled': False})
+        assert settings.enabled is False
 
     def test_platform_name(self):
         settings = Settings({})
