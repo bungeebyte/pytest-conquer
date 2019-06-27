@@ -4,9 +4,9 @@ from testandconquer.model import Schedule, ScheduleItem
 
 
 class Scheduler:
-    def __init__(self, settings):
+    def __init__(self, settings, worker_id):
         self.settings = settings
-        self.config = ConfigSerializer.serialize(self.settings)
+        self.config = ConfigSerializer.serialize(self.settings, worker_id)
         logger.debug('generated config: %s', self.config)
 
     @property
@@ -46,7 +46,7 @@ class Serializer:
 class ConfigSerializer:
 
     @staticmethod
-    def serialize(settings):
+    def serialize(settings, worker_id):
         return {
             'build': {
                 'dir': Serializer.truncate(settings.build_dir, 1024),
@@ -62,6 +62,7 @@ class ConfigSerializer:
                 'name': Serializer.truncate(settings.client_name, 64),
                 'version': Serializer.truncate(settings.client_version, 32),
                 'workers': settings.client_workers,
+                'worker_id': worker_id,
             },
             'platform': {
                 'name': Serializer.truncate(settings.platform_name, 64),

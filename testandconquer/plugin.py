@@ -23,7 +23,7 @@ failure = None
 manager = multiprocessing.Manager()
 report_items = []
 report_items_by_process = manager.dict()
-scheduler = None
+schedulers = []
 settings = None
 suite_items = []
 suite_item_locations = set()
@@ -90,7 +90,7 @@ def create_settings(config):
 
 
 def pytest_runtestloop(session):
-    global scheduler
+    global schedulers
 
     if not settings.client_enabled:
         return main.pytest_runtestloop(session)
@@ -105,13 +105,14 @@ def pytest_runtestloop(session):
     # we do it here since we don't want to do it if the plugin is disabled/we fail to collect
     settings.init_provider()
 
-    scheduler = Scheduler(settings)
-
     threads = []
     no_of_workers = settings.client_workers
     for i in range(no_of_workers):
-        t = Worker(args=[session])
+        worker_id = str(uuid.uuid4())
+        scheduler = Scheduler(settings, worker_id)
+        t = Worker(args=[worker_id, session, scheduler])
         threads.append(t)
+        schedulers.append(scheduler)
         t.start()
     for t in threads:
         t.join()
@@ -122,17 +123,18 @@ def pytest_runtestloop(session):
 class Worker(threading.Thread):
     def __init__(self, *args, **kwargs):
         threading.Thread.__init__(self, *args, **kwargs)
-        self.session = kwargs['args'][0]
-        self.id = str(uuid.uuid4())
+        self.id = kwargs['args'][0]
+        self.session = kwargs['args'][1]
+        self.scheduler = kwargs['args'][2]
 
     def run(self):
         global failure
         try:
-            schedule = scheduler.start(suite_items)
+            schedule = self.scheduler.start(suite_items)
             while schedule.items:
                 pid = self.run_schedule(schedule)
                 report_items = report_items_by_process[pid]  # we pick them up where the process left them
-                schedule = scheduler.next(report_items)
+                schedule = self.scheduler.next(report_items)
         except SystemExit as e:
             failure = e
             raise e

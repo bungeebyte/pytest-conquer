@@ -50,7 +50,7 @@ def test_successful_server_communication(config, server):
         'vcs_repo': 'github.com/myrepo',
         'vcs_revision': 'asd43da',
         'vcs_revision_message': 'my commit',
-    }))
+    }), 'my_worker_id')
 
     # Round 1: init schedule
 
@@ -213,7 +213,7 @@ def test_retry_scheduling_on_server_error(config, server):
         'enabled': True,
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
-    }))
+    }), 'my_worker_id')
 
     server.next_response(500, {})
     server.next_response(500, {})
@@ -243,7 +243,7 @@ def test_give_up_when_receiving_400s_from_server(config, server):
             'enabled': True,
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
-        }))
+        }), 'my_worker_id')
         scheduler.start([])
 
 
@@ -259,7 +259,7 @@ def test_give_up_when_server_unreachable(config):
             'enabled': True,
             'vcs_branch': 'master',
             'vcs_revision': 'asd43da',
-        }))
+        }), 'my_worker_id')
         scheduler.start([])
 
 
@@ -285,7 +285,7 @@ def config(mocker):
     return {
         'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'node': 'build-node'},
         'client': {'capabilities': ['fixtures', 'isolated_process', 'lifecycle_timings', 'split_by_file'],
-                   'name': 'pytest-conquer', 'version': '1.0', 'workers': 1},
+                   'name': 'pytest-conquer', 'version': '1.0', 'workers': 1, 'worker_id': 'my_worker_id'},
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},
         'system': {'context': {}, 'provider': 'custom', 'os': 'Linux', 'os_version': '1.42', 'cpus': 3, 'ram': 17179869184},

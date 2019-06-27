@@ -9,8 +9,8 @@ synchronization = dict(manager=manager)
 
 
 class MockScheduler(Scheduler):
-    def __init__(self, settings):
-        super().__init__(settings)
+    def __init__(self, settings, worker_id):
+        super().__init__(settings, worker_id)
         self._suite_items = []
         self._suite_files = manager.list()
         self._report_items = manager.list()
