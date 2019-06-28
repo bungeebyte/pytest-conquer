@@ -157,7 +157,7 @@ def test_successful_server_communication(config, server):
     assert scheduler.next([
         ReportItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_1', 1), 'passed', None, time, time, 'wid', 'pid'),
         ReportItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B_2', 2), 'passed', None, time, time, 'wid', 'pid'),
-        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 4), 'skipped', None, time, time, 'wid', 'pid'),
+        ReportItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 4), 'skipped', None, None, None, 'wid', 'pid'),
     ]).items == []
     assert server.last_requests == [('POST', '/reports', post_headers, {
         'config': config,
@@ -196,8 +196,8 @@ def test_successful_server_communication(config, server):
                 'status': 'skipped',
                 'process_id': 'pid',
                 'worker_id': 'wid',
-                'started_at': '2000-01-01T00:00:00.000Z',
-                'finished_at': '2000-01-01T00:00:00.000Z',
+                'started_at': None,
+                'finished_at': None,
             },
         ],
     })]
