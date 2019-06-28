@@ -196,8 +196,6 @@ def test_successful_server_communication(config, server):
                 'status': 'skipped',
                 'process_id': 'pid',
                 'worker_id': 'wid',
-                'started_at': None,
-                'finished_at': None,
             },
         ],
     })]
