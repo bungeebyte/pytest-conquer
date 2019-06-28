@@ -170,9 +170,11 @@ class ReportSerializer:
             'status': item.status,
             'process_id': str(item.process_id),
             'worker_id': item.worker_id,
-            'started_at': item.started_at.strftime(ReportSerializer.date_format),
-            'finished_at': item.finished_at.strftime(ReportSerializer.date_format),
         }
+        if item.started_at:
+            data['started_at'] = item.started_at.strftime(ReportSerializer.date_format)
+        if item.finished_at:
+            data['finished_at'] = item.finished_at.strftime(ReportSerializer.date_format)
         if item.location.module:
             data['module'] = Serializer.truncate(item.location.module, 1024)
         if item.location.cls:
