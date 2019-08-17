@@ -316,7 +316,7 @@ def pytest_runtest_makereport(item, call):
     report = (yield).get_result()
 
     if not settings.enabled:
-        return report
+        return
 
     location = node_to_location(item)
 
