@@ -133,7 +133,7 @@ class Worker(threading.Thread):
             schedule = self.scheduler.start(suite_items)
             while schedule.items:
                 pid = self.run_schedule(schedule)
-                report_items = report_items_by_process[pid]  # we pick them up where the process left them
+                report_items = report_items_by_process.pop(pid)  # we pick them up where the process left them
                 schedule = self.scheduler.next(report_items)
         except SystemExit as e:
             failure = e
