@@ -14,7 +14,7 @@ class ParallelTerminalReporter(TerminalReporter):
 
     def pytest_runtest_logreport(self, report):
         rep = report
-        res = self.config.hook.pytest_report_teststatus(report=rep)
+        res = self.config.hook.pytest_report_teststatus(report=rep, config=self.config)
         cat, letter, word = res
 
         with self.report_log_lock:
