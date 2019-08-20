@@ -132,26 +132,25 @@ class Worker(threading.Thread):
         try:
             schedule = self.scheduler.start(suite_items)
             while schedule.items:
-                pid = self.run_schedule(schedule)
-                report_items = report_items_by_process.pop(pid)  # we pick them up where the process left them
+                report_items = self.run_schedule(schedule)
                 schedule = self.scheduler.next(report_items)
         except SystemExit as e:
             failure = e
             raise e
 
     def run_schedule(self, schedule):
-        tests = []
-        items = schedule.items
-        for i, item in enumerate(items):
-            tests.extend(tests_by_file[item.file])
-        proc = Process(args=[tests, self.session])
-        proc.start()
-        proc.join()
-        if proc.exception:
-            print('\033[91m' + 'INTERNAL ERROR:')
-            print(proc.exception + '\033[0m')
-        reporter.flush()  # force logs of the process to print
-        return proc.id
+        report_items = []
+        for i, item in enumerate(schedule.items):
+            tests = tests_by_file[item.file]
+            proc = Process(args=[tests, self.session])
+            proc.start()
+            proc.join()
+            if proc.exception:
+                print('\033[91m' + 'INTERNAL ERROR:')
+                print(proc.exception + '\033[0m')
+            reporter.flush()  # force logs of the process to print
+            report_items.extend(report_items_by_process.pop(proc.id))  # we pick them up where the process left them
+        return report_items
 
 
 class Process(multiprocessing.Process):
