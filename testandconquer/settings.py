@@ -27,13 +27,10 @@ class Capability(Enum):
 class Settings():
     def __init__(self, args):
         self.args = args
-        self.config = None
+        self.config_file = None
         self.mapping = None
         self.static_settings = StaticSettings()
         self.default_settings = DefaultSettings()
-        self.init_env()
-
-    def init_env(self):
         self.upcased_environ = dict()
         for key in os.environ:
             upper_key = key.upper()
@@ -42,23 +39,23 @@ class Settings():
                 raise ValueError("unsupported key '" + key + "' in environment variables")
             self.upcased_environ[upper_key_without_prefix] = os.environ[key]
 
-    def init_provider(self, client=None):
-        self.__init_mapping(client or Client(self))  # we need to get the env variable mappings from the server first
+    def init_from_file(self, path):
+        self.config_file = configparser.ConfigParser()
+        self.config_file.read(path)  # ignores non-existing file
 
-    def init_file(self, path):
-        self.config = configparser.ConfigParser()
-        self.config.read(path)  # ignores non-existing file
-
-        if self.config.has_section(CONFIG_SECTION):
-            for key in self.config[CONFIG_SECTION]:
+        if self.config_file.has_section(CONFIG_SECTION):
+            for key in self.config_file[CONFIG_SECTION]:
                 if not hasattr(self.default_settings, key):
                     raise ValueError("unsupported key '" + key + "' in config file " + path)
 
         if self.debug is True:
             debug_logger()
 
-    def __init_mapping(self, client):
-        envs = client.get('/envs')
+    def init_from_server(self, custom_client=None):
+        config = (custom_client or Client(self)).get('/config')
+        self.__init_mapping(config['envs'])  # we need to get the env variable mappings from the server first
+
+    def __init_mapping(self, envs):
         for env in envs:
             is_match = True
             for condition in env['conditions']:
@@ -99,8 +96,8 @@ class Settings():
             return self.__convert(self.upcased_environ[env_name], default_val)
 
         # 4) local config file
-        if self.config and self.config.has_option(CONFIG_SECTION, name):
-            return self.__convert(self.config.get(CONFIG_SECTION, name), default_val)
+        if self.config_file and self.config_file.has_option(CONFIG_SECTION, name):
+            return self.__convert(self.config_file.get(CONFIG_SECTION, name), default_val)
 
         # 5) provider variables
         if self.mapping and name in self.mapping:

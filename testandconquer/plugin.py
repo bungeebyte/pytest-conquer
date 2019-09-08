@@ -80,7 +80,7 @@ def create_settings(config):
         'runner_version': pytest.__version__,
         'workers': config.option.workers,
     })
-    settings.init_file('pytest.ini')
+    settings.init_from_file('pytest.ini')
     return settings
 
 
@@ -103,7 +103,7 @@ def pytest_runtestloop(session):
 
     # final step to initializing the settings
     # we do it here since we don't want to do it if the plugin is disabled/we fail to collect
-    settings.init_provider()
+    settings.init_from_server()
 
     threads = []
     no_of_workers = settings.client_workers

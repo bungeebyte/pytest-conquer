@@ -9,5 +9,5 @@ class MockSettings(Settings):
         super().__init__(args)
 
     # skips network call
-    def init_provider(self, _client=None):
+    def init_from_server(self, _client=None):
         pass

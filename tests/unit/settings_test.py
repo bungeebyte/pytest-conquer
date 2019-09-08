@@ -188,7 +188,7 @@ class TestSettingsInit():
 
     def test_get_variable_from_file(self):
         settings = Settings({})
-        settings.init_file('pytest.ini')
+        settings.init_from_file('pytest.ini')
         assert settings.system_provider == 'config-provider'
 
     def test_get_variable_from_mapping(self):
@@ -210,7 +210,7 @@ class TestSettingsInit():
     def test_validate_config_file_entries(self):
         with pytest.raises(ValueError, match="unsupported key 'wrong_var' in config file pytest.invalid.ini"):
             settings = Settings({})
-            settings.init_file('pytest.invalid.ini')
+            settings.init_from_file('pytest.invalid.ini')
 
     @pytest.fixture
     def invalid_env(self):
