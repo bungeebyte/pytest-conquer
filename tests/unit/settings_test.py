@@ -1,5 +1,4 @@
 import os
-from unittest import mock
 
 import pytest
 
@@ -195,9 +194,8 @@ class TestSettingsInit():
         os.environ['CI_NAME'] = 'mapping-provider'
         os.environ['ci_node'] = 'node'  # NOTE: lowercase name
         settings = Settings({})
-        client_mock = mock.Mock()
-        client_mock.get = lambda _url: [{'name': 'mapping-provider', 'conditions': ['CI_NAME'], 'mapping': {'build_node': 'CI_NODE'}}]
-        getattr(settings, '_Settings__init_mapping')(client_mock)
+        envs = [{'name': 'mapping-provider', 'conditions': ['CI_NAME'], 'mapping': {'build_node': 'CI_NODE'}}]
+        getattr(settings, '_Settings__init_mapping')(envs)
         assert settings.system_provider == 'mapping-provider'
         assert settings.build_node == 'node'
         del os.environ['CI_NAME']
