@@ -3,6 +3,7 @@ import random
 import string
 import sys
 import uuid
+import wsgiref.handlers
 from collections import namedtuple
 from datetime import datetime, timezone
 
@@ -19,11 +20,13 @@ from tests.mock.server import Server
 time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
+@pytest.mark.wip()
 def test_successful_server_communication(config, server):
     get_headers = {
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip, deflate',
         'Authorization': 'api_key',
+        'Date': 'Wed, 21 Oct 2015 07:28:00 GMT',
         'Host': server.url.replace('http://', ''),
         'User-Agent': 'pytest-conquer/1.0',
         'X-Attempt': '0',
@@ -279,6 +282,7 @@ def config(mocker):
     mocker.patch.object(platform, 'system', return_value='Linux', autospec=True)
     mocker.patch.object(uuid, 'uuid4', return_value='build-node', autospec=True)
     mocker.patch.object(sys, 'argv', ['arg1'])
+    mocker.patch.object(wsgiref.handlers, 'format_date_time', return_value='Wed, 21 Oct 2015 07:28:00 GMT', autospec=True)
     build_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return {
         'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'node': 'build-node'},

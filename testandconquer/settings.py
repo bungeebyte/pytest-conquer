@@ -52,8 +52,9 @@ class Settings():
             debug_logger()
 
     def init_from_server(self, custom_client=None):
+        # we need to get the env variable mappings from the server first
         config = (custom_client or Client(self)).get('/config')
-        self.__init_mapping(config['envs'])  # we need to get the env variable mappings from the server first
+        self.__init_mapping(config['envs'])
 
     def __init_mapping(self, envs):
         for env in envs:

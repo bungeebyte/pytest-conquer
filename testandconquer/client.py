@@ -2,6 +2,9 @@ import json
 import sys
 import time
 import zlib
+import datetime
+import wsgiref.handlers
+from time import mktime
 
 from testandconquer.vendor.httplib2 import Http, HttpLib2Error
 from testandconquer import logger
@@ -30,6 +33,7 @@ class Client():
         headers = {
             'Accept': 'application/json',
             'Authorization': str(self.api_key),
+            'Date': wsgiref.handlers.format_date_time(mktime(datetime.datetime.now().timetuple())),
             'User-Agent': str(self.user_agent),
             'X-Build-Id': str(self.build_id),
             'X-Build-Node': str(self.build_node),
