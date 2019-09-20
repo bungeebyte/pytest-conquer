@@ -76,7 +76,7 @@ class MockClient(Client):
         self.responses = responses
         self.requests = []
 
-    def _do_request(self, url, headers, body, timeout):
+    def _do_request(self, method, url, headers, body, timeout):
         self.requests.append({'url': url, 'headers': headers, 'body': body})
         head, tail = self.responses[0], self.responses[1:]
         self.responses = tail

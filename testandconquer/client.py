@@ -23,13 +23,15 @@ class Client():
         self.user_agent = settings.client_name + '/' + settings.client_version
 
     def get(self, path):
-        return self._request(path)
+        return self._request(path, 'GET', None)
+
+    def put(self, path, data):
+        return self._request(path, 'PUT', data)
 
     def post(self, path, data):
-        body = zlib.compress(json.dumps(data).encode('utf8'))
-        return self._request(path, body)
+        return self._request(path, 'POST', data)
 
-    def _request(self, path, body=None):
+    def _request(self, path, method, data):
         headers = {
             'Accept': 'application/json',
             'Authorization': str(self.api_key),
@@ -38,9 +40,12 @@ class Client():
             'X-Build-Id': str(self.build_id),
             'X-Build-Node': str(self.build_node),
         }
-        if body:
+        if data:
+            body = zlib.compress(json.dumps(data).encode('utf8'))
             headers['Content-Encoding'] = 'gzip'
             headers['Content-Type'] = 'application/json; charset=UTF-8'
+        else:
+            body = None
 
         attempts = 0
         result = None
@@ -56,7 +61,7 @@ class Client():
 
             try:
                 headers['X-Attempt'] = str(attempts)
-                response, content = self._do_request(url, headers, body, max(0.01, self.api_timeout))  # since zero means 'no timeout'
+                response, content = self._do_request(method, url, headers, body, max(0.01, self.api_timeout))  # since zero means 'no timeout'
                 log_msg = 'status code=' + str(response.status) + ', request id=' + str(response.get('x-request-id'))
                 if 200 <= response.status < 300:
                     result = json.loads(content.decode('utf-8'))
@@ -79,8 +84,6 @@ class Client():
 
         return result
 
-    def _do_request(self, url, headers, body, timeout):
+    def _do_request(self, method, url, headers, body, timeout):
         http = Http(timeout=timeout)
-        if body:
-            return http.request(url, 'POST', headers=headers, body=body)
-        return http.request(url, 'GET', headers=headers)
+        return http.request(url, method, headers=headers, body=body)
