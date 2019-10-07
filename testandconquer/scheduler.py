@@ -1,5 +1,7 @@
 import asyncio
 
+from contextlib import suppress
+
 from testandconquer import logger
 from testandconquer.client import Client
 from testandconquer.model import Schedule, ScheduleBatch, ScheduleItem
@@ -33,7 +35,11 @@ class Scheduler:
 
     async def stop(self):
         await self.report_queue.join()
-        [t.cancel() for t in self.tasks]
+        for t in self.tasks:
+            t.cancel()
+        for t in self.tasks:
+            with suppress(asyncio.CancelledError):
+                await t
 
     async def _heartbeat_task(self):
         logger.debug('initialising heartbeat task')
@@ -41,20 +47,27 @@ class Scheduler:
             logger.debug('sending heartbeat')
             try:
                 await self._make_http_call(self.client.post, '/heartbeat', None)
+            except asyncio.CancelledError:
+                break
+                raise
             except BaseException:
                 logger.exception('heartbeat to server failed')
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
 
     async def _report_task(self):
         logger.debug('initialising report task')
         self.report_queue = asyncio.Queue()
         while True:
-            report_items = await self.report_queue.get()
-            logger.debug('sending %s completed item(s)', len(report_items))
-            completed_data = ReportSerializer.serialize(self.run_id, self.job_id, report_items)
-            schedule_data = await self._make_http_call(self.client.put, '/schedules', completed_data)
-            self.__parse_schedule(schedule_data)
-            self.report_queue.task_done()
+            try:
+                report_items = await self.report_queue.get()
+                logger.debug('sending %s completed item(s)', len(report_items))
+                completed_data = ReportSerializer.serialize(self.run_id, self.job_id, report_items)
+                schedule_data = await self._make_http_call(self.client.put, '/schedules', completed_data)
+                self.__parse_schedule(schedule_data)
+                self.report_queue.task_done()
+            except asyncio.CancelledError:
+                break
+                raise
 
     def __parse_schedule(self, data):
         schedule_batches = []

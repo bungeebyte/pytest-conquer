@@ -22,6 +22,7 @@ time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.mark.asyncio()
+@pytest.mark.wip()
 async def test_successful_server_communication(config, mock_server):
     get_headers = {
         'Accept': 'application/json',
@@ -219,6 +220,7 @@ async def test_successful_server_communication(config, mock_server):
 
 
 @pytest.mark.asyncio()
+@pytest.mark.wip()
 async def test_retry_scheduling_on_server_error(config, mock_server, caplog):
     scheduler = Scheduler(MockSettings({
         'api_key': 'api_key',
@@ -245,6 +247,7 @@ async def test_retry_scheduling_on_server_error(config, mock_server, caplog):
     ]) == Schedule([
         ScheduleBatch([ScheduleItem('tests/IT/stub/stub_A.py')]),
     ])
+    await scheduler.stop()
 
     reqs = mock_server.requests
     assert len(reqs) == 3
@@ -255,6 +258,7 @@ async def test_retry_scheduling_on_server_error(config, mock_server, caplog):
 
 
 @pytest.mark.asyncio()
+@pytest.mark.wip()
 async def test_give_up_when_server_unreachable(config, caplog):
     with pytest.raises(SystemExit, match='EXIT: server communication error'):
         scheduler = Scheduler(MockSettings({
@@ -270,6 +274,8 @@ async def test_give_up_when_server_unreachable(config, caplog):
             'vcs_revision': 'asd43da',
         }), 'my_worker_id')
         await scheduler.start([])
+
+    await scheduler.stop()
 
     messages = [x.message for x in caplog.records if x.levelno == logging.WARNING]
     assert re.match(r'could not get successful response from server \[status=0\] \[request-id=random-uuid\]: \[Errno [0-9]+\] Connection refused', messages[0])
