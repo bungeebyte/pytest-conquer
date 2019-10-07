@@ -18,6 +18,7 @@ ENV_PREFIX = 'CONQUER_'
 
 
 class Capability(Enum):
+    Heartbeat = 'heartbeat'
     Fixtures = 'fixtures'
     IsolatedProcess = 'isolated_process'
     LifecycleTimings = 'lifecycle_timings'
@@ -183,6 +184,7 @@ class DefaultSettings():
 
     def client_capabilities(self):
         return [
+            Capability.Heartbeat,
             Capability.Fixtures,
             Capability.IsolatedProcess,
             Capability.LifecycleTimings,

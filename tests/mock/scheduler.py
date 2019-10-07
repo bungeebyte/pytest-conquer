@@ -1,7 +1,7 @@
 from multiprocessing import Manager
 
 from testandconquer.scheduler import Scheduler
-from testandconquer.model import Schedule, ScheduleItem
+from testandconquer.model import Schedule, ScheduleItem, ScheduleBatch
 
 
 manager = Manager()
@@ -16,14 +16,14 @@ class MockScheduler(Scheduler):
         self._report_items = manager.list()
         synchronization['lock'] = manager.Lock()
 
-    def start(self, suite_items):
+    async def start(self, suite_items):
         with synchronization['lock']:
             if not self._suite_files:
                 self._suite_items = suite_items
                 self._suite_files = list(set([i.location.file for i in suite_items]))
         return self.__next()
 
-    def next(self, report_items):
+    async def next(self, report_items):
         with synchronization['lock']:
             self._report_items.extend(report_items)
         return self.__next()
@@ -38,15 +38,15 @@ class MockScheduler(Scheduler):
 
     def __next(self):
         with synchronization['lock']:
-            items = []
+            batches = []
             if self._suite_files:
-                items = [ScheduleItem(self._suite_files.pop(0))]
-            return Schedule(items)
+                batches = [ScheduleBatch([ScheduleItem(self._suite_files.pop(0))])]
+            return Schedule(batches)
 
     def __fixed_report(self, report_items):
         items = []
         for item in report_items:
-            item = item._replace(started_at=None, finished_at=None, process_id=None, worker_id=None)
+            item = item._replace(started_at=None, finished_at=None, process_id=None)
             items.append(item)
         return items
 

@@ -5,11 +5,14 @@ SuiteItem = \
 SuiteItem.__new__.__defaults__ = (None,) * len(SuiteItem._fields)
 
 ReportItem = \
-    namedtuple('ReportItem', ['type', 'location', 'status', 'error', 'started_at', 'finished_at', 'worker_id', 'process_id'])
+    namedtuple('ReportItem', ['type', 'location', 'status', 'error', 'started_at', 'finished_at', 'process_id'])
 ReportItem.__new__.__defaults__ = (None,) * len(ReportItem._fields)
 
 Schedule = \
-    namedtuple('Schedule', ['items'])
+    namedtuple('Schedule', ['batches'])
+
+ScheduleBatch = \
+    namedtuple('ScheduleBatch', ['items'])
 
 ScheduleItem = \
     namedtuple('ScheduleItem', ['file'])
