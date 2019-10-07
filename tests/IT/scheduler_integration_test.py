@@ -255,6 +255,7 @@ async def test_retry_scheduling_on_server_error(config, mock_server, caplog):
 
 
 @pytest.mark.asyncio()
+@pytest.mark.wip()
 async def test_give_up_when_server_unreachable(config, caplog):
     with pytest.raises(SystemExit, match='EXIT: server communication error'):
         scheduler = Scheduler(MockSettings({
@@ -272,7 +273,7 @@ async def test_give_up_when_server_unreachable(config, caplog):
         await scheduler.start([])
 
     messages = [x.message for x in caplog.records if x.levelno == logging.WARNING]
-    assert re.match('could not get successful response from server \[status=0\] \[request-id=random-uuid\]: \[Errno [0-9]+\] Connection refused', messages[0])
+    assert re.match(r'could not get successful response from server \[status=0\] \[request-id=random-uuid\]: \[Errno [0-9]+\] Connection refused', messages[0])
 
 
 @pytest.fixture
