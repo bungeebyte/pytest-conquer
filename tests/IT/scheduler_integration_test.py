@@ -3,6 +3,7 @@ import random
 import string
 import sys
 import uuid
+import re
 import logging
 import wsgiref.handlers
 from collections import namedtuple
@@ -271,7 +272,7 @@ async def test_give_up_when_server_unreachable(config, caplog):
         await scheduler.start([])
 
     messages = [x.message for x in caplog.records if x.levelno == logging.WARNING]
-    assert messages[:3] == 3 * ['could not get successful response from server [status=0] [request-id=random-uuid]: [Errno 61] Connection refused']
+    assert re.match('could not get successful response from server \[status=0\] \[request-id=random-uuid\]: \[Errno [0-9]+\] Connection refused', messages[0])
 
 
 @pytest.fixture
