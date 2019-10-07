@@ -1,17 +1,6 @@
 import os
 
-import pytest
-
-import testandconquer.plugin
-from tests.mock.server import Server
-
-
-@pytest.fixture
-def server(request):
-    server = Server()
-    server.start()
-    request.addfinalizer(server.stop)
-    return server
+import testandconquer
 
 
 def run_test(pyt, files, args=['--conquer']):

@@ -21,13 +21,14 @@ time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.mark.asyncio()
-async def test_successful_server_communication(config, server):
+@pytest.mark.wip()
+async def test_successful_server_communication(config, mock_server):
     get_headers = {
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip, deflate',
         'Authorization': 'api_key',
         'Date': 'Wed, 21 Oct 2015 07:28:00 GMT',
-        'Host': server.url.replace('http://', ''),
+        'Host': mock_server.url.replace('http://', ''),
         'User-Agent': 'pytest-conquer/1.0',
         'X-Attempt': '0',
         'X-Build-Id': config['build']['id'],
@@ -45,7 +46,7 @@ async def test_successful_server_communication(config, server):
         'api_retries': '0',
         'api_retry_cap': '0',
         'api_timeout': '0',
-        'api_url': server.url,
+        'api_url': mock_server.url,
         'build_dir': '/app',
         'build_id': config['build']['id'],
         'build_job': 'job',
@@ -58,7 +59,7 @@ async def test_successful_server_communication(config, server):
 
     # Round 1
 
-    server.next_response(200, {
+    mock_server.next_response(200, {
         'run_id': 'some_run_id',
         'job_id': 'some_job_id',
         'batches': [{
@@ -79,7 +80,7 @@ async def test_successful_server_communication(config, server):
 
     # Round 2
 
-    server.next_response(200, {
+    mock_server.next_response(200, {
         'run_id': 'some_run_id',
         'job_id': 'some_job_id',
         'batches': [{
@@ -99,7 +100,7 @@ async def test_successful_server_communication(config, server):
 
     # Round 3
 
-    server.next_response(200, {
+    mock_server.next_response(200, {
         'run_id': 'some_run_id',
         'job_id': 'some_job_id',
         'batches': [],
@@ -115,7 +116,7 @@ async def test_successful_server_communication(config, server):
 
     # check schedules were transmitted correctly
 
-    assert server.requests == [
+    assert mock_server.requests == [
         ('POST', '/schedules', post_headers, {
             'config': config,
             'items': [{
@@ -218,21 +219,21 @@ async def test_successful_server_communication(config, server):
 
 
 @pytest.mark.asyncio()
-async def test_retry_scheduling_on_server_error(config, server, caplog):
+async def test_retry_scheduling_on_server_error(config, mock_server, caplog):
     scheduler = Scheduler(MockSettings({
         'api_key': 'api_key',
         'api_retry_cap': '0',
         'api_timeout': '0',
-        'api_url': server.url,
+        'api_url': mock_server.url,
         'build_id': 'build_id',
         'enabled': True,
         'vcs_branch': 'master',
         'vcs_revision': 'asd43da',
     }), 'my_worker_id')
 
-    server.next_response(500, {})
-    server.next_response(500, {})
-    server.next_response(200, {
+    mock_server.next_response(500, {})
+    mock_server.next_response(500, {})
+    mock_server.next_response(200, {
         'run_id': 'some_run_id',
         'job_id': 'some_job_id',
         'batches': [{
@@ -245,7 +246,7 @@ async def test_retry_scheduling_on_server_error(config, server, caplog):
         ScheduleBatch([ScheduleItem('tests/IT/stub/stub_A.py')]),
     ])
 
-    reqs = server.requests
+    reqs = mock_server.requests
     assert len(reqs) == 3
     assert [r[2]['X-Attempt'] for r in reqs] == ['0', '1', '2']
 

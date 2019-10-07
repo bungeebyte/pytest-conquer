@@ -638,6 +638,7 @@ def module_for(file):
 
 @pytest.fixture(scope='module', autouse=True)
 def mock_schedule():
+    # NOTE: doesn't work when the plugin is imported at any time
     previous = testandconquer.scheduler.Scheduler
     testandconquer.scheduler.Scheduler = MockScheduler
     yield
@@ -646,6 +647,7 @@ def mock_schedule():
 
 @pytest.fixture(scope='module', autouse=True)
 def mock_settings():
+    # NOTE: doesn't work when the plugin is imported at any time
     previous = testandconquer.settings.Settings
     testandconquer.settings.Settings = MockSettings
     yield
