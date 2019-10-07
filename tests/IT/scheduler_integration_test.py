@@ -255,7 +255,6 @@ async def test_retry_scheduling_on_server_error(config, mock_server, caplog):
 
 
 @pytest.mark.asyncio()
-@pytest.mark.wip()
 async def test_give_up_when_server_unreachable(config, caplog):
     with pytest.raises(SystemExit, match='EXIT: server communication error'):
         scheduler = Scheduler(MockSettings({
