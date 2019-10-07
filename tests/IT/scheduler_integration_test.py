@@ -21,7 +21,6 @@ time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.mark.asyncio()
-@pytest.mark.wip()
 async def test_successful_server_communication(config, mock_server):
     get_headers = {
         'Accept': 'application/json',
