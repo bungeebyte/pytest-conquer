@@ -636,7 +636,7 @@ def module_for(file):
     return file.replace('fixtures/', '').replace('.py', '')
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(autouse=True)
 def mock_schedule():
     # NOTE: doesn't work when the plugin is imported at any time
     previous = testandconquer.scheduler.Scheduler
@@ -645,7 +645,7 @@ def mock_schedule():
     testandconquer.scheduler.Scheduler = previous
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(autouse=True)
 def mock_settings():
     # NOTE: doesn't work when the plugin is imported at any time
     previous = testandconquer.settings.Settings

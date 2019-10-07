@@ -30,7 +30,7 @@ def test_end_to_end(testdir, mock_server):
     assert len(mock_server.requests) == 3
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(autouse=True)
 def mock_settings(mock_server):
     os.environ['CONQUER_API_URL'] = mock_server.url
     os.environ['CONQUER_API_KEY'] = '<API-KEY>'
