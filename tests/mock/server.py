@@ -7,7 +7,7 @@ from werkzeug.wrappers import Response, Request
 
 
 class Server(threading.Thread):
-    def __init__(self, host='127.0.0.1', port=0, **kwargs):
+    def __init__(self, host='0.0.0.0', port=0, **kwargs):
         self._server = make_server(host, port, self, **kwargs)
         self.requests = []
         self.responses = []

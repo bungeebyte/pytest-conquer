@@ -45,7 +45,7 @@ async def test_successful_server_communication(config, mock_server):
         'api_key': 'api_key',
         'api_retries': '0',
         'api_retry_cap': '0',
-        'api_timeout': '0',
+        'api_timeout': '10',
         'api_url': mock_server.url,
         'build_dir': '/app',
         'build_id': config['build']['id'],
@@ -223,7 +223,7 @@ async def test_retry_scheduling_on_server_error(config, mock_server, caplog):
     scheduler = Scheduler(MockSettings({
         'api_key': 'api_key',
         'api_retry_cap': '0',
-        'api_timeout': '0',
+        'api_timeout': '10',
         'api_url': mock_server.url,
         'build_id': 'build_id',
         'enabled': True,
@@ -262,7 +262,7 @@ async def test_give_up_when_server_unreachable(config, caplog):
             'api_key': 'api_key',
             'api_retries': '2',
             'api_retry_cap': '0',
-            'api_timeout': '0',
+            'api_timeout': '10',
             'api_url': 'http://localhost:12345',
             'api_url_fallback': 'http://localhost:12345',
             'build_id': 'build_id',
@@ -275,7 +275,7 @@ async def test_give_up_when_server_unreachable(config, caplog):
     await scheduler.stop()
 
     messages = [x.message for x in caplog.records if x.levelno == logging.WARNING]
-    assert re.match(r'could not get successful response from server \[status=0\] \[request-id=random-uuid\]: \[Errno [0-9]+\] Connection refused', messages[0])
+    assert re.match(r'could not get successful response from server \[status=0\] \[request-id=random-uuid\]: \[Errno [0-9]+\] (.*)', messages[0])
 
 
 @pytest.fixture
