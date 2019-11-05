@@ -1,6 +1,10 @@
+import asyncio
+
+from contextlib import suppress
+
 from testandconquer import logger
 from testandconquer.client import Client
-from testandconquer.model import Schedule, ScheduleItem
+from testandconquer.model import Schedule, ScheduleBatch, ScheduleItem
 
 
 class Scheduler:
@@ -9,25 +13,71 @@ class Scheduler:
         self.config = ConfigSerializer.serialize(self.settings, worker_id)
         logger.debug('generated config: %s', self.config)
 
-    def start(self, suite_items):
-        logger.debug('initialising suite with %s item(s)', len(suite_items))
+    async def start(self, suite_items):
         self.client = Client(self.settings)
-        suite_data = SuiteSerializer.serialize(self.config, suite_items)
-        schedule_data = self.client.post('/suites', suite_data)
-        return self.__parse_schedule(schedule_data)
+        self.tasks = []
+        self.tasks.append(asyncio.ensure_future(self._heartbeat_task()))
+        self.tasks.append(asyncio.ensure_future(self._report_task()))
 
-    def next(self, report_items):
+        logger.debug('initialising suite with %s item(s)', len(suite_items))
+        suite_data = SuiteSerializer.serialize(self.config, suite_items)
+        schedule_data = await self._make_http_call(self.client.post, '/schedules', suite_data)
+        self.run_id = schedule_data['run_id']
+        self.job_id = schedule_data['job_id']
+        self.schedule_queue = asyncio.Queue()
+        self.__parse_schedule(schedule_data)
+        return await self.schedule_queue.get()
+
+    async def next(self, report_items):
         logger.debug('submitting report with %s item(s)', len(report_items))
-        report_data = ReportSerializer.serialize(self.config, report_items)
-        schedule_data = self.client.post('/reports', report_data)
-        return self.__parse_schedule(schedule_data)
+        self.report_queue.put_nowait(report_items)
+        return await self.schedule_queue.get()
+
+    async def stop(self):
+        await self.report_queue.join()
+        for t in self.tasks:
+            t.cancel()
+        for t in self.tasks:
+            with suppress(asyncio.CancelledError):
+                await t
+
+    async def _heartbeat_task(self):
+        logger.debug('initialising heartbeat task')
+        while True:
+            logger.debug('sending heartbeat')
+            try:
+                await self._make_http_call(self.client.post, '/heartbeat', None)
+            except asyncio.CancelledError:
+                break
+                raise
+            except BaseException:
+                logger.exception('heartbeat to server failed')
+            await asyncio.sleep(10)
+
+    async def _report_task(self):
+        logger.debug('initialising report task')
+        self.report_queue = asyncio.Queue()
+        while True:
+            try:
+                report_items = await self.report_queue.get()
+                logger.debug('sending %s completed item(s)', len(report_items))
+                completed_data = ReportSerializer.serialize(self.run_id, self.job_id, report_items)
+                schedule_data = await self._make_http_call(self.client.put, '/schedules', completed_data)
+                self.__parse_schedule(schedule_data)
+                self.report_queue.task_done()
+            except asyncio.CancelledError:
+                break
+                raise
 
     def __parse_schedule(self, data):
-        schedule_items = []
-        for item in data['items']:
-            schedule_items.append(ScheduleItem(item['file']))
-        logger.debug('received schedule with %s item(s)', len(schedule_items))
-        return Schedule(schedule_items)
+        schedule_batches = []
+        for batch in data['batches']:
+            schedule_batches.append(ScheduleBatch([ScheduleItem(item['file']) for item in batch['items']]))
+        logger.debug('received schedule with %s batches', len(schedule_batches))
+        self.schedule_queue.put_nowait(Schedule(schedule_batches))
+
+    def _make_http_call(self, func, path, data):
+        return asyncio.get_event_loop().run_in_executor(None, func, path, data)
 
 
 class Serializer:
@@ -154,9 +204,10 @@ class ReportSerializer:
     date_format = '%Y-%m-%dT%H:%M:%S.000Z'
 
     @staticmethod
-    def serialize(config, report_items):
+    def serialize(run_id, job_id, report_items):
         return {
-            'config': config,
+            'run_id': run_id,
+            'job_id': job_id,
             'items': [ReportSerializer.serialize_item(i) for i in report_items],
         }
 
@@ -169,7 +220,6 @@ class ReportSerializer:
             'line': item.location.line,
             'status': item.status,
             'process_id': str(item.process_id),
-            'worker_id': item.worker_id,
         }
         if item.started_at:
             data['started_at'] = item.started_at.strftime(ReportSerializer.date_format)

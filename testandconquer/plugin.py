@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import os.path
 import os
@@ -7,6 +8,7 @@ import sys
 import threading
 import traceback
 import uuid
+import itertools
 from collections import defaultdict
 from datetime import datetime
 
@@ -55,11 +57,11 @@ def pytest_configure(config):
     settings = create_settings(config)
 
     if settings.enabled:
-        if tuple(map(int, (pytest.__version__.split('.')))) < (3, 0, 5):
-            raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.0.5\n')
+        if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
+            raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.6.0\n')
 
-        if sys.version_info < (3, 5):
-            raise SystemExit('Sorry, pytest-conquer requires at least Python 3.5\n')
+        if sys.version_info < (3, 6, 0):
+            raise SystemExit('Sorry, pytest-conquer requires at least Python 3.6.0\n')
 
         # replace the builtin reporter with our own that handles concurrency better
         builtin_reporter = config.pluginmanager.get_plugin('terminalreporter')
@@ -80,7 +82,7 @@ def create_settings(config):
         'runner_version': pytest.__version__,
         'workers': config.option.workers,
     })
-    settings.init_file('pytest.ini')
+    settings.init_from_file('pytest.ini')
     return settings
 
 
@@ -103,7 +105,7 @@ def pytest_runtestloop(session):
 
     # final step to initializing the settings
     # we do it here since we don't want to do it if the plugin is disabled/we fail to collect
-    settings.init_provider()
+    settings.init_from_server()
 
     threads = []
     no_of_workers = settings.client_workers
@@ -128,20 +130,27 @@ class Worker(threading.Thread):
         self.scheduler = kwargs['args'][2]
 
     def run(self):
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(self.run_task())
+        loop.close()
+
+    async def run_task(self):
         global failure
         try:
-            schedule = self.scheduler.start(suite_items)
-            while schedule.items:
-                report_items = self.run_schedule(schedule)
-                schedule = self.scheduler.next(report_items)
+            schedule = await self.scheduler.start(suite_items)
+            while schedule.batches:
+                report_items = self.execute_schedule(schedule)
+                schedule = await self.scheduler.next(report_items)
         except SystemExit as e:
+            print(e)
             failure = e
             raise e
 
-    def run_schedule(self, schedule):
+    def execute_schedule(self, schedule):
         report_items = []
-        for i, item in enumerate(schedule.items):
-            tests = tests_by_file[item.file]
+        for batch in schedule.batches:
+            files = [item.file for item in batch.items]
+            tests = list(itertools.chain(*[tests_by_file[f] for f in files]))
             proc = Process(args=[tests, self.session])
             proc.start()
             proc.join()
@@ -149,7 +158,8 @@ class Worker(threading.Thread):
                 print('\033[91m' + 'INTERNAL ERROR:')
                 print(proc.exception + '\033[0m')
             reporter.flush()  # force logs of the process to print
-            report_items.extend(report_items_by_process.pop(proc.id))  # we pick them up where the process left them
+            if proc.id in report_items_by_process:
+                report_items.extend(report_items_by_process.pop(proc.id))  # we pick them up where the process left them
         return report_items
 
 
@@ -167,7 +177,7 @@ class Process(multiprocessing.Process):
             for i, test in enumerate(self.tests):
                 next_test = self.tests[i + 1] if i + 1 < len(self.tests) else None
                 test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
-            report_items_by_process[multiprocessing.current_process().id] = report_items  # batch write to share data to main process
+            report_items_by_process[self.id] = report_items  # batch write to share data to main process
         except Exception:
             self.writer.send(traceback.format_exc())
 
@@ -395,8 +405,7 @@ def collect_item(item):
 # This is called from multiple subprocesses, so we need to manage the data by process ID.
 def report_item(type, location, status, start, end, failure):
     process_id = multiprocessing.current_process().id
-    worker_id = threading.current_thread().id
-    report_items.append(ReportItem(type, location, status, failure, start, end, worker_id, process_id))
+    report_items.append(ReportItem(type, location, status, failure, start, end, process_id))
 
 
 def node_to_location(node):

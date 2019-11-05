@@ -6,6 +6,7 @@ import pytest
 import testandconquer.scheduler
 from testandconquer.model import Failure, Location, ReportItem, SuiteItem, Tag
 
+from tests.IT import run_test, assert_outcomes
 from tests.mock.settings import MockSettings
 from tests.mock.scheduler import MockScheduler
 
@@ -623,7 +624,7 @@ def test_settings(testdir):
 
     assert settings.client_workers == 1
     assert settings.runner_name == 'pytest'
-    assert settings.runner_plugins == [('pytest-conquer', '1.0.0'), ('pytest-cov', '2.5.1'), ('pytest-mock', '1.6.3')]
+    assert settings.runner_plugins == [('pytest-asyncio', '0.10.0'), ('pytest-conquer', '1.0.0'), ('pytest-cov', '2.5.1'), ('pytest-mock', '1.6.3')]
     assert settings.runner_root == os.getcwd()
     assert settings.runner_version == pytest.__version__
 
@@ -635,42 +636,19 @@ def module_for(file):
     return file.replace('fixtures/', '').replace('.py', '')
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(autouse=True)
 def mock_schedule():
+    # NOTE: doesn't work when the plugin is imported at any time
     previous = testandconquer.scheduler.Scheduler
     testandconquer.scheduler.Scheduler = MockScheduler
     yield
     testandconquer.scheduler.Scheduler = previous
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(autouse=True)
 def mock_settings():
+    # NOTE: doesn't work when the plugin is imported at any time
     previous = testandconquer.settings.Settings
     testandconquer.settings.Settings = MockSettings
     yield
     testandconquer.settings.Settings = previous
-
-
-def run_test(pyt, files, args=['--conquer']):
-    source_by_name = {}
-    here = os.path.abspath(os.path.dirname(__file__))
-    files.append('fixtures/conftest.py')
-    files.append('fixtures/fixture.py')
-    files.append('fixtures/lib.py')
-    for file in files:
-        with open(os.path.join(here, file)) as f:
-            source_by_name[file] = f.readlines()
-    pyt.makepyfile(**source_by_name)
-    test_result = pyt.runpytest('-s', *args)
-    return (test_result, (testandconquer.plugin.schedulers or [None])[0])
-
-
-def assert_outcomes(result, passed=0, skipped=0, failed=0, error=0):
-    d = result.parseoutcomes()
-    obtained = {
-        'passed': d.get('passed', 0),
-        'skipped': d.get('skipped', 0),
-        'failed': d.get('failed', 0),
-        'error': d.get('error', 0),
-    }
-    assert obtained == dict(passed=passed, skipped=skipped, failed=failed, error=error)

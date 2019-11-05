@@ -3,21 +3,19 @@ language: python
 
 matrix:
     include:
-      # oldest supported versions:
-      - python: 3.5
-        env: TOX_ENV=py35 PYTEST_VERSION===3.0.5
-      # previous major versions:
-      - python: 3.5
-        env: TOX_ENV=py35 PYTEST_VERSION===3.10.1
+      # oldest supported python/pytest versions:
+      - python: 3.6
+        env: TOX_ENV=py36 PYTEST_VERSION===3.6.0
+      # previous major python/pytest versions:
+      - python: 3.6
+        env: TOX_ENV=py36 PYTEST_VERSION===3.10.1
       # latest:
-      - python: 3.5
-        env: TOX_ENV=py35
       - python: 3.6
         env: TOX_ENV=py36
       - python: 3.7
         env: TOX_ENV=py37
         dist: xenial
-      - python: 3.6
+      - python: 3.7
         env: TOX_ENV=flake8
 
 before_cache:
