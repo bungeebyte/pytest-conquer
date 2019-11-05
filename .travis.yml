@@ -5,7 +5,7 @@ matrix:
     include:
       # oldest supported Python/PyTest versions:
       - python: 3.6
-        env: TOX_ENV=py36 PYTEST_VERSION===3.0.5
+        env: TOX_ENV=py36 PYTEST_VERSION===3.0.6
       # previous major Python/PyTest versions:
       - python: 3.6
         env: TOX_ENV=py36 PYTEST_VERSION===3.10.1
