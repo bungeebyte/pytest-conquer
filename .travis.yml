@@ -14,10 +14,11 @@ matrix:
         env: TOX_ENV=py36
       - python: 3.7
         env: TOX_ENV=py37
+        dist: xenial  # required for Python 3.7+
       - python: 3.8
         env: TOX_ENV=py38
-        dist: xenial
-      - python: 3.8
+        dist: xenial  # required for Python 3.7+
+      - python: 3.7
         env: TOX_ENV=flake8
 
 before_cache:
