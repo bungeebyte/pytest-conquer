@@ -1,19 +1,20 @@
 import logging
 
-
 __version__ = '1.0'
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+
+# log warnings by default
+logger.setLevel(logging.WARNING)
+sh = logging.StreamHandler()
+sh.setFormatter(formatter)
+logger.addHandler(sh)
 
 
 def debug_logger():
     logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    sh = logging.StreamHandler()
-    sh.setFormatter(formatter)
-    logger.addHandler(sh)
 
     fh = logging.FileHandler('conquer.log')
     fh.setFormatter(formatter)
