@@ -51,7 +51,7 @@ class Scheduler:
                 break
                 raise
             except BaseException:
-                logger.exception('heartbeat to server failed')
+                logger.error('heartbeat to server failed')
             await asyncio.sleep(10)
 
     async def _report_task(self):
