@@ -98,7 +98,7 @@ class Client():
         except ValueError:
             pass
         if not isinstance(json_resp, dict):
-            return None, RuntimeError('invalid JSON response')
+            return None, RuntimeError('an error occurred')
 
         if 200 <= response.status < 300:
             return json_resp, None

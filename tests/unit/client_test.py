@@ -44,10 +44,10 @@ class TestClient():
     def test_handle_invalid_json_message(self, caplog, fakeuuid):
         client = MockClient([(400, """{INVALID JSON}""")])
 
-        with pytest.raises(Exception, match='invalid JSON response'):
+        with pytest.raises(Exception, match='an error occurred'):
             client.post('/endpoint', {})
 
-        assert warn_messages(caplog) == ['could not get successful response from server [status=400] [request-id=random-uuid]: invalid JSON response']
+        assert warn_messages(caplog) == ['could not get successful response from server [status=400] [request-id=random-uuid]: an error occurred']
 
     def test_print_error_message_from_server(self, caplog, fakeuuid):
         client = MockClient([(400, """{"error": "a helpful error message"}""")])
