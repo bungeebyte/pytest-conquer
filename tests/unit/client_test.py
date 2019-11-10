@@ -39,7 +39,7 @@ class TestClient():
         with pytest.raises(Exception, match='Client Error'):
             client.post('/endpoint', {})
 
-        assert warn_messages(caplog) == ['could not get successful response from server [status=400] [request-id=random-uuid]: Client Error']
+        assert warn_messages(caplog) == ['could not get successful response from server [path=/endpoint] [status=400] [request-id=random-uuid]: Client Error']
 
     def test_handle_invalid_json_message(self, caplog, fakeuuid):
         client = MockClient([(400, """{INVALID JSON}""")])
@@ -47,7 +47,7 @@ class TestClient():
         with pytest.raises(Exception, match='an error occurred'):
             client.post('/endpoint', {})
 
-        assert warn_messages(caplog) == ['could not get successful response from server [status=400] [request-id=random-uuid]: an error occurred']
+        assert warn_messages(caplog) == ['could not get successful response from server [path=/endpoint] [status=400] [request-id=random-uuid]: an error occurred']
 
     def test_print_error_message_from_server(self, caplog, fakeuuid):
         client = MockClient([(400, """{"error": "a helpful error message"}""")])
@@ -55,7 +55,7 @@ class TestClient():
         with pytest.raises(Exception, match='a helpful error message'):
             client.post('/endpoint', {})
 
-        assert warn_messages(caplog) == ['could not get successful response from server [status=400] [request-id=random-uuid]: a helpful error message']
+        assert warn_messages(caplog) == ['could not get successful response from server [path=/endpoint] [status=400] [request-id=random-uuid]: a helpful error message']
 
     def test_switch_api_url_for_connection_problems(self):
         client = MockClient([
@@ -82,7 +82,7 @@ class TestClient():
         with pytest.raises(Exception, match='Server Error'):
             client.post('/endpoint', {})
 
-        assert warn_messages(caplog) == 4 * ['could not get successful response from server [status=500] [request-id=random-uuid]: Server Error']
+        assert warn_messages(caplog) == 4 * ['could not get successful response from server [path=/endpoint] [status=500] [request-id=random-uuid]: Server Error']
 
     def test_give_up_when_persistent_connection_error(self, caplog, fakeuuid):
         client = MockClient([
@@ -95,7 +95,7 @@ class TestClient():
         with pytest.raises(Exception, match='unable to reach server'):
             client.post('/endpoint', {})
 
-        assert warn_messages(caplog) == 4 * ['could not get successful response from server [status=0] [request-id=random-uuid]: unable to reach server']
+        assert warn_messages(caplog) == 4 * ['could not get successful response from server [path=/endpoint] [status=0] [request-id=random-uuid]: unable to reach server']
 
 
 class MockClient(Client):

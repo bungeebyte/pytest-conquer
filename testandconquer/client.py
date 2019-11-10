@@ -60,7 +60,7 @@ class Client():
                 if last_err:
                     attempts += 1
                     wait_before_retry = 2 ** attempts - (time.time() - start)
-                    logger.warning('could not get successful response from server [status=%s] [request-id=%s]: %s', status_code, headers['X-Request-Id'], last_err)
+                    logger.warning('could not get successful response from server [path=%s] [status=%s] [request-id=%s]: %s', path, status_code, headers['X-Request-Id'], last_err)
 
         if last_err:
             raise last_err
