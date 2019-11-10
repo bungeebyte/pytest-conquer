@@ -275,7 +275,7 @@ async def test_give_up_when_server_unreachable(config, caplog):
     await scheduler.stop()
 
     messages = [x.message for x in caplog.records if x.levelno == logging.WARNING]
-    assert re.match(r'could not get successful response from server \[path=/heartbeat\] \[status=0\] \[request-id=random-uuid\]: \[Errno [0-9]+\] (.*)', messages[0])
+    assert re.match(r'could not get successful response from server \[path=(.*)\] \[status=0\] \[request-id=random-uuid\]: \[Errno [0-9]+\] (.*)', messages[0])
 
 
 @pytest.fixture
