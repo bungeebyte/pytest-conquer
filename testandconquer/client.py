@@ -1,5 +1,4 @@
 import json
-import sys
 import time
 import zlib
 import datetime
@@ -64,7 +63,7 @@ class Client():
                     logger.warning('could not get successful response from server [status=%s] [request-id=%s]: %s', status_code, headers['X-Request-Id'], last_err)
 
         if last_err:
-            sys.exit('EXIT: server communication error')
+            raise last_err
 
         return result
 
@@ -99,10 +98,10 @@ class Client():
         except ValueError:
             pass
         if not isinstance(json_resp, dict):
-            return None, 'invalid JSON response'
+            return None, RuntimeError('an error occurred')
 
         if 200 <= response.status < 300:
             return json_resp, None
 
         err_msg = (json_resp.get('error') if json_resp else None) or ('Server Error' if response.status >= 500 else 'Client Error')
-        return None, err_msg
+        return None, RuntimeError(err_msg)

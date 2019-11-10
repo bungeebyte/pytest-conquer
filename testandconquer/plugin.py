@@ -17,6 +17,7 @@ from _pytest import main
 
 from testandconquer.model import Failure, Location, SuiteItem, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
+from testandconquer.heartbeat import Heartbeat
 from testandconquer.settings import Settings
 from testandconquer.terminal import ParallelTerminalReporter
 
@@ -112,7 +113,8 @@ def pytest_runtestloop(session):
     for i in range(no_of_workers):
         worker_id = str(uuid.uuid4())
         scheduler = Scheduler(settings, worker_id)
-        t = Worker(args=[worker_id, session, scheduler])
+        heartbeat = Heartbeat(settings)
+        t = Worker(args=[worker_id, session, scheduler, heartbeat])
         threads.append(t)
         schedulers.append(scheduler)
         t.start()
@@ -128,6 +130,7 @@ class Worker(threading.Thread):
         self.id = kwargs['args'][0]
         self.session = kwargs['args'][1]
         self.scheduler = kwargs['args'][2]
+        self.heartbeat = kwargs['args'][3]
 
     def run(self):
         loop = asyncio.new_event_loop()
@@ -137,11 +140,14 @@ class Worker(threading.Thread):
     async def run_task(self):
         global failure
         try:
+            self.heartbeat.start()
             schedule = await self.scheduler.start(suite_items)
             while schedule.batches:
                 report_items = self.execute_schedule(schedule)
                 schedule = await self.scheduler.next(report_items)
-        except SystemExit as e:
+            await self.scheduler.stop()
+            await self.heartbeat.stop()
+        except BaseException as e:
             print(e)
             failure = e
             raise e

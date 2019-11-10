@@ -23,6 +23,9 @@ class MockScheduler(Scheduler):
                 self._suite_files = list(set([i.location.file for i in suite_items]))
         return self.__next()
 
+    async def stop(self):
+        pass
+
     async def next(self, report_items):
         with synchronization['lock']:
             self._report_items.extend(report_items)
