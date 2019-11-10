@@ -15,9 +15,7 @@ class Scheduler:
 
     async def start(self, suite_items):
         self.client = Client(self.settings)
-        self.tasks = []
-        self.tasks.append(asyncio.ensure_future(self._heartbeat_task()))
-        self.tasks.append(asyncio.ensure_future(self._report_task()))
+        self.task = asyncio.ensure_future(self._report_task())
 
         logger.debug('initialising suite with %s item(s)', len(suite_items))
         suite_data = SuiteSerializer.serialize(self.config, suite_items)
@@ -35,24 +33,9 @@ class Scheduler:
 
     async def stop(self):
         await self.report_queue.join()
-        for t in self.tasks:
-            t.cancel()
-        for t in self.tasks:
-            with suppress(asyncio.CancelledError):
-                await t
-
-    async def _heartbeat_task(self):
-        logger.debug('initialising heartbeat task')
-        while True:
-            logger.debug('sending heartbeat')
-            try:
-                await self._make_http_call(self.client.post, '/heartbeat', None)
-            except asyncio.CancelledError:
-                break
-                raise
-            except BaseException:
-                logger.error('heartbeat to server failed')
-            await asyncio.sleep(10)
+        self.task.cancel()
+        with suppress(asyncio.CancelledError):
+            await self.task
 
     async def _report_task(self):
         logger.debug('initialising report task')
@@ -67,7 +50,6 @@ class Scheduler:
                 self.report_queue.task_done()
             except asyncio.CancelledError:
                 break
-                raise
 
     def __parse_schedule(self, data):
         schedule_batches = []

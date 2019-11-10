@@ -5,6 +5,7 @@ import pytest
 from tests.IT import run_test, assert_outcomes
 
 
+@pytest.mark.wip()
 def test_end_to_end(testdir, mock_server):
     mock_server.next_response(200, {
         'envs': {},

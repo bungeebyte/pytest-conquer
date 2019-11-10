@@ -36,7 +36,7 @@ class TestClient():
     def test_do_not_retry_on_400(self, caplog, fakeuuid):
         client = MockClient([(400, MOCK_CONTENT)])
 
-        with pytest.raises(SystemExit, match='EXIT: server communication error'):
+        with pytest.raises(Exception, match='Client Error'):
             client.post('/endpoint', {})
 
         assert warn_messages(caplog) == ['could not get successful response from server [status=400] [request-id=random-uuid]: Client Error']
@@ -44,7 +44,7 @@ class TestClient():
     def test_handle_invalid_json_message(self, caplog, fakeuuid):
         client = MockClient([(400, """{INVALID JSON}""")])
 
-        with pytest.raises(SystemExit, match='EXIT: server communication error'):
+        with pytest.raises(Exception, match='invalid JSON response'):
             client.post('/endpoint', {})
 
         assert warn_messages(caplog) == ['could not get successful response from server [status=400] [request-id=random-uuid]: invalid JSON response']
@@ -52,7 +52,7 @@ class TestClient():
     def test_print_error_message_from_server(self, caplog, fakeuuid):
         client = MockClient([(400, """{"error": "a helpful error message"}""")])
 
-        with pytest.raises(SystemExit, match='EXIT: server communication error'):
+        with pytest.raises(Exception, match='a helpful error message'):
             client.post('/endpoint', {})
 
         assert warn_messages(caplog) == ['could not get successful response from server [status=400] [request-id=random-uuid]: a helpful error message']
@@ -79,7 +79,7 @@ class TestClient():
             (500, MOCK_CONTENT),
         ])
 
-        with pytest.raises(SystemExit, match='EXIT: server communication error'):
+        with pytest.raises(Exception, match='Server Error'):
             client.post('/endpoint', {})
 
         assert warn_messages(caplog) == 4 * ['could not get successful response from server [status=500] [request-id=random-uuid]: Server Error']
@@ -92,7 +92,7 @@ class TestClient():
             IOError('unable to reach server'),
         ])
 
-        with pytest.raises(SystemExit, match='EXIT: server communication error'):
+        with pytest.raises(Exception, match='unable to reach server'):
             client.post('/endpoint', {})
 
         assert warn_messages(caplog) == 4 * ['could not get successful response from server [status=0] [request-id=random-uuid]: unable to reach server']
