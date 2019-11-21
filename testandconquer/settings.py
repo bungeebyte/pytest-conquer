@@ -162,7 +162,7 @@ class DefaultSettings():
         return 60
 
     def api_timeout(self):
-        return 10
+        return 15
 
     def api_url(self):
         return 'https://scheduler.testandconquer.com'

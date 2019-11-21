@@ -25,7 +25,7 @@ class TestSettings():
 
     def test_api_timeout_default(self):
         settings = Settings({})
-        assert settings.api_timeout == 10
+        assert settings.api_timeout == 15
 
     def test_api_timeout(self):
         settings = Settings({'api_timeout': '1'})
