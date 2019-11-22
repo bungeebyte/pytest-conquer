@@ -39,6 +39,7 @@ class Client():
         headers, body = self._prepare_request(data)
         while result is None and attempts < self.api_retries + 1:
             url = self.api_urls[0] + path
+            headers['X-Request-Id'] = str(uuid.uuid4())
 
             if wait_before_retry >= 1:
                 logger.debug('retrying in %ss', wait_before_retry)
@@ -75,7 +76,6 @@ class Client():
             'User-Agent': str(self.user_agent),
             'X-Build-Id': str(self.build_id),
             'X-Build-Node': str(self.build_node),
-            'X-Request-Id': str(uuid.uuid4()),
         }
 
         if data:
