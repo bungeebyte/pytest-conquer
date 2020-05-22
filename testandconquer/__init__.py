@@ -3,7 +3,7 @@ import logging
 __version__ = '1.0'
 
 logger = logging.getLogger(__name__)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s|%(filename)s:%(lineno)d] %(message)s')
 
 
 # log warnings by default

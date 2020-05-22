@@ -7,7 +7,7 @@ from tests.mock.settings import MockSettings
 @patch('testandconquer.plugin.sys')
 def test_fails_for_old_python_version(mock_sys):
     import testandconquer.plugin  # has to be inline since the module can't be loaded upfront due to pytester
-    type(mock_sys).version_info = PropertyMock(return_value=(3, 4))
+    type(mock_sys).version_info = PropertyMock(return_value=(3, 5))
     with pytest.raises(SystemExit):
         testandconquer.plugin.pytest_configure(None)
 

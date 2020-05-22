@@ -358,4 +358,4 @@ HeadersLike = Union[Headers, Mapping[str, str], Iterable[Tuple[str, str]]]
 
 
 # at the bottom to allow circular import, because AbortHandshake depends on HeadersLike
-import websockets.exceptions  # isort:skip # noqa
+import testandconquer.vendor.websockets.exceptions  # isort:skip # noqa

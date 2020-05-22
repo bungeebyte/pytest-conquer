@@ -3,13 +3,12 @@ import os.path
 
 import pytest
 
-import testandconquer.heartbeat
 import testandconquer.scheduler
 from testandconquer.model import Failure, Location, ReportItem, SuiteItem, Tag
 
 from tests.IT import run_test, assert_outcomes
+from tests.mock.client import MockClient
 from tests.mock.settings import MockSettings
-from tests.mock.heartbeat import MockHeartbeat
 from tests.mock.scheduler import MockScheduler
 
 
@@ -639,14 +638,20 @@ def module_for(file):
 
 
 @pytest.fixture(autouse=True)
+def mock_client():
+    # NOTE: doesn't work when the plugin is imported at any time
+    previous_client = testandconquer.client.Client
+    testandconquer.client.Client = MockClient
+    yield
+    testandconquer.client.Client = previous_client
+
+
+@pytest.fixture(autouse=True)
 def mock_schedule():
     # NOTE: doesn't work when the plugin is imported at any time
     previous_scheduler = testandconquer.scheduler.Scheduler
-    previous_heartbeat = testandconquer.heartbeat.Heartbeat
-    testandconquer.heartbeat.Heartbeat = MockHeartbeat
     testandconquer.scheduler.Scheduler = MockScheduler
     yield
-    testandconquer.heartbeat.Heartbeat = previous_heartbeat
     testandconquer.scheduler.Scheduler = previous_scheduler
 
 

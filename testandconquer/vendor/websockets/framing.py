@@ -339,4 +339,4 @@ def check_close(code: int) -> None:
 
 
 # at the bottom to allow circular import, because Extension depends on Frame
-import websockets.extensions.base  # isort:skip # noqa
+import testandconquer.vendor.websockets.extensions.base  # isort:skip # noqa

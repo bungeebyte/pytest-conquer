@@ -2,6 +2,7 @@ import os
 
 import pytest
 
+from testandconquer.client import MessageType
 from testandconquer.settings import Settings
 
 
@@ -15,37 +16,29 @@ class TestSettings():
         with pytest.raises(ValueError, match="missing API key, please set 'api_key'"):
             Settings({}).api_key
 
-    def test_api_retries_default(self):
+    def test_api_retry_limit_default(self):
         settings = Settings({})
-        assert settings.api_retries == 6
+        assert settings.api_retry_limit == 6
 
-    def test_api_retries(self):
-        settings = Settings({'api_retries': '1'})
-        assert settings.api_retries == 1
+    def test_api_retry_limit(self):
+        settings = Settings({'api_retry_limit': '1'})
+        assert settings.api_retry_limit == 1
 
-    def test_api_timeout_default(self):
+    def test_api_wait_limit_default(self):
         settings = Settings({})
-        assert settings.api_timeout == 15
+        assert settings.api_wait_limit == 60
 
-    def test_api_timeout(self):
-        settings = Settings({'api_timeout': '1'})
-        assert settings.api_timeout == 1
+    def test_api_wait_limit(self):
+        settings = Settings({'api_wait_limit': '1'})
+        assert settings.api_wait_limit == 1
 
-    def test_api_retry_cap_default(self):
+    def test_api_domains(self):
         settings = Settings({})
-        assert settings.api_retry_cap == 60
+        assert settings.api_domain == 'testandconquer.com'
+        assert settings.api_domain_fallback == 'testconquer.com'
 
-    def test_api_retry_cap(self):
-        settings = Settings({'api_retry_cap': '1'})
-        assert settings.api_retry_cap == 1
-
-    def test_api_urls(self):
-        settings = Settings({})
-        assert settings.api_url == 'https://scheduler.testandconquer.com'
-        assert settings.api_url_fallback == 'https://scheduler.testconquer.com'
-
-        settings = Settings({'api_url': 'http://0.0.0.0'})
-        assert settings.api_url == 'http://0.0.0.0'
+        settings = Settings({'api_domain': '0.0.0.0'})
+        assert settings.api_domain == '0.0.0.0'
 
     def test_build_id(self):
         settings = Settings({'build_id': 'ABCD'})
@@ -190,20 +183,30 @@ class TestSettingsInit():
         settings.init_from_file('pytest.ini')
         assert settings.system_provider == 'config-provider'
 
-    def test_get_variable_from_mapping(self):
-        os.environ['CI_NAME'] = 'mapping-provider'
-        os.environ['ci_node'] = 'node'  # NOTE: lowercase name
+    @pytest.mark.asyncio()
+    async def test_get_variable_from_mapping(self):
+        os.environ['CI_name'] = 'mapping-provider'
+        os.environ['ENV_node'] = 'NODE'
         settings = Settings({})
-        envs = [{'name': 'mapping-provider', 'conditions': ['CI_NAME'], 'mapping': {'build_node': 'CI_NODE'}}]
-        getattr(settings, '_Settings__init_mapping')(envs)
+
+        # when provider matches
+        envs = [{'name': 'mapping-provider', 'conditions': ['ci_NAME'], 'mapping': {'build_NODE': 'ENV_NODE'}}]
+        assert await settings.on_server_message(MessageType.Env.value, envs) == (MessageType.Env, 'mapping-provider')
         assert settings.system_provider == 'mapping-provider'
-        assert settings.build_node == 'node'
-        del os.environ['CI_NAME']
-        del os.environ['ci_node']
+        assert settings.build_node == 'NODE'
+
+        # when provider doesn't match
+        envs = []
+        assert await settings.on_server_message(MessageType.Env.value, envs) == (MessageType.Env, 'unknown')
+        assert settings.system_provider == 'unknown'
+        assert settings.build_node != 'NODE'
+
+        del os.environ['CI_name']
+        del os.environ['ENV_node']
 
     def test_get_variable_from_defaults(self):
         settings = Settings({})
-        assert settings.system_provider == 'custom'
+        assert settings.system_provider is None
 
     def test_validate_config_file_entries(self):
         with pytest.raises(ValueError, match="unsupported key 'wrong_var' in config file pytest.invalid.ini"):

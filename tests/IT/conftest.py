@@ -1,11 +1,11 @@
 import pytest
 
-from tests.mock.server import Server
+from tests.mock.server import MockServer
 
 
-@pytest.fixture()
-def mock_server(request):
-    server = Server()
-    server.start()
-    request.addfinalizer(server.stop)
-    return server
+@pytest.yield_fixture()
+async def mock_server(request):
+    server = MockServer()
+    await server.start()
+    yield server
+    await server.stop()

@@ -17,11 +17,9 @@ setup(
     packages=[
         'testandconquer',
         'testandconquer.vendor',
-        'testandconquer.vendor.httplib2',
+        'testandconquer.vendor.websockets',
+        'testandconquer.vendor.websockets.extensions',
     ],
-    package_data={
-        'testandconquer.vendor.httplib2': ['*.txt'],
-    },
     entry_points={
         'pytest11': [
             'pytest-conquer = testandconquer.plugin',
@@ -36,10 +34,10 @@ setup(
         'Topic :: Software Development :: Testing',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Operating System :: OS Independent',
         'License :: OSI Approved :: MIT License',
     ],
