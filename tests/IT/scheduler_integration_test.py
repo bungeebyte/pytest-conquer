@@ -28,9 +28,8 @@ async def test_successful_server_communication(config, mock_server):
     settings = MockSettings({
         'api_domain': mock_server.url,
         'api_key': 'api_key',
-        'api_retries': '0',
-        'api_retry_cap': '0',
-        'api_timeout': '1',
+        'api_retry_limit': '0',
+        'api_wait_limit': '0',
         'build_dir': '/app',
         'build_id': config['build']['id'],
         'build_job': 'job',
