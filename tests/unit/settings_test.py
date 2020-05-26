@@ -209,9 +209,9 @@ class TestSettingsInit():
         assert settings.system_provider is None
 
     def test_validate_config_file_entries(self):
-        with pytest.raises(ValueError, match="unsupported key 'wrong_var' in config file pytest.invalid.ini"):
+        with pytest.raises(ValueError, match="unsupported key 'wrong_var' in config file tests/pytest.invalid.ini"):
             settings = Settings({})
-            settings.init_from_file('pytest.invalid.ini')
+            settings.init_from_file('tests/pytest.invalid.ini')
 
     @pytest.fixture
     def invalid_env(self):
