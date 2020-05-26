@@ -3,9 +3,10 @@ import asyncio
 import socket
 import uuid
 import time
-import datetime
+from datetime import datetime
 from enum import Enum
 
+from testandconquer.util import system_exit
 from testandconquer.vendor import websockets
 from testandconquer import logger
 
@@ -53,7 +54,7 @@ class Client():
         return json.dumps({
             'id': str(uuid.uuid4()),
             'num': str(message_num),
-            'date': datetime.datetime.now().isoformat(),
+            'date': datetime.utcnow().isoformat(),
             'type': message_type.value,
             'payload': payload,
         })
@@ -182,7 +183,7 @@ class Client():
                 finally:
                     self.connected = False
                     if self.connection_attempt > self.api_retry_limit:
-                        raise SystemError('failed to connect to server')
+                        self._abort()
                     self.connection_attempt += 1
                     wait_before_reconnect = 2 ** self.connection_attempt - (time.time() - start)
                     self.api_urls.reverse()  # we'll try the other URL next
@@ -190,6 +191,17 @@ class Client():
             pass
         except Exception as err:
             logger.exception(err)
+
+    def _abort(self):
+        system_exit('COULD NOT CONNECT:',
+                    'Unable to connect to server, giving up.\n'
+                    + 'Please try again and contact support if the error persists.',
+                    {
+                        'Client-Name': self.client_name,
+                        'Client-Version': self.client_version,
+                        'Connection-Attempt': self.connection_attempt,
+                        'Connection-ID': self.id,
+                    })
 
     @staticmethod
     def to_url(domain, region):

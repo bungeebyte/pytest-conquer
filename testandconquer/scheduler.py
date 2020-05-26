@@ -5,6 +5,7 @@ from testandconquer import logger
 from testandconquer.client import MessageType
 from testandconquer.model import Schedule
 from testandconquer.serializer import Serializer
+from testandconquer.util import system_exit
 
 
 class Scheduler:
@@ -51,7 +52,7 @@ class Scheduler:
             self.more = False
             await self.schedule_queue.put(Schedule([]))  # so we unblock 'next'
         elif message_type == MessageType.Error.value:
-            pass  # TBD
+            system_exit(payload['body'], payload['title'], payload['meta'])
 
     async def _report_task(self):
         logger.debug('initialising report task')

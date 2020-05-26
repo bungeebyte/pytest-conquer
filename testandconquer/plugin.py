@@ -42,7 +42,7 @@ def pytest_addoption(parser):
     conquer_help = 'Divide and conquer tests.'
     group.addoption('--conquer', action='store_true', default=None, dest='enabled', help=conquer_help)
 
-    workers_help = 'Set the number of workers. Default is 1, to use all CPU cores set to \'max\'.'
+    workers_help = "Set the number of workers. Default is 1, to use all CPU cores set to 'max'."
     group.addoption('--w', '--workers', action='store', default=None, dest='workers', help=workers_help)
 
 
