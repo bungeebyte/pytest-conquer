@@ -17,6 +17,7 @@ from testandconquer.client import Client
 from testandconquer.model import Failure, Location, SuiteItem, Report, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
 from testandconquer.settings import Settings
+from testandconquer.util import system_exit
 
 
 fatal_error = None
@@ -54,10 +55,10 @@ def pytest_configure(config):
 
     if settings.enabled:
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
-            raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.6.0\n')
+            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0', {}, exit_fn=lambda: pytest.exit('', 1))
 
         if sys.version_info < (3, 6, 0):
-            raise SystemExit('Sorry, pytest-conquer requires at least Python 3.6.0\n')
+            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0', {}, exit_fn=lambda: pytest.exit('', 1))
 
 
 def create_settings(config):

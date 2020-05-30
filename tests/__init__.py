@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 
 async def assert_received_eventually(receiver, expected):
@@ -14,3 +15,11 @@ async def assert_received_eventually(receiver, expected):
                 await asyncio.sleep(0.1)
             else:
                 raise err
+
+
+def warn_messages(caplog):
+    return [x.message for x in caplog.records if x.levelno == logging.WARNING]
+
+
+def error_messages(caplog):
+    return [x.message for x in caplog.records if x.levelno == logging.ERROR]

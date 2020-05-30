@@ -193,15 +193,16 @@ class Client():
             logger.exception(err)
 
     def _abort(self):
-        system_exit('COULD NOT CONNECT:',
-                    'Unable to connect to server, giving up.\n'
-                    + 'Please try again and contact support if the error persists.',
-                    {
-                        'Client-Name': self.client_name,
-                        'Client-Version': self.client_version,
-                        'Connection-Attempt': self.connection_attempt,
-                        'Connection-ID': self.id,
-                    })
+        system_exit(
+            'COULD NOT CONNECT:',
+            'Unable to connect to server, giving up.\n'
+            + 'Please try again and contact support if the error persists.',
+            {
+                'Client-Name': self.client_name,
+                'Client-Version': self.client_version,
+                'Connection-Attempt': self.connection_attempt,
+                'Connection-ID': self.id,
+            })
 
     @staticmethod
     def to_url(domain, region):

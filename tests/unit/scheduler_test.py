@@ -1,11 +1,15 @@
+from datetime import datetime
+
 import pytest
 
 from testandconquer.client import MessageType
 from testandconquer.model import Location, Report, Schedule, SuiteItem
 from testandconquer.scheduler import Scheduler
 
+from unittest import mock
 from tests.mock.client import MockClient
 from tests.mock.settings import MockSettings
+from tests import error_messages
 
 
 @pytest.mark.asyncio()
@@ -68,7 +72,7 @@ async def test_reply_to_suite_message():
 
 
 @pytest.mark.asyncio()
-async def test_reply_to_exit_message():
+async def test_reply_to_done_message():
     settings = MockSettings({})
     client = MockClient(settings)
     scheduler = Scheduler(settings, client, [], 'my_worker_id')
@@ -79,6 +83,42 @@ async def test_reply_to_exit_message():
     assert scheduler.more is False
 
     await scheduler.stop()
+
+
+@pytest.mark.wip()
+@mock.patch('testandconquer.util.datetime')
+def test_reply_to_error_message(datetime_mock, caplog, event_loop):
+    settings = MockSettings({})
+    client = MockClient(settings)
+    scheduler = Scheduler(settings, client, [], 'my_worker_id')
+
+    with pytest.raises(SystemExit):
+        datetime_mock.utcnow = mock.Mock(return_value=datetime(2000, 1, 1))
+        event_loop.run_until_complete(scheduler.on_server_message(MessageType.Error.value, {
+            'title': 'title',
+            'body': 'body',
+            'meta': {
+                'Name': 'Value',
+            },
+        }))
+
+    assert error_messages(caplog) == [
+        '\n'
+        '\n'
+        '    '
+        '================================================================================\n'
+        '\n'
+        '    [ERROR] [CONQUER] body\n'
+        '\n'
+        '    title\n'
+        '\n'
+        '    [Name = Value]\n'
+        '    [Timestamp = 2000-01-01T00:00:00]\n'
+        '\n'
+        '    '
+        '================================================================================\n'
+        '\n',
+    ]
 
 
 @pytest.mark.asyncio()

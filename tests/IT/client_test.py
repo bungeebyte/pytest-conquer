@@ -1,5 +1,4 @@
 import uuid
-import logging
 import asyncio
 from datetime import datetime
 
@@ -7,7 +6,7 @@ import pytest
 from unittest import mock
 from tests.mock.settings import MockSettings
 from tests.mock.server import MockServer
-from tests import assert_received_eventually
+from tests import assert_received_eventually, error_messages, warn_messages
 
 from testandconquer.client import Client, MessageType
 
@@ -161,14 +160,6 @@ class Context():
             await self.server.stop()
         except Exception as err:
             print(err)
-
-
-def warn_messages(caplog):
-    return [x.message for x in caplog.records if x.levelno == logging.WARNING]
-
-
-def error_messages(caplog):
-    return [x.message for x in caplog.records if x.levelno == logging.ERROR]
 
 
 @pytest.fixture
