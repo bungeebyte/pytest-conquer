@@ -3,10 +3,8 @@ import functools
 import os.path
 import os
 import inspect
-import multiprocessing
 import sys
 import threading
-import traceback
 import uuid
 import itertools
 from collections import defaultdict
@@ -15,17 +13,15 @@ from datetime import datetime
 import pytest
 from _pytest import main
 
-from testandconquer.model import Failure, Location, SuiteItem, ReportItem, Tag
+from testandconquer.client import Client
+from testandconquer.model import Failure, Location, SuiteItem, Report, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
-from testandconquer.heartbeat import Heartbeat
 from testandconquer.settings import Settings
-from testandconquer.terminal import ParallelTerminalReporter
+from testandconquer.util import system_exit
 
 
-failure = None
-manager = multiprocessing.Manager()
-report_items = []
-report_items_by_process = manager.dict()
+fatal_error = None
+report_items_by_worker = {}
 schedulers = []
 settings = None
 suite_items = []
@@ -47,29 +43,24 @@ def pytest_addoption(parser):
     conquer_help = 'Divide and conquer tests.'
     group.addoption('--conquer', action='store_true', default=None, dest='enabled', help=conquer_help)
 
-    workers_help = 'Set the number of workers. Default is 1, to use all CPU cores set to \'max\'.'
+    workers_help = "Set the number of workers. Default is 1, to use all CPU cores set to 'max'."
     group.addoption('--w', '--workers', action='store', default=None, dest='workers', help=workers_help)
 
 
-@pytest.hookimpl(trylast=True)  # we need to wait for the 'terminalreporter' to be loaded
+@pytest.hookimpl(trylast=True)
 def pytest_configure(config):
-    global reporter, settings
+    global reporter, settings, fatal_error
 
     settings = create_settings(config)
 
     if settings.enabled:
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
-            raise SystemExit('Sorry, pytest-conquer requires at least pytest 3.6.0\n')
+            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0.', {}, exit_fn=lambda: None)
+            fatal_error = True
 
         if sys.version_info < (3, 6, 0):
-            raise SystemExit('Sorry, pytest-conquer requires at least Python 3.6.0\n')
-
-        # replace the builtin reporter with our own that handles concurrency better
-        builtin_reporter = config.pluginmanager.get_plugin('terminalreporter')
-        if builtin_reporter:
-            reporter = ParallelTerminalReporter(builtin_reporter, manager)
-            config.pluginmanager.unregister(builtin_reporter)
-            config.pluginmanager.register(reporter, 'terminalreporter')
+            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0.', {}, exit_fn=lambda: None)
+            fatal_error = True
 
 
 def create_settings(config):
@@ -93,10 +84,13 @@ def create_settings(config):
 
 
 def pytest_runtestloop(session):
-    global schedulers
+    global fatal_error
 
     if not settings.enabled:
         return main.pytest_runtestloop(session)
+
+    if fatal_error:
+        return False
 
     if session.testsfailed and not session.config.option.continue_on_collection_errors:
         raise session.Interrupted('{} errors during collection'.format(session.testsfailed))
@@ -104,19 +98,11 @@ def pytest_runtestloop(session):
     if session.config.option.collectonly:
         return True
 
-    # final step to initializing the settings
-    # we do it here since we don't want to do it if the plugin is disabled/we fail to collect
-    settings.init_from_server()
-
     threads = []
     no_of_workers = settings.client_workers
     for i in range(no_of_workers):
-        worker_id = str(uuid.uuid4())
-        scheduler = Scheduler(settings, worker_id)
-        heartbeat = Heartbeat(settings)
-        t = Worker(args=[worker_id, session, scheduler, heartbeat])
+        t = Worker(args=[session, settings])
         threads.append(t)
-        schedulers.append(scheduler)
         t.start()
     for t in threads:
         t.join()
@@ -126,81 +112,68 @@ def pytest_runtestloop(session):
 
 class Worker(threading.Thread):
     def __init__(self, *args, **kwargs):
-        threading.Thread.__init__(self, *args, **kwargs)
-        self.id = kwargs['args'][0]
-        self.session = kwargs['args'][1]
-        self.scheduler = kwargs['args'][2]
-        self.heartbeat = kwargs['args'][3]
+        threading.Thread.__init__(self, name=str(uuid.uuid4()), *args, **kwargs)
+        self.session = kwargs['args'][0]
+        self.settings = kwargs['args'][1]
 
     def run(self):
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(self.run_task())
-        loop.close()
+        global fatal_error
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self.run_task())
+            loop.close()
+        except:  # noqa: E722
+            fatal_error = True
+            raise
 
     async def run_task(self):
-        global failure
-        try:
-            self.heartbeat.start()
-            schedule = await self.scheduler.start(suite_items)
-            while schedule.batches:
-                report_items = self.execute_schedule(schedule)
-                schedule = await self.scheduler.next(report_items)
-            await self.scheduler.stop()
-            await self.heartbeat.stop()
-        except BaseException as e:
-            print(e)
-            failure = e
-            raise e
+        global suite_items, schedulers
+        # init client
+        client = Client(settings)
+        client.subscribe(self.settings)
+
+        # init scheduler
+        scheduler = Scheduler(self.settings, client, suite_items, self.name)
+        schedulers.append(scheduler)
+
+        # connect to server
+        await client.start()
+
+        # work through test items
+        while not scheduler.done:
+            pending_at = datetime.utcnow()
+            schedule = await scheduler.next()
+            started_at = datetime.utcnow()
+            report_items = self.execute_schedule(schedule)
+            finished_at = datetime.utcnow()
+            await scheduler.report(Report(report_items, pending_at, started_at, finished_at))
+
+        # wrap things up
+        await scheduler.stop()
+        await client.stop()
 
     def execute_schedule(self, schedule):
-        report_items = []
+        global report_items_by_worker
+        report_items_by_worker[self.name] = []
+
+        res = []
         for batch in schedule.batches:
             files = [item.file for item in batch.items]
             tests = list(itertools.chain(*[tests_by_file[f] for f in files]))
-            proc = Process(args=[tests, self.session])
-            proc.start()
-            proc.join()
-            if proc.exception:
-                print('\033[91m' + 'INTERNAL ERROR:')
-                print(proc.exception + '\033[0m')
-            reporter.flush()  # force logs of the process to print
-            if proc.id in report_items_by_process:
-                report_items.extend(report_items_by_process.pop(proc.id))  # we pick them up where the process left them
-        return report_items
-
-
-class Process(multiprocessing.Process):
-    def __init__(self, *args, **kwargs):
-        multiprocessing.Process.__init__(self, *args, **kwargs)
-        self.id = uuid.uuid4()
-        self.reader, self.writer = multiprocessing.Pipe()
-        self.tests = kwargs['args'][0]
-        self.session = kwargs['args'][1]
-        self.err = None
-
-    def run(self):
-        try:
-            for i, test in enumerate(self.tests):
-                next_test = self.tests[i + 1] if i + 1 < len(self.tests) else None
+            for i, test in enumerate(tests):
+                next_test = tests[i + 1] if i + 1 < len(tests) else None
                 test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
-            report_items_by_process[self.id] = report_items  # batch write to share data to main process
-        except Exception:
-            self.writer.send(traceback.format_exc())
+            res.extend(report_items_by_worker[self.name])
 
-    @property
-    def exception(self):
-        if self.reader.poll():
-            self.err = self.reader.recv()
-        return self.err
+        return res
 
 
 # report internal error properly
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
-    global failure
-    if failure:
-        from _pytest.main import EXIT_INTERNALERROR
-        session.exitstatus = EXIT_INTERNALERROR
+    global fatal_error
+    if fatal_error:
+        session.exitstatus = 3  # EXIT_INTERNALERROR
 
 
 # ======================================================================================
@@ -408,10 +381,9 @@ def collect_item(item):
     return item
 
 
-# This is called from multiple subprocesses, so we need to manage the data by process ID.
 def report_item(type, location, status, start, end, failure):
-    process_id = multiprocessing.current_process().id
-    report_items.append(ReportItem(type, location, status, failure, start, end, process_id))
+    worker_id = threading.current_thread().name
+    report_items_by_worker[worker_id].append(ReportItem(type, location, status, failure, start, end))
 
 
 def node_to_location(node):

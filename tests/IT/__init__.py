@@ -25,4 +25,4 @@ def assert_outcomes(result, passed=0, skipped=0, failed=0, error=0):
         'failed': d.get('failed', 0),
         'error': d.get('error', 0),
     }
-    assert obtained == dict(passed=passed, skipped=skipped, failed=failed, error=error)
+    assert obtained == dict(passed=passed, skipped=skipped, failed=failed, error=error), obtained

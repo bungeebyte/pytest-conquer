@@ -1,53 +1,68 @@
-import json
-import threading
-import zlib
+import asyncio
 
-from werkzeug.serving import make_server
-from werkzeug.wrappers import Response, Request
+from testandconquer.client import Client
+from testandconquer.vendor import websockets
 
 
-class Server(threading.Thread):
-    def __init__(self, host='0.0.0.0', port=0, **kwargs):
-        self._server = make_server(host, port, self, **kwargs)
-        self.requests = []
-        self.responses = []
-        super(Server, self).__init__(
-            name=self.__class__,
-            target=self._server.serve_forever)
+HOST = '0.0.0.0'
+PORT = 4352
 
-    def __del__(self):
-        self.stop()
 
-    def __call__(self, environ, start_response):
-        request = Request(environ)
-        data = None
-        path = request.path
-        if path == '/heartbeat':
-            return Response(status=200)(environ, start_response)
-        if request.data:
-            data = json.loads(zlib.decompress(request.data).decode('utf-8'))
-        headers = dict([h for h in request.headers if h[0] != 'Content-Length'])
-        self.requests.append((request.method, path, headers, data))
-        if not self.responses:
-            raise RuntimeError('no response defined')
-        next_response = self.responses[0]
-        self.responses = self.responses[1:]
-        return next_response(environ, start_response)
+class MockServer():
+    def __init__(self):
+        self.daemon = True
+        self.stopping = False
+        self.server = None
+        self.producer_task = None
+        self.consumer_task = None
+        self.outgoing = asyncio.Queue()
+        self.received = []
+        self.connections = []
 
-    def stop(self):
-        self._server.shutdown()
+    async def start(self):
+        self.server = await websockets.serve(self._handle, HOST, PORT, process_request=self._process_request)
 
-    def next_response(self, status, body):
-        response = Response(status=status)
-        if status != 502:
-            response.headers = {
-                'content-type': 'application/json',
-                'x-request-id': '<unique-request-id>',
-            }
-        response.data = json.dumps(body)
-        self.responses.append(response)
+    async def stop(self):
+        self.stopping = True
+        await asyncio.wait_for(self.outgoing.join(), timeout=1)
+        self.server.close()
+        await self.server.wait_closed()
+        if (self.consumer_task):
+            self.consumer_task.cancel()
+        if (self.producer_task):
+            self.producer_task.cancel()
+
+    async def restart(self):
+        await self.stop()
+        await self.start()
+
+    async def _process_request(self, path, request_headers):
+        self.connections.append((path, request_headers))
+        pass
+
+    async def _handle(self, ws, path):
+        async def consumer_handler():
+            async for raw_message in ws:
+                message = Client.decode(raw_message)
+                self.received.append((message['type'], message['payload']))
+
+        async def producer_handler():
+            while True:
+                message = await self.outgoing.get()
+                await ws.send(message)
+                self.outgoing.task_done()
+
+        while not self.stopping:
+            self.consumer_task = asyncio.ensure_future(consumer_handler())
+            self.producer_task = asyncio.ensure_future(producer_handler())
+            done, pending = await asyncio.wait([self.consumer_task, self.producer_task], return_when=asyncio.FIRST_COMPLETED)
+
+            for task in pending:
+                task.cancel()
+
+    async def send(self, message_type, payload):
+        await self.outgoing.put(Client.encode(0, message_type, payload))
 
     @property
     def url(self):
-        host, port = self._server.server_address
-        return 'http://%s:%i' % (host, port)
+        return '%s:%i' % (HOST, PORT)

@@ -1,7 +1,8 @@
-sudo: false
+dist: xenial
+os: linux
 language: python
 
-matrix:
+jobs:
     include:
       - python: 3.6
         env: TOX_ENV=py36 PYTEST_VERSION===3.6.0  # oldest supported python/pytest versions

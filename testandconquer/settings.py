@@ -9,7 +9,7 @@ import psutil
 from enum import Enum
 
 from testandconquer import __version__, debug_logger
-from testandconquer.client import Client
+from testandconquer.client import MessageType
 from testandconquer.git import Git
 
 
@@ -18,9 +18,7 @@ ENV_PREFIX = 'CONQUER_'
 
 
 class Capability(Enum):
-    Heartbeat = 'heartbeat'
     Fixtures = 'fixtures'
-    IsolatedProcess = 'isolated_process'
     LifecycleTimings = 'lifecycle_timings'
     SplitByFile = 'split_by_file'
 
@@ -52,22 +50,27 @@ class Settings():
         if self.debug is True:
             debug_logger()
 
-    def init_from_server(self, custom_client=None):
-        # we need to get the env variable mappings from the server first
-        config = (custom_client or Client(self)).get('/config')
-        self.__init_mapping(config['envs'])
+    async def on_server_message(self, message_type, payload):
+        if message_type == MessageType.Env.value:
+            self._init_mapping(payload)
+            return (MessageType.Env, self.args['system_provider'])
 
-    def __init_mapping(self, envs):
+    def _init_mapping(self, envs):
+        is_match = False
         for env in envs:
-            is_match = True
             for condition in env['conditions']:
-                if condition not in self.upcased_environ:
-                    is_match = False
+                if condition.upper() in self.upcased_environ:
+                    is_match = True
                     break
-            if is_match:
-                self.mapping = env['mapping']
-                self.args['system_provider'] = env['name']
-                break
+
+        if is_match:
+            self.mapping = {}
+            for key in env['mapping']:
+                self.mapping[key.upper()] = env['mapping'][key]
+            self.args['system_provider'] = env['name']
+        else:
+            self.mapping = {}
+            self.args['system_provider'] = 'unknown'
 
     @property
     def client_workers(self):
@@ -90,29 +93,30 @@ class Settings():
         # 2) plugin arguments
         arg_val = self.args.get(name, None)
         if arg_val is not None:
-            return self.__convert(arg_val, default_val)
+            return self._convert(arg_val, default_val)
 
         # 3) environment variables
         env_name = name.upper()
         if env_name in self.upcased_environ:
-            return self.__convert(self.upcased_environ[env_name], default_val)
+            return self._convert(self.upcased_environ[env_name], default_val)
 
         # 4) local config file
         if self.config_file and self.config_file.has_option(CONFIG_SECTION, name):
-            return self.__convert(self.config_file.get(CONFIG_SECTION, name), default_val)
+            return self._convert(self.config_file.get(CONFIG_SECTION, name), default_val)
 
         # 5) provider variables
-        if self.mapping and name in self.mapping:
-            env_key = self.mapping[name].upper()
+        mapping_name = name.upper()
+        if self.mapping and mapping_name in self.mapping.keys():
+            env_key = self.mapping[mapping_name].upper()
             if env_key and isinstance(env_key, str) and env_key in self.upcased_environ:
-                return self.__convert(self.upcased_environ[env_key], default_val)
+                return self._convert(self.upcased_environ[env_key], default_val)
 
         # 6) defaults
         if isinstance(default_val, Exception):
             raise default_val
         return default_val
 
-    def __convert(self, val, default_val):
+    def _convert(self, val, default_val):
         if isinstance(val, str) and isinstance(default_val, int) and val.isdigit():
             return int(val)
         if isinstance(val, str) and isinstance(default_val, bool):
@@ -152,23 +156,23 @@ class StaticSettings():
 
 class DefaultSettings():
 
+    def api_domain(self):
+        return 'testandconquer.com'
+
+    def api_domain_fallback(self):
+        return 'testconquer.com'
+
     def api_key(self):
         return ValueError("missing API key, please set 'api_key'")
 
-    def api_retries(self):
+    def api_region(self):
+        return 'eu'
+
+    def api_retry_limit(self):
         return 6
 
-    def api_retry_cap(self):
+    def api_wait_limit(self):
         return 60
-
-    def api_timeout(self):
-        return 15
-
-    def api_url(self):
-        return 'https://scheduler.testandconquer.com'
-
-    def api_url_fallback(self):
-        return 'https://scheduler.testconquer.com'
 
     def build_dir(self):
         return os.getcwd()
@@ -181,15 +185,6 @@ class DefaultSettings():
 
     def build_pool(self):
         return 0
-
-    def client_capabilities(self):
-        return [
-            Capability.Heartbeat,
-            Capability.Fixtures,
-            Capability.IsolatedProcess,
-            Capability.LifecycleTimings,
-            Capability.SplitByFile,
-        ]
 
     def debug(self):
         return False
@@ -206,7 +201,7 @@ class DefaultSettings():
         return res
 
     def system_provider(self):
-        return 'custom'
+        return None
 
     def vcs_branch(self, cwd=None):
         res = Git.branch(cwd)

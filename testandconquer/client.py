@@ -1,107 +1,211 @@
 import json
-import time
-import zlib
-import datetime
+import asyncio
+import socket
 import uuid
-import wsgiref.handlers
-from time import mktime
+import time
+from datetime import datetime
+from enum import Enum
 
-from testandconquer.vendor.httplib2 import Http, HttpLib2Error
+from testandconquer.util import system_exit
+from testandconquer.vendor import websockets
 from testandconquer import logger
+
+
+class MessageType(Enum):
+    Config = 'config'
+    Done = 'done'
+    Env = 'env'
+    Error = 'error'
+    Report = 'report'
+    Schedule = 'schedule'
+    Suite = 'suite'
 
 
 class Client():
 
     def __init__(self, settings):
+        self.id = uuid.uuid4()
+        self.daemon = True
+        self.stopping = False
+        self.connected = False
+        self.subscribers = []
+        self.handle_task = None
+        self.message_num = 0
+        self.producer_task = None
+        self.consumer_task = None
+        self.connection_attempt = 0
+        self.outgoing = asyncio.Queue()
+        self.update_settings(settings)
+
+    def update_settings(self, settings):
         self.api_key = settings.api_key
-        self.api_retries = settings.api_retries
-        self.api_retry_cap = settings.api_retry_cap
-        self.api_timeout = settings.api_timeout
-        self.api_urls = [settings.api_url, settings.api_url_fallback]
-        self.build_id = settings.build_id or 'unknown'  # might not be initialized yet
-        self.build_node = settings.build_node or 'unknown'  # might not be initialized yet
-        self.user_agent = settings.client_name + '/' + settings.client_version
+        self.api_retry_limit = settings.api_retry_limit
+        self.api_wait_limit = settings.api_wait_limit
+        self.api_urls = [
+            Client.to_url(settings.api_domain, settings.api_region),
+            Client.to_url(settings.api_domain_fallback, settings.api_region),
+        ]
+        self.client_name = settings.client_name
+        self.client_version = settings.client_version
+        self.system_provider = settings.system_provider
 
-    def get(self, path):
-        return self._request(path, 'GET', None)
+    @staticmethod
+    def encode(message_num, message_type, payload):
+        return json.dumps({
+            'id': str(uuid.uuid4()),
+            'num': str(message_num),
+            'date': datetime.utcnow().isoformat(),
+            'type': message_type.value,
+            'payload': payload,
+        })
 
-    def put(self, path, data):
-        return self._request(path, 'PUT', data)
+    @staticmethod
+    def decode(raw_message):
+        return json.loads(raw_message)
 
-    def post(self, path, data):
-        return self._request(path, 'POST', data)
+    def subscribe(self, subscriber):
+        self.subscribers.append(subscriber)
 
-    def _request(self, path, method, data):
-        attempts = 0
-        result = None
-        last_err = None
-        wait_before_retry = 0
-        headers, body = self._prepare_request(data)
-        while result is None and attempts < self.api_retries + 1:
-            url = self.api_urls[0] + path
-            headers['X-Request-Id'] = str(uuid.uuid4())
+    async def start(self):
+        logger.debug('client: starting')
+        self.handle_task = asyncio.ensure_future(self._handle())
 
-            if wait_before_retry >= 1:
-                logger.debug('retrying in %ss', wait_before_retry)
-                time.sleep(min(self.api_retry_cap, wait_before_retry))
-            start = time.time()
+    async def stop(self):
+        logger.debug('client: shutting down')
+        # quiescent the client
+        self.stopping = True
+        # wait for message queue to empty first
+        await asyncio.wait_for(self.outgoing.join(), timeout=10)
+        # now cancel all pending tasks
+        if (self.consumer_task):
+            self.consumer_task.cancel()
+        if (self.producer_task):
+            self.producer_task.cancel()
+        if (self.handle_task):
+            self.handle_task.cancel()
 
-            status_code = 0
-            try:
-                headers['X-Attempt'] = str(attempts)
-                response, content = self._execute_request(method, url, headers, body, max(0.01, self.api_timeout))  # since zero means 'no timeout'
-                result, last_err = self._parse_reponse(response, content)
-                status_code = response.status
-                if status_code != 404 and 400 <= status_code < 500:  # this means we'll likely not recover anyway
-                    attempts = self.api_retries + 1
-            except (HttpLib2Error, IOError) as e:
-                self.api_urls.reverse()  # let's try the next API URL because this one seems unreachable
-                last_err = e
-            finally:
-                if last_err:
-                    attempts += 1
-                    wait_before_retry = 2 ** attempts - (time.time() - start)
-                    logger.warning('could not get successful response from server [path=%s] [status=%s] [request-id=%s]: %s', path, status_code, headers['X-Request-Id'], last_err)
+    async def send(self, message_type, payload):
+        if self.stopping:
+            logger.debug('client: not sending %s since shutting down'. message_type)
+            return
+        self.message_num += 1
+        message = Client.encode(self.message_num, message_type, payload)
+        await self.outgoing.put(message)
 
-        if last_err:
-            raise last_err
-
-        return result
-
-    def _prepare_request(self, data):
-        headers = {
-            'Accept': 'application/json',
-            'Authorization': str(self.api_key),
-            'Date': wsgiref.handlers.format_date_time(mktime(datetime.datetime.now().timetuple())),
-            'User-Agent': str(self.user_agent),
-            'X-Build-Id': str(self.build_id),
-            'X-Build-Node': str(self.build_node),
-        }
-
-        if data:
-            body = zlib.compress(json.dumps(data).encode('utf8'))
-            headers['Content-Encoding'] = 'gzip'
-            headers['Content-Type'] = 'application/json; charset=UTF-8'
-        else:
-            body = None
-
-        return headers, body
-
-    def _execute_request(self, method, url, headers, body, timeout):
-        http = Http(timeout=timeout)
-        return http.request(url, method, headers=headers, body=body)
-
-    def _parse_reponse(self, response, content):
-        json_resp = None
+    async def _handle(self):
         try:
-            json_resp = json.loads(content.decode('utf-8')) if content else {}
-        except ValueError:
+            async def consumer_handler(ws):
+                try:
+                    async for raw_message in ws:
+                        message = Client.decode(raw_message)
+                        for subscriber in self.subscribers:
+                            resp = await subscriber.on_server_message(message['type'].lower(), message['payload'])
+                            if resp is not None:
+                                message_type, payload = resp
+                                await self.send(message_type, payload)
+                except asyncio.CancelledError:
+                    pass  # we are shutting down
+
+            async def producer_handler(ws):
+                try:
+                    while True:
+                        message = await self.outgoing.get()  # blocks forever until something is available
+                        await ws.send(message)
+                        self.outgoing.task_done()
+                except asyncio.CancelledError:
+                    pass  # we are shutting down
+
+            wait_before_reconnect = 0
+            self.connection_attempt = 1
+
+            while not self.stopping:
+                url = self.api_urls[0]
+                logger.debug('connecting to %s', url)
+                headers = [
+                    ('X-Api-Key', str(self.api_key)),
+                    ('X-Client-Name', str(self.client_name)),
+                    ('X-Client-Version', str(self.client_version)),
+                    ('X-Connection-Attempt', str(self.connection_attempt)),
+                    ('X-Connection-ID', str(self.id)),
+                    ('X-Message-Num', str(self.message_num)),
+                    ('X-Message-Format', 'json'),
+                ]
+
+                if self.system_provider:
+                    headers.append(('X-Env', str(self.system_provider)))
+
+                if wait_before_reconnect > 0:
+                    logger.debug('retrying in %ss', wait_before_reconnect)
+                    await asyncio.sleep(min(self.api_wait_limit, wait_before_reconnect))
+
+                try:
+                    start = time.time()
+                    async with websockets.connect(
+                        url,
+                        ping_interval=None,     # don't send ping, that's the server's responsibility
+                        max_size=None,          # accept any message size
+                        max_queue=None,         # never drop a message
+                        extra_headers=headers,
+                    ) as ws:
+                        self.connected = True
+                        self.connection_attempt = 1
+
+                        # run consumer and producer in parallel
+                        self.consumer_task = asyncio.ensure_future(consumer_handler(ws))
+                        self.producer_task = asyncio.ensure_future(producer_handler(ws))
+                        done, pending = await asyncio.wait([self.producer_task, self.consumer_task], return_when=asyncio.FIRST_COMPLETED)
+
+                        # re-raise any exceptions
+                        for task in done:
+                            err = task.exception()
+                            if err:
+                                logger.debug(err)
+                                raise err
+
+                        # one of them finished, let's cancel the other
+                        for task in pending:
+                            task.cancel()
+                except websockets.exceptions.InvalidStatusCode as err:
+                    logger.debug(err)
+                    logger.warning('server error [code: %s], will try to re-connect' % err.status_code)
+                except websockets.exceptions.ConnectionClosed as err:
+                    logger.debug(err)
+                    logger.warning('connection closed, will try to re-connect')
+                except socket.gaierror as err:
+                    logger.debug(err)
+                    logger.warning('lost socket connection, will try to re-connect')
+                except ConnectionRefusedError as err:
+                    logger.debug(err)
+                    logger.warning('connection refused, will try to re-connect')
+                except OSError as err:
+                    logger.debug(err)
+                    logger.warning('connection error, will try to re-connect')
+                finally:
+                    self.connected = False
+                    if self.connection_attempt > self.api_retry_limit:
+                        self._abort()
+                    self.connection_attempt += 1
+                    wait_before_reconnect = 2 ** self.connection_attempt - (time.time() - start)
+                    self.api_urls.reverse()  # we'll try the other URL next
+        except asyncio.CancelledError:
             pass
-        if not isinstance(json_resp, dict):
-            return None, RuntimeError('an error occurred')
+        except Exception as err:
+            logger.exception(err)
 
-        if 200 <= response.status < 300:
-            return json_resp, None
+    def _abort(self):
+        system_exit(
+            'COULD NOT CONNECT:',
+            'Unable to connect to server, giving up.\n'
+            + 'Please try again and contact support if the error persists.',
+            {
+                'Client-Name': self.client_name,
+                'Client-Version': self.client_version,
+                'Connection-Attempt': self.connection_attempt,
+                'Connection-ID': self.id,
+            })
 
-        err_msg = (json_resp.get('error') if json_resp else None) or ('Server Error' if response.status >= 500 else 'Client Error')
-        return None, RuntimeError(err_msg)
+    @staticmethod
+    def to_url(domain, region):
+        if domain.startswith('localhost') or domain.startswith('0.0.0.0'):  # for testing
+            return 'ws://' + domain
+        return 'wss://equilibrium-' + region + '.' + domain
