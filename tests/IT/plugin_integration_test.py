@@ -625,7 +625,7 @@ def test_settings(testdir):
 
     assert settings.client_workers == 1
     assert settings.runner_name == 'pytest'
-    assert settings.runner_plugins == [('pytest-asyncio', '0.10.0'), ('pytest-conquer', '1.0.0'), ('pytest-cov', '2.8.1'), ('pytest-mock', '1.11.2')]
+    assert settings.runner_plugins == [('pytest-asyncio', '0.12.0'), ('pytest-conquer', '1.0.0'), ('pytest-cov', '2.9.0'), ('pytest-mock', '3.1.0')]
     assert settings.runner_root == os.getcwd()
     assert settings.runner_version == pytest.__version__
 
