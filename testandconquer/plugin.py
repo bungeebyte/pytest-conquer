@@ -49,16 +49,18 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl(trylast=True)
 def pytest_configure(config):
-    global reporter, settings
+    global reporter, settings, fatal_error
 
     settings = create_settings(config)
 
     if settings.enabled:
         if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
-            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0', {}, exit_fn=lambda: pytest.exit('', 1))
+            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0.', {}, exit_fn=lambda: None)
+            fatal_error = True
 
         if sys.version_info < (3, 6, 0):
-            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0', {}, exit_fn=lambda: pytest.exit('', 1))
+            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0.', {}, exit_fn=lambda: None)
+            fatal_error = True
 
 
 def create_settings(config):
@@ -82,8 +84,13 @@ def create_settings(config):
 
 
 def pytest_runtestloop(session):
+    global fatal_error
+
     if not settings.enabled:
         return main.pytest_runtestloop(session)
+
+    if fatal_error:
+        return False
 
     if session.testsfailed and not session.config.option.continue_on_collection_errors:
         raise session.Interrupted('{} errors during collection'.format(session.testsfailed))
@@ -115,7 +122,7 @@ class Worker(threading.Thread):
             loop = asyncio.new_event_loop()
             loop.run_until_complete(self.run_task())
             loop.close()
-        except Exception:
+        except:  # noqa: E722
             fatal_error = True
             raise
 
@@ -166,7 +173,7 @@ class Worker(threading.Thread):
 def pytest_sessionfinish(session, exitstatus):
     global fatal_error
     if fatal_error:
-        pytest.exit('', 1)
+        session.exitstatus = 3  # EXIT_INTERNALERROR
 
 
 # ======================================================================================

@@ -85,7 +85,6 @@ async def test_reply_to_done_message():
     await scheduler.stop()
 
 
-@pytest.mark.wip()
 @mock.patch('testandconquer.util.datetime')
 def test_reply_to_error_message(datetime_mock, caplog, event_loop):
     settings = MockSettings({})
