@@ -1,7 +1,3 @@
 [run]
 omit =
-  .tox/*
-  tests/*
-  setup.py
   testandconquer/vendor/*
-  /private/var/*
