@@ -1,8 +1,10 @@
 import uuid
 import logging
 import asyncio
+from datetime import datetime
 
 import pytest
+from unittest import mock
 from tests.mock.settings import MockSettings
 from tests.mock.server import MockServer
 from tests import assert_received_eventually
@@ -40,9 +42,8 @@ class TestClient():
                 await asyncio.sleep(0.01)
         assert warn_messages(caplog) == ['server error [code: 503], will try to re-connect']
 
-    @pytest.mark.asyncio
-    @pytest.mark.xfail(raises=SystemExit)
-    async def test_connection_when_server_not_reachable(self, caplog):
+    @mock.patch('testandconquer.util.datetime')
+    def test_connection_when_server_not_reachable(self, datetime_mock, caplog, event_loop):
         settings = {
             'api_retry_limit': '3',
             'api_wait_limit': '0',
@@ -50,10 +51,39 @@ class TestClient():
             'api_domain_fallback': 'doesnot.exist:802',
         }
         self.client = Client(MockSettings(settings))
-        await self.client.start()
-        while self.client.connection_attempt < 4:
-            await asyncio.sleep(0.01)
-        await asyncio.sleep(1)
+
+        with pytest.raises(SystemExit):
+            datetime_mock.utcnow = mock.Mock(return_value=datetime(2000, 1, 1))
+            event_loop.run_until_complete(self.client.start())
+            event_loop.run_until_complete(asyncio.sleep(1))
+
+        assert warn_messages(caplog) == [
+            'lost socket connection, will try to re-connect',
+            'lost socket connection, will try to re-connect',
+            'lost socket connection, will try to re-connect',
+            'lost socket connection, will try to re-connect',
+        ]
+        assert error_messages(caplog) == [
+            '\n'
+            '\n'
+            '    '
+            '================================================================================\n'
+            '\n'
+            '    [ERROR] [CONQUER] COULD NOT CONNECT:\n'
+            '\n'
+            '    Unable to connect to server, giving up.\n'
+            '    Please try again and contact support if the error persists.\n'
+            '\n'
+            '    [Client-Name = pytest-conquer]\n'
+            '    [Client-Version = 1.0]\n'
+            '    [Connection-Attempt = 4]\n'
+            '    [Connection-ID = ' + str(self.client.id) + ']\n'
+            '    [Timestamp = 2000-01-01T00:00:00]\n'
+            '\n'
+            '    '
+            '================================================================================\n'
+            '\n',
+        ]
 
     @pytest.mark.asyncio
     async def test_reconnect(self, caplog):

@@ -19,7 +19,7 @@ from testandconquer.scheduler import Scheduler
 from testandconquer.settings import Settings
 
 
-failure = None
+fatal_error = None
 report_items_by_worker = {}
 schedulers = []
 settings = None
@@ -109,40 +109,40 @@ class Worker(threading.Thread):
         self.settings = kwargs['args'][1]
 
     def run(self):
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(self.run_task())
-        loop.close()
+        global fatal_error
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self.run_task())
+            loop.close()
+        except Exception:
+            fatal_error = True
+            raise
 
     async def run_task(self):
-        global failure, suite_items, schedulers
-        try:
-            # init client
-            client = Client(settings)
-            client.subscribe(self.settings)
+        global suite_items, schedulers
+        # init client
+        client = Client(settings)
+        client.subscribe(self.settings)
 
-            # init scheduler
-            scheduler = Scheduler(self.settings, client, suite_items, self.name)
-            schedulers.append(scheduler)
+        # init scheduler
+        scheduler = Scheduler(self.settings, client, suite_items, self.name)
+        schedulers.append(scheduler)
 
-            # connect to server
-            await client.start()
+        # connect to server
+        await client.start()
 
-            # work through test items
-            while not scheduler.done:
-                pending_at = datetime.utcnow()
-                schedule = await scheduler.next()
-                started_at = datetime.utcnow()
-                report_items = self.execute_schedule(schedule)
-                finished_at = datetime.utcnow()
-                await scheduler.report(Report(report_items, pending_at, started_at, finished_at))
+        # work through test items
+        while not scheduler.done:
+            pending_at = datetime.utcnow()
+            schedule = await scheduler.next()
+            started_at = datetime.utcnow()
+            report_items = self.execute_schedule(schedule)
+            finished_at = datetime.utcnow()
+            await scheduler.report(Report(report_items, pending_at, started_at, finished_at))
 
-            # wrap things up
-            await scheduler.stop()
-            await client.stop()
-        except BaseException as e:
-            print(e)
-            failure = e
-            raise e
+        # wrap things up
+        await scheduler.stop()
+        await client.stop()
 
     def execute_schedule(self, schedule):
         global report_items_by_worker
@@ -158,6 +158,14 @@ class Worker(threading.Thread):
             res.extend(report_items_by_worker[self.name])
 
         return res
+
+
+# report internal error properly
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    global fatal_error
+    if fatal_error:
+        pytest.exit('', 1)
 
 
 # ======================================================================================
