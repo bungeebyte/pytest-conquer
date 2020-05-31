@@ -162,6 +162,7 @@ class Worker(threading.Thread):
             report_items = self.execute_schedule(schedule)
             finished_at = datetime.utcnow()
             await scheduler.report(Report(report_items, pending_at, started_at, finished_at))
+            logger.info('sent report')
 
         logger.info('wrapping up')
 
