@@ -132,6 +132,7 @@ class ReportSerializer:
     def serialize(report):
         return {
             'items': [ReportSerializer.serialize_item(i) for i in report.items],
+            'pending_at': report.pending_at.strftime(Serializer.date_format),
             'started_at': report.started_at.strftime(Serializer.date_format),
             'finished_at': report.finished_at.strftime(Serializer.date_format),
         }
