@@ -18,6 +18,7 @@ from testandconquer.model import Failure, Location, SuiteItem, Report, ReportIte
 from testandconquer.scheduler import Scheduler
 from testandconquer.settings import Settings
 from testandconquer.util import system_exit
+from testandconquer import logger
 
 
 fatal_error = None
@@ -87,6 +88,7 @@ def pytest_runtestloop(session):
     global fatal_error
 
     if not settings.enabled:
+        logger.debug('conquer not enabled')
         return main.pytest_runtestloop(session)
 
     if fatal_error:
@@ -97,6 +99,8 @@ def pytest_runtestloop(session):
 
     if session.config.option.collectonly:
         return True
+
+    logger.info('conquer starting')
 
     threads = []
     no_of_workers = settings.client_workers
