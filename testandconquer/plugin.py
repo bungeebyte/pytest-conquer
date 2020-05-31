@@ -101,6 +101,7 @@ def pytest_runtestloop(session):
         return True
 
     print('conquer starting')
+    logger.info('starting now')
 
     threads = []
     no_of_workers = settings.client_workers
@@ -111,6 +112,7 @@ def pytest_runtestloop(session):
     for t in threads:
         t.join()
 
+    logger.info('done')
     return True
 
 
@@ -132,25 +134,36 @@ class Worker(threading.Thread):
 
     async def run_task(self):
         global suite_items, schedulers
+
+        logger.info('starting run_task')
         # init client
         client = Client(settings)
         client.subscribe(self.settings)
+
+        logger.info('client initialized')
 
         # init scheduler
         scheduler = Scheduler(self.settings, client, suite_items, self.name)
         schedulers.append(scheduler)
 
+        logger.info('scheduler initialized')
+
         # connect to server
         await client.start()
+
+        logger.info('client connected')
 
         # work through test items
         while not scheduler.done:
             pending_at = datetime.utcnow()
             schedule = await scheduler.next()
             started_at = datetime.utcnow()
+            logger.info('waited for schedule: ' + str(started_at - pending_at))
             report_items = self.execute_schedule(schedule)
             finished_at = datetime.utcnow()
             await scheduler.report(Report(report_items, pending_at, started_at, finished_at))
+
+        logger.info('wrapping up')
 
         # wrap things up
         await scheduler.stop()
