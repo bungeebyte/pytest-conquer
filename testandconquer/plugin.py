@@ -100,7 +100,7 @@ def pytest_runtestloop(session):
     if session.config.option.collectonly:
         return True
 
-    logger.info('conquer starting')
+    print('conquer starting')
 
     threads = []
     no_of_workers = settings.client_workers
