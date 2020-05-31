@@ -47,6 +47,7 @@ class Scheduler:
         elif message_type == MessageType.Schedule.value:
             schedule_batches = self.serializer.deserialize_schedule(payload)
             logger.debug('received schedule with %s batches', len(schedule_batches))
+            logger.info('queue up schedule')
             await self.schedule_queue.put(Schedule(schedule_batches))
         elif message_type == MessageType.Done.value:
             self.more = False
