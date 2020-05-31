@@ -184,16 +184,19 @@ class TestSettingsInit():
         assert settings.system_provider == 'config-provider'
 
     @pytest.mark.asyncio()
+    @pytest.mark.wip()
     async def test_get_variable_from_mapping(self):
         os.environ['CI_name'] = 'mapping-provider'
         os.environ['ENV_node'] = 'NODE'
+        os.environ['env_HOST'] = 'HOST'
         settings = Settings({})
 
         # when provider matches
-        envs = [{'name': 'mapping-provider', 'conditions': ['ci_NAME'], 'mapping': {'build_NODE': 'ENV_NODE'}}]
+        envs = [{'name': 'mapping-provider', 'conditions': ['ci_NAME'], 'mapping': {'build_NODE': 'ENV_NODE', 'system_context': ['ENV_HOST']}}]
         assert await settings.on_server_message(MessageType.Env.value, envs) == (MessageType.Env, 'mapping-provider')
         assert settings.system_provider == 'mapping-provider'
         assert settings.build_node == 'NODE'
+        assert settings.system_context == {'ENV_HOST': 'HOST'}
 
         # when provider doesn't match
         envs = []
@@ -203,6 +206,7 @@ class TestSettingsInit():
 
         del os.environ['CI_name']
         del os.environ['ENV_node']
+        del os.environ['env_HOST']
 
     def test_get_variable_from_defaults(self):
         settings = Settings({})

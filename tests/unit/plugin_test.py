@@ -8,7 +8,6 @@ from tests.mock.settings import MockSettings
 from tests import error_messages
 
 
-@pytest.mark.wip()
 @patch('testandconquer.plugin.sys')
 @patch('testandconquer.util.datetime')
 def test_fails_for_old_python_version(datetime_mock, mock_sys, caplog):
@@ -37,7 +36,6 @@ def test_fails_for_old_python_version(datetime_mock, mock_sys, caplog):
     testandconquer.plugin.fatal_error = None
 
 
-@pytest.mark.wip()
 @patch('testandconquer.util.datetime')
 @patch.object(pytest, '__version__', '3.0.4')
 def test_fails_for_old_pytest_version(datetime_mock, caplog):

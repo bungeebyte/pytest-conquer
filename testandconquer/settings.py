@@ -107,9 +107,16 @@ class Settings():
         # 5) provider variables
         mapping_name = name.upper()
         if self.mapping and mapping_name in self.mapping.keys():
-            env_key = self.mapping[mapping_name].upper()
-            if env_key and isinstance(env_key, str) and env_key in self.upcased_environ:
-                return self._convert(self.upcased_environ[env_key], default_val)
+            val = self.mapping[mapping_name]
+            if val:
+                if isinstance(val, str) and val.upper() in self.upcased_environ:
+                    return self._convert(self.upcased_environ[val.upper()], default_val)
+                elif isinstance(val, list):
+                    res = {}
+                    for key in val:
+                        if key.upper() in self.upcased_environ:
+                            res[key] = self.upcased_environ[key.upper()]
+                    return res
 
         # 6) defaults
         if isinstance(default_val, Exception):
@@ -193,12 +200,7 @@ class DefaultSettings():
         return False
 
     def system_context(self):
-        res = {}
-        if hasattr(self, 'mapping'):
-            for key in self.mapping.get('system_context', {}):
-                if key.upper() in self.upcased_environ:
-                    res[key] = self.upcased_environ[key.upper()]
-        return res
+        return {}
 
     def system_provider(self):
         return None
