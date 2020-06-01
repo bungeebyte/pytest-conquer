@@ -111,7 +111,7 @@ def pytest_runtestloop(session):
         fatal_error = True
         raise
 
-async def run_task():
+async def run_task(settings):
     global suite_items, schedulers
 
     logger.info('starting run_task')
