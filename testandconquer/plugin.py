@@ -379,8 +379,7 @@ def collect_item(item):
 
 
 def report_item(type, location, status, start, end, failure):
-    worker_id = threading.current_thread().name
-    report_items_by_worker[worker_id].append(ReportItem(type, location, status, failure, start, end))
+    report_items_by_worker["worker"].append(ReportItem(type, location, status, failure, start, end))
 
 
 def node_to_location(node):
