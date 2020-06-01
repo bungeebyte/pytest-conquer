@@ -103,7 +103,6 @@ def pytest_runtestloop(session):
     print('conquer starting')
     logger.info('starting now')
 
-    global fatal_error
     try:
         loop = asyncio.new_event_loop()
         loop.run_until_complete(run_task(settings))
