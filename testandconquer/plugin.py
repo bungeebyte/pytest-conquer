@@ -103,66 +103,87 @@ def pytest_runtestloop(session):
     print('conquer starting')
     logger.info('starting now')
 
-    try:
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(run_task(settings))
-        loop.close()
-    except:  # noqa: E722
-        fatal_error = True
-        raise
+    threads = []
+    no_of_workers = settings.client_workers
+    for i in range(no_of_workers):
+        t = Worker(args=[session, settings])
+        threads.append(t)
+        t.start()
+    for t in threads:
+        t.join()
 
-async def run_task(settings):
-    global suite_items, schedulers
+    logger.info('done')
+    return True
 
-    logger.info('starting run_task')
-    # init client
-    client = Client(settings)
-    client.subscribe(settings)
 
-    logger.info('client initialized')
+class Worker(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        threading.Thread.__init__(self, name=str(uuid.uuid4()), *args, **kwargs)
+        self.session = kwargs['args'][0]
+        self.settings = kwargs['args'][1]
 
-    # init scheduler
-    scheduler = Scheduler(settings, client, suite_items, "worker")
-    schedulers.append(scheduler)
+    def run(self):
+        global fatal_error
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self.run_task())
+            loop.close()
+        except:  # noqa: E722
+            fatal_error = True
+            raise
 
-    logger.info('scheduler initialized')
+    async def run_task(self):
+        global suite_items, schedulers
 
-    # connect to server
-    await client.start()
+        logger.info('starting run_task')
+        # init client
+        client = Client(settings)
+        client.subscribe(self.settings)
 
-    logger.info('client connected')
+        logger.info('client initialized')
 
-    # work through test items
-    while not scheduler.done:
-        pending_at = datetime.utcnow()
-        schedule = await scheduler.next()
-        started_at = datetime.utcnow()
-        logger.info('waited for schedule: ' + str(started_at - pending_at))
-        report_items = execute_schedule(schedule)
-        finished_at = datetime.utcnow()
-        await scheduler.report(Report(report_items, pending_at, started_at, finished_at))
-        logger.info('sent report')
+        # init scheduler
+        scheduler = Scheduler(self.settings, client, suite_items, self.name)
+        schedulers.append(scheduler)
 
-    logger.info('wrapping up')
+        logger.info('scheduler initialized')
 
-    # wrap things up
-    await scheduler.stop()
-    await client.stop()
+        # connect to server
+        await client.start()
 
-def execute_schedule(schedule):
-    global report_items_by_worker
-    report_items_by_worker["worker"] = []
+        logger.info('client connected')
 
-    res = []
-    for batch in schedule.batches:
-        files = [item.file for item in batch.items]
-        tests = list(itertools.chain(*[tests_by_file[f] for f in files]))
-        for i, test in enumerate(tests):
-            next_test = tests[i + 1] if i + 1 < len(tests) else None
-            test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
-        res.extend(report_items_by_worker["worker"])
+        # work through test items
+        while not scheduler.done:
+            pending_at = datetime.utcnow()
+            schedule = await scheduler.next()
+            started_at = datetime.utcnow()
+            logger.info('waited for schedule: ' + str(started_at - pending_at))
+            report_items = self.execute_schedule(schedule)
+            finished_at = datetime.utcnow()
+            await scheduler.report(Report(report_items, pending_at, started_at, finished_at))
+            logger.info('sent report')
 
-    return res
+        logger.info('wrapping up')
+
+        # wrap things up
+        await scheduler.stop()
+        await client.stop()
+
+    def execute_schedule(self, schedule):
+        global report_items_by_worker
+        report_items_by_worker[self.name] = []
+
+        res = []
+        for batch in schedule.batches:
+            files = [item.file for item in batch.items]
+            tests = list(itertools.chain(*[tests_by_file[f] for f in files]))
+            for i, test in enumerate(tests):
+                next_test = tests[i + 1] if i + 1 < len(tests) else None
+                test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
+            res.extend(report_items_by_worker[self.name])
+
+        return res
 
 
 # report internal error properly
@@ -379,7 +400,8 @@ def collect_item(item):
 
 
 def report_item(type, location, status, start, end, failure):
-    report_items_by_worker["worker"].append(ReportItem(type, location, status, failure, start, end))
+    worker_id = threading.current_thread().name
+    report_items_by_worker[worker_id].append(ReportItem(type, location, status, failure, start, end))
 
 
 def node_to_location(node):
