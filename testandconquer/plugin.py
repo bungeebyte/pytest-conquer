@@ -180,6 +180,7 @@ class Worker(threading.Thread):
             tests = list(itertools.chain(*[tests_by_file[f] for f in files]))
             for i, test in enumerate(tests):
                 next_test = tests[i + 1] if i + 1 < len(tests) else None
+                print('next test:', next_test)
                 test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
             res.extend(report_items_by_worker[self.name])
 
