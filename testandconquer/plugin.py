@@ -158,7 +158,7 @@ class Worker(threading.Thread):
             while next_tests:
                 if len(next_tests) < 2 and not scheduler.done:
                     logger.debug('requiring next schedule')
-                    continue  # we don't know the next test yet
+                    break  # we don't know the next test yet
                 test = next_tests.pop(0)
                 next_test = next_tests[0] if next_tests else None
                 test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
