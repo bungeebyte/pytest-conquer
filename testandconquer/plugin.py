@@ -157,6 +157,7 @@ class Worker(threading.Thread):
             report_items_by_worker[self.name] = []
             while next_tests:
                 if len(next_tests) < 2 and not scheduler.done:
+                    logger.debug('requiring next schedule')
                     continue  # we don't know the next test yet
                 test = next_tests.pop(0)
                 next_test = next_tests[0] if next_tests else None
