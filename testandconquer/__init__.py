@@ -12,10 +12,6 @@ sh = logging.StreamHandler()
 sh.setFormatter(formatter)
 logger.addHandler(sh)
 
-fh = logging.FileHandler('conquer.log')
-fh.setFormatter(formatter)
-logger.addHandler(fh)
-
 
 def debug_logger():
     logger.setLevel(logging.DEBUG)
