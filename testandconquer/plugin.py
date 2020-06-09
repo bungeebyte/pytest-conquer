@@ -101,7 +101,6 @@ def pytest_runtestloop(session):
         return True
 
     print('conquer starting')
-    logger.info('starting now')
 
     threads = []
     no_of_workers = settings.client_workers
@@ -112,7 +111,6 @@ def pytest_runtestloop(session):
     for t in threads:
         t.join()
 
-    logger.info('done')
     return True
 
 
@@ -133,58 +131,42 @@ class Worker(threading.Thread):
             raise
 
     async def run_task(self):
-        global suite_items, schedulers
+        global suite_items, schedulers, report_items_by_worker
 
-        logger.info('starting run_task')
         # init client
         client = Client(settings)
         client.subscribe(self.settings)
-
-        logger.info('client initialized')
 
         # init scheduler
         scheduler = Scheduler(self.settings, client, suite_items, self.name)
         schedulers.append(scheduler)
 
-        logger.info('scheduler initialized')
-
         # connect to server
         await client.start()
 
-        logger.info('client connected')
-
         # work through test items
+        next_tests = []
         while not scheduler.done:
             pending_at = datetime.utcnow()
-            schedule = await scheduler.next()
+            next_schedule = await scheduler.next()
             started_at = datetime.utcnow()
-            logger.info('waited for schedule: ' + str(started_at - pending_at))
-            report_items = self.execute_schedule(schedule)
-            finished_at = datetime.utcnow()
-            await scheduler.report(Report(report_items, pending_at, started_at, finished_at))
-            logger.info('sent report')
+            next_files = [item.file for item in next_schedule.items]
+            next_tests.extend(list(itertools.chain(*[tests_by_file[f] for f in next_files])))
 
-        logger.info('wrapping up')
+            report_items_by_worker[self.name] = []
+            while next_tests:
+                if len(next_tests) < 2 and not scheduler.done:
+                    break  # we don't know the next test yet
+                test = next_tests.pop(0)
+                next_test = next_tests[0] if next_tests else None
+                test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
+
+            finished_at = datetime.utcnow()
+            await scheduler.report(Report(report_items_by_worker[self.name], pending_at, started_at, finished_at))
 
         # wrap things up
         await scheduler.stop()
         await client.stop()
-
-    def execute_schedule(self, schedule):
-        global report_items_by_worker
-        report_items_by_worker[self.name] = []
-
-        res = []
-        for batch in schedule.batches:
-            files = [item.file for item in batch.items]
-            tests = list(itertools.chain(*[tests_by_file[f] for f in files]))
-            for i, test in enumerate(tests):
-                next_test = tests[i + 1] if i + 1 < len(tests) else None
-                logger.info('next test: ' + str(next_test))
-                test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
-            res.extend(report_items_by_worker[self.name])
-
-        return res
 
 
 # report internal error properly

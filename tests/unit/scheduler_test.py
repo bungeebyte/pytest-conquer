@@ -37,15 +37,15 @@ async def test_reply_to_schedule_message():
     class MockSerializer:
         @staticmethod
         def deserialize_schedule(payload):
-            return payload
+            return Schedule(payload)
 
     settings = MockSettings({})
     client = MockClient(settings)
     scheduler = Scheduler(settings, client, [], 'my_worker_id', MockSerializer)
 
-    await scheduler.on_server_message(MessageType.Schedule.value, '<batches>')
+    await scheduler.on_server_message(MessageType.Schedules.value, [['A'], ['B']])
 
-    assert await scheduler.next() == Schedule(batches='<batches>')
+    assert await scheduler.next() == Schedule(['A'])
 
     await scheduler.stop()
 

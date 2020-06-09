@@ -1,6 +1,6 @@
 from multiprocessing import Manager
 
-from testandconquer.model import Schedule, ScheduleItem, ScheduleBatch
+from testandconquer.model import Schedule, ScheduleItem
 
 
 manager = Manager()
@@ -22,12 +22,12 @@ class MockScheduler():
 
     async def next(self):
         with synchronization['lock']:
-            batches = []
+            items = []
             if self.suite_files:
-                batches = [ScheduleBatch([ScheduleItem(self.suite_files.pop(0))])]
+                items = [ScheduleItem(self.suite_files.pop(0))]
             else:
                 self.done = True
-            return Schedule(batches)
+            return Schedule(items)
 
     async def report(self, report):
         with synchronization['lock']:

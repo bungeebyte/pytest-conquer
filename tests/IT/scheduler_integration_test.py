@@ -13,7 +13,7 @@ import pytest
 
 from testandconquer.client import Client, MessageType
 from testandconquer.scheduler import Scheduler
-from testandconquer.model import Failure, Location, Report, ReportItem, ScheduleBatch, ScheduleItem, Schedule, SuiteItem, Tag
+from testandconquer.model import Failure, Location, Report, ReportItem, ScheduleItem, Schedule, SuiteItem, Tag
 
 from tests.mock.settings import MockSettings
 from tests import assert_received_eventually
@@ -56,12 +56,12 @@ async def test_successful_server_communication(config, mock_server):
 
     # (2) SERVER REQUESTS ENV
 
-    await mock_server.send(MessageType.Env, [{'name': 'CI', 'conditions': ['my_CI'], 'mapping': {}}])
+    await mock_server.send(MessageType.Envs, [{'name': 'CI', 'conditions': ['my_CI'], 'mapping': {}}])
 
     # (3) CLIENT REPLIES WITH ENV
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Env.value, 'CI'),
+        (MessageType.Envs.value, 'CI'),
     ])
 
     # (4) SERVER REQUESTS CONFIG
@@ -75,7 +75,7 @@ async def test_successful_server_communication(config, mock_server):
             'build': {'dir': '/app', 'id': config['build']['id'], 'job': 'job', 'node': 'random-uuid', 'pool': 0, 'project': None, 'url': None},
             'client': {
                 'capabilities': ['fixtures', 'lifecycle_timings', 'split_by_file'],
-                'messages': ['config', 'done', 'env', 'error', 'report', 'schedule', 'suite'],
+                'messages': ['config', 'done', 'envs', 'error', 'report', 'schedules', 'suite'],
                 'name': 'pytest-conquer', 'version': '1.0', 'workers': 1, 'worker_id': 'my_worker_id',
             },
             'platform': {'name': 'python', 'version': '3.6'},
@@ -113,8 +113,8 @@ async def test_successful_server_communication(config, mock_server):
     })
 
     assert await scheduler.next() == Schedule([
-        ScheduleBatch([ScheduleItem('tests/IT/stub/stub_A.py')]),
-        ScheduleBatch([ScheduleItem('tests/IT/stub/stub_B.py')]),
+        ScheduleItem('tests/IT/stub/stub_A.py'),
+        ScheduleItem('tests/IT/stub/stub_B.py'),
     ])
 
     # (9) CLIENT SENDS REPORT #1
@@ -149,7 +149,7 @@ async def test_successful_server_communication(config, mock_server):
     })
 
     assert await scheduler.next() == Schedule([
-        ScheduleBatch([ScheduleItem('tests/IT/stub/stub_C.py')]),
+        ScheduleItem('tests/IT/stub/stub_C.py'),
     ])
 
     # (11) CLIENT SENDS REPORT #2

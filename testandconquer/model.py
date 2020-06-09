@@ -12,10 +12,7 @@ Report = \
     namedtuple('Report', ['items', 'pending_at', 'started_at', 'finished_at'])
 
 Schedule = \
-    namedtuple('Schedule', ['batches'])
-
-ScheduleBatch = \
-    namedtuple('ScheduleBatch', ['items'])
+    namedtuple('Schedule', ['items'])
 
 ScheduleItem = \
     namedtuple('ScheduleItem', ['file'])

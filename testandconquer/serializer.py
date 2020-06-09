@@ -1,6 +1,6 @@
 from testandconquer import logger
 from testandconquer.client import MessageType
-from testandconquer.model import ScheduleBatch, ScheduleItem
+from testandconquer.model import Schedule, ScheduleItem
 from testandconquer.settings import Capability
 
 
@@ -157,16 +157,13 @@ class ReportSerializer:
 
 
 class ScheduleSerializer:
-    from testandconquer.model import ScheduleBatch, ScheduleItem
+    from testandconquer.model import ScheduleItem
 
     @staticmethod
     def deserialize(data):
-        res = []
-        for batch in data['batches']:
-            items = [ScheduleItem(item['file']) for item in batch['items']]
-            res.append(ScheduleBatch(items))
-        logger.debug('received schedule with %s batches', len(res))
-        return res
+        items = [ScheduleItem(item['file']) for item in data['items']]
+        logger.debug('received schedule with %s items', len(items))
+        return Schedule(items)
 
 
 class LocationSerializer:
