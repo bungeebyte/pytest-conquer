@@ -152,11 +152,12 @@ class Worker(threading.Thread):
             started_at = datetime.utcnow()
             next_files = [item.file for item in next_schedule.items]
             next_tests.extend(list(itertools.chain(*[tests_by_file[f] for f in next_files])))
+            logger.debug('waited for schedule: ' + str(started_at - pending_at))
 
             report_items_by_worker[self.name] = []
             while next_tests:
                 if len(next_tests) < 2 and not scheduler.done:
-                    break  # we don't know the next test yet
+                    continue  # we don't know the next test yet
                 test = next_tests.pop(0)
                 next_test = next_tests[0] if next_tests else None
                 test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
