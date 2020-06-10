@@ -7,7 +7,7 @@ formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s|%(filename)s:
 
 
 # log warnings by default
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 sh = logging.StreamHandler()
 sh.setFormatter(formatter)
 logger.addHandler(sh)
