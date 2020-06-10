@@ -14,7 +14,7 @@ logger.addHandler(sh)
 
 
 def debug_logger():
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     fh = logging.FileHandler('conquer.log')
     fh.setFormatter(formatter)

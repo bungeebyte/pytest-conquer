@@ -88,7 +88,7 @@ def pytest_runtestloop(session):
     global fatal_error
 
     if not settings.enabled:
-        logger.debug('conquer not enabled')
+        logger.info('conquer not enabled')
         return main.pytest_runtestloop(session)
 
     if fatal_error:
@@ -152,12 +152,12 @@ class Worker(threading.Thread):
             started_at = datetime.utcnow()
             next_files = [item.file for item in next_schedule.items]
             next_tests.extend(list(itertools.chain(*[tests_by_file[f] for f in next_files])))
-            logger.debug('waited for schedule: ' + str(started_at - pending_at))
+            logger.info('waited for schedule: ' + str(started_at - pending_at))
 
             report_items_by_worker[self.name] = []
             while next_tests:
                 if len(next_tests) < 2 and not scheduler.done:
-                    logger.debug('requiring next schedule')
+                    logger.info('requiring next schedule')
                     break  # we don't know the next test yet
                 test = next_tests.pop(0)
                 next_test = next_tests[0] if next_tests else None
