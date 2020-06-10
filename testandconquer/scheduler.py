@@ -26,7 +26,7 @@ class Scheduler:
         return await self.schedule_queue.get()
 
     async def report(self, report):
-        logger.debug('submitting report with %s item(s)', len(report.items))
+        logger.info('submitting report with %s item(s)', len(report.items))
         await self.report_queue.put(report)
 
     async def stop(self):
@@ -38,16 +38,16 @@ class Scheduler:
     async def on_server_message(self, message_type, payload):
         if message_type == MessageType.Config.value:
             config_data = self.serializer.serialize_config(self.settings, self.worker_id)
-            logger.debug('generated config: %s', config_data)
+            logger.info('generated config: %s', config_data)
             await self.client.send(MessageType.Config, config_data)
         elif message_type == MessageType.Suite.value:
             suite_data = self.serializer.serialize_suite(self.suite_items)
-            logger.debug('initialising suite with %s item(s)', len(self.suite_items))
+            logger.info('initialising suite with %s item(s)', len(self.suite_items))
             await self.client.send(MessageType.Suite, suite_data)
         elif message_type == MessageType.Schedules.value:
             for schedule_data in payload:
                 schedule = self.serializer.deserialize_schedule(schedule_data)
-                logger.debug('received schedule with %s items', len(schedule.items))
+                logger.info('received schedule with %s items', len(schedule.items))
                 await self.schedule_queue.put(schedule)
         elif message_type == MessageType.Done.value:
             self.more = False
@@ -56,11 +56,11 @@ class Scheduler:
             system_exit(payload['title'], payload['body'], payload['meta'])
 
     async def _report_task(self):
-        logger.debug('initialising report task')
+        logger.info('initialising report task')
         while True:
             try:
                 report = await self.report_queue.get()
-                logger.debug('sending %s completed item(s)', len(report.items))
+                logger.info('sending %s completed item(s)', len(report.items))
                 report_data = self.serializer.serialize_report(report)
                 await self.client.send(MessageType.Report, report_data)
                 self.report_queue.task_done()

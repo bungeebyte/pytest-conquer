@@ -67,11 +67,11 @@ class Client():
         self.subscribers.append(subscriber)
 
     async def start(self):
-        logger.debug('client: starting')
+        logger.info('client: starting')
         self.handle_task = asyncio.ensure_future(self._handle())
 
     async def stop(self):
-        logger.debug('client: shutting down')
+        logger.info('client: shutting down')
         # quiescent the client
         self.stopping = True
         # wait for message queue to empty first
@@ -86,7 +86,7 @@ class Client():
 
     async def send(self, message_type, payload):
         if self.stopping:
-            logger.debug('client: not sending %s since shutting down'. message_type)
+            logger.info('client: not sending %s since shutting down'. message_type)
             return
         self.message_num += 1
         message = Client.encode(self.message_num, message_type, payload)
@@ -120,7 +120,7 @@ class Client():
 
             while not self.stopping:
                 url = self.api_urls[0]
-                logger.debug('connecting to %s', url)
+                logger.info('connecting to %s', url)
                 headers = [
                     ('X-Api-Key', str(self.api_key)),
                     ('X-Client-Name', str(self.client_name)),
@@ -135,7 +135,7 @@ class Client():
                     headers.append(('X-Env', str(self.system_provider)))
 
                 if wait_before_reconnect > 0:
-                    logger.debug('retrying in %ss', wait_before_reconnect)
+                    logger.info('retrying in %ss', wait_before_reconnect)
                     await asyncio.sleep(min(self.api_wait_limit, wait_before_reconnect))
 
                 try:
@@ -159,26 +159,26 @@ class Client():
                         for task in done:
                             err = task.exception()
                             if err:
-                                logger.debug(err)
+                                logger.info(err)
                                 raise err
 
                         # one of them finished, let's cancel the other
                         for task in pending:
                             task.cancel()
                 except websockets.exceptions.InvalidStatusCode as err:
-                    logger.debug(err)
+                    logger.info(err)
                     logger.warning('server error [code: %s], will try to re-connect' % err.status_code)
                 except websockets.exceptions.ConnectionClosed as err:
-                    logger.debug(err)
+                    logger.info(err)
                     logger.warning('connection closed, will try to re-connect')
                 except socket.gaierror as err:
-                    logger.debug(err)
+                    logger.info(err)
                     logger.warning('lost socket connection, will try to re-connect')
                 except ConnectionRefusedError as err:
-                    logger.debug(err)
+                    logger.info(err)
                     logger.warning('connection refused, will try to re-connect')
                 except OSError as err:
-                    logger.debug(err)
+                    logger.info(err)
                     logger.warning('connection error, will try to re-connect')
                 finally:
                     self.connected = False

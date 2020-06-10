@@ -162,7 +162,7 @@ class ScheduleSerializer:
     @staticmethod
     def deserialize(data):
         items = [ScheduleItem(item['file']) for item in data['items']]
-        logger.debug('received schedule with %s items', len(items))
+        logger.info('received schedule with %s items', len(items))
         return Schedule(items)
 
 
