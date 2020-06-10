@@ -152,7 +152,7 @@ class Worker(threading.Thread):
             started_at = datetime.utcnow()
             next_files = [item.file for item in next_schedule.items]
             next_tests.extend(list(itertools.chain(*[tests_by_file[f] for f in next_files])))
-            logger.info('waited for schedule: ' + str(started_at - pending_at))
+            logger.info('waited for schedule: %s', str(started_at - pending_at))
 
             report_items_by_worker[self.name] = []
             while next_tests:
