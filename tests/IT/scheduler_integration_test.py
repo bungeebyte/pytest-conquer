@@ -104,13 +104,12 @@ async def test_successful_server_communication(config, mock_server):
 
     # (8) SERVER SENDS SCHEDULE #1
 
-    await mock_server.send(MessageType.Schedule, {
-        'batches': [{
-            'items': [{'file': 'tests/IT/stub/stub_A.py'}],
-        }, {
-            'items': [{'file': 'tests/IT/stub/stub_B.py'}],
-        }],
-    })
+    await mock_server.send(MessageType.Schedules, [{
+        'items': [
+            {'file': 'tests/IT/stub/stub_A.py'},
+            {'file': 'tests/IT/stub/stub_B.py'},
+        ],
+    }])
 
     assert await scheduler.next() == Schedule([
         ScheduleItem('tests/IT/stub/stub_A.py'),
@@ -142,11 +141,11 @@ async def test_successful_server_communication(config, mock_server):
 
     # (10) SERVER SENDS SCHEDULE #2
 
-    await mock_server.send(MessageType.Schedule, {
-        'batches': [{
-            'items': [{'file': 'tests/IT/stub/stub_C.py'}],
-        }],
-    })
+    await mock_server.send(MessageType.Schedules, [{
+        'items': [
+            {'file': 'tests/IT/stub/stub_C.py'},
+        ],
+    }])
 
     assert await scheduler.next() == Schedule([
         ScheduleItem('tests/IT/stub/stub_C.py'),
