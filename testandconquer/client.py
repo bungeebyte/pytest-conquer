@@ -14,10 +14,10 @@ from testandconquer import logger
 class MessageType(Enum):
     Config = 'config'
     Done = 'done'
-    Env = 'env'
+    Envs = 'envs'
     Error = 'error'
     Report = 'report'
-    Schedule = 'schedule'
+    Schedules = 'schedules'
     Suite = 'suite'
 
 

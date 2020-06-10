@@ -44,10 +44,11 @@ class Scheduler:
             suite_data = self.serializer.serialize_suite(self.suite_items)
             logger.debug('initialising suite with %s item(s)', len(self.suite_items))
             await self.client.send(MessageType.Suite, suite_data)
-        elif message_type == MessageType.Schedule.value:
-            schedule_batches = self.serializer.deserialize_schedule(payload)
-            logger.debug('received schedule with %s batches', len(schedule_batches))
-            await self.schedule_queue.put(Schedule(schedule_batches))
+        elif message_type == MessageType.Schedules.value:
+            for schedule_data in payload:
+                schedule = self.serializer.deserialize_schedule(schedule_data)
+                logger.debug('received schedule with %s items', len(schedule.items))
+                await self.schedule_queue.put(schedule)
         elif message_type == MessageType.Done.value:
             self.more = False
             await self.schedule_queue.put(Schedule([]))  # so we unblock 'next'

@@ -51,9 +51,9 @@ class Settings():
             debug_logger()
 
     async def on_server_message(self, message_type, payload):
-        if message_type == MessageType.Env.value:
+        if message_type == MessageType.Envs.value:
             self._init_mapping(payload)
-            return (MessageType.Env, self.args['system_provider'])
+            return (MessageType.Envs, self.args['system_provider'])
 
     def _init_mapping(self, envs):
         is_match = False
