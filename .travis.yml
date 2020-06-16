@@ -32,6 +32,9 @@ script:
   # unit/integration tests
   - tox -e $TOX_ENV
 
+  # report coverage
+  - COVERALLS_PARALLEL=true coveralls
+
   # end-to-end tests
   - |
     if [ $TOX_ENV != "flake8" ]; then
@@ -66,6 +69,3 @@ script:
         exit 1
       fi
     fi
-
-after_script:
-  - COVERALLS_PARALLEL=true coveralls
