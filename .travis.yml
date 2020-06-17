@@ -33,7 +33,7 @@ script:
   - tox -e $TOX_ENV
 
   # report coverage
-  - if $TOX_ENV != "flake8"; then COVERALLS_PARALLEL=true coveralls; fi
+  - if [ $TOX_ENV != "flake8" ]; then COVERALLS_PARALLEL=true coveralls; fi
 
   # end-to-end tests
   - |
