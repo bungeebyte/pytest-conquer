@@ -120,6 +120,30 @@ class TestClient():
     def test_build_url(self):
         assert Client.to_url('domain.com', 'us') == 'wss://equilibrium-us.domain.com'
 
+    @pytest.mark.asyncio
+    async def test_ack_message(self):
+        async with Context() as (client, server, subscriber):
+            await server.send(MessageType.Suite, 'some-payload')
+            await assert_received_eventually(server, [
+                (MessageType.Ack.value, {'message': 0}),
+            ])
+
+    @pytest.mark.asyncio
+    async def test_dedup_message(self):
+        async with Context() as (client, server, subscriber):
+            await server.send(MessageType.Suite, 'some-payload')
+            await assert_received_eventually(server, [
+                (MessageType.Ack.value, {'message': 0}),
+            ])
+
+            server.message_num = 0      # reset numbering to replicate duplicated message
+            client.subscribers = None   # invalidate subscribers to make sure they aren't called
+
+            await server.send(MessageType.Suite, 'some-payload')
+            await assert_received_eventually(server, [
+                (MessageType.Ack.value, {'message': 0}),
+            ])
+
 
 class Subscriber():
     def __init__(self):
