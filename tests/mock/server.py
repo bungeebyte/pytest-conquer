@@ -13,6 +13,7 @@ class MockServer():
         self.daemon = True
         self.stopping = False
         self.server = None
+        self.message_num = 0
         self.producer_task = None
         self.consumer_task = None
         self.outgoing = asyncio.Queue()
@@ -61,7 +62,8 @@ class MockServer():
                 task.cancel()
 
     async def send(self, message_type, payload):
-        await self.outgoing.put(Client.encode(0, message_type, payload))
+        await self.outgoing.put(Client.encode(self.message_num, message_type, payload))
+        self.message_num += 1
 
     @property
     def url(self):

@@ -12,6 +12,7 @@ from testandconquer import logger
 
 
 class MessageType(Enum):
+    Ack = 'ack'
     Config = 'config'
     Done = 'done'
     Envs = 'envs'
@@ -52,8 +53,7 @@ class Client():
     @staticmethod
     def encode(message_num, message_type, payload):
         return json.dumps({
-            'id': str(uuid.uuid4()),
-            'num': str(message_num),
+            'num': message_num,
             'date': datetime.utcnow().isoformat(),
             'type': message_type.value,
             'payload': payload,
@@ -98,6 +98,7 @@ class Client():
                 try:
                     async for raw_message in ws:
                         message = Client.decode(raw_message)
+                        await self.send(MessageType.Ack, {'message': message['num']})
                         for subscriber in self.subscribers:
                             resp = await subscriber.on_server_message(message['type'].lower(), message['payload'])
                             if resp is not None:

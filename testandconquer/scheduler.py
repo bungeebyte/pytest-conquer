@@ -47,7 +47,7 @@ class Scheduler:
         elif message_type == MessageType.Schedules.value:
             for schedule_data in payload:
                 schedule = self.serializer.deserialize_schedule(schedule_data)
-                logger.info('received schedule with %s items', len(schedule.items))
+                logger.info('received schedule with %s item(s)', len(schedule.items))
                 await self.schedule_queue.put(schedule)
         elif message_type == MessageType.Done.value:
             self.more = False
