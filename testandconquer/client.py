@@ -12,6 +12,7 @@ from testandconquer import logger
 
 
 class MessageType(Enum):
+    Ack = 'ack'
     Config = 'config'
     Done = 'done'
     Envs = 'envs'
@@ -31,6 +32,7 @@ class Client():
         self.subscribers = []
         self.handle_task = None
         self.message_num = 0
+        self.last_acked_message_num = -1
         self.producer_task = None
         self.consumer_task = None
         self.connection_attempt = 0
@@ -52,8 +54,7 @@ class Client():
     @staticmethod
     def encode(message_num, message_type, payload):
         return json.dumps({
-            'id': str(uuid.uuid4()),
-            'num': str(message_num),
+            'num': message_num,
             'date': datetime.utcnow().isoformat(),
             'type': message_type.value,
             'payload': payload,
@@ -98,11 +99,24 @@ class Client():
                 try:
                     async for raw_message in ws:
                         message = Client.decode(raw_message)
+
+                        # ack the message so the server knows not to send it again
+                        await self.send(MessageType.Ack, {'message': message['num']})
+
+                        # if we've seen the message before, skip it
+                        if self.last_acked_message_num >= message['num']:
+                            logger.info('deduping message: %s', message['num'])
+                            continue
+
+                        # let subscribers send a reply to the message
                         for subscriber in self.subscribers:
                             resp = await subscriber.on_server_message(message['type'].lower(), message['payload'])
                             if resp is not None:
                                 message_type, payload = resp
                                 await self.send(message_type, payload)
+
+                        # mark message as processed
+                        self.last_acked_message_num = message['num']
                 except asyncio.CancelledError:
                     pass  # we are shutting down
 

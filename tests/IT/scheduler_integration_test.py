@@ -61,6 +61,7 @@ async def test_successful_server_communication(config, mock_server):
     # (3) CLIENT REPLIES WITH ENV
 
     await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'message': 0}),
         (MessageType.Envs.value, 'CI'),
     ])
 
@@ -71,11 +72,12 @@ async def test_successful_server_communication(config, mock_server):
     # (5) CLIENT REPLIES WITH CONFIG
 
     await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'message': 1}),
         (MessageType.Config.value, {
             'build': {'dir': '/app', 'id': config['build']['id'], 'job': 'job', 'node': 'random-uuid', 'pool': 0, 'project': None, 'url': None},
             'client': {
                 'capabilities': ['fixtures', 'lifecycle_timings', 'split_by_file'],
-                'messages': ['config', 'done', 'envs', 'error', 'report', 'schedules', 'suite'],
+                'messages': ['ack', 'config', 'done', 'envs', 'error', 'report', 'schedules', 'suite'],
                 'name': 'pytest-conquer', 'version': '1.0', 'workers': 1, 'worker_id': 'my_worker_id',
             },
             'platform': {'name': 'python', 'version': '3.6'},
@@ -92,6 +94,7 @@ async def test_successful_server_communication(config, mock_server):
     # (7) CLIENT SENDS SUITE
 
     await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'message': 2}),
         (MessageType.Suite.value, {
             'items': [
                 {'type': 'test', 'location': {'file': 'tests/IT/stub/stub_A.py', 'func': 'test_A', 'module': 'stub_A', 'class': 'TestClass', 'line': 1}},
@@ -110,6 +113,10 @@ async def test_successful_server_communication(config, mock_server):
             {'file': 'tests/IT/stub/stub_B.py'},
         ],
     }])
+
+    await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'message': 3}),
+    ])
 
     assert await scheduler.next() == Schedule([
         ScheduleItem('tests/IT/stub/stub_A.py'),
@@ -146,6 +153,10 @@ async def test_successful_server_communication(config, mock_server):
             {'file': 'tests/IT/stub/stub_C.py'},
         ],
     }])
+
+    await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'message': 4}),
+    ])
 
     assert await scheduler.next() == Schedule([
         ScheduleItem('tests/IT/stub/stub_C.py'),
