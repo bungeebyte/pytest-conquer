@@ -163,7 +163,7 @@ class ScheduleSerializer:
     def deserialize(data):
         items = [ScheduleItem(item['file']) for item in data['items']]
         logger.info('received schedule with %s items', len(items))
-        return Schedule(items)
+        return Schedule(data['id'], items)
 
 
 class LocationSerializer:

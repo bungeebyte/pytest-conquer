@@ -1,3 +1,4 @@
+import uuid
 from multiprocessing import Manager
 
 from testandconquer.model import Schedule, ScheduleItem
@@ -27,9 +28,9 @@ class MockScheduler():
                 items = [ScheduleItem(self.suite_files.pop(0))]
             else:
                 self.done = True
-            return Schedule(items)
+            return Schedule(uuid.uuid1(), items)
 
-    async def report(self, report):
+    async def report(self, schedule_id, report):
         with synchronization['lock']:
             self._report_items.extend(report.items)
 

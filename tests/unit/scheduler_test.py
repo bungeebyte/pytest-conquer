@@ -37,15 +37,16 @@ async def test_reply_to_schedule_message():
     class MockSerializer:
         @staticmethod
         def deserialize_schedule(payload):
-            return Schedule(payload)
+            return Schedule(payload['id'], payload['items'])
 
     settings = MockSettings({})
     client = MockClient(settings)
     scheduler = Scheduler(settings, client, [], 'my_worker_id', MockSerializer)
 
-    await scheduler.on_server_message(MessageType.Schedules.value, [['A'], ['B']])
+    payload = [{'id': 'ID', 'items': [['A'], ['B']]}]
+    await scheduler.on_server_message(MessageType.Schedules.value, payload)
 
-    assert await scheduler.next() == Schedule(['A'])
+    assert await scheduler.next() == Schedule('ID', [['A'], ['B']])
 
     await scheduler.stop()
 
@@ -132,10 +133,11 @@ async def test_report():
     scheduler = Scheduler(settings, client, [], 'my_worker_id', MockSerializer)
 
     report = Report('<items>', None, None, None)
-    await scheduler.report(report)
+    await scheduler.report('ID', report)
 
     await scheduler.stop()  # flushes reports
 
     assert client.received == [
+        (MessageType.Ack, {'schedule': 'ID'}),
         (MessageType.Report, report),
     ]
