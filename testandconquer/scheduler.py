@@ -26,7 +26,7 @@ class Scheduler:
 
     async def report(self, schedule_id, report):
         logger.info('acking schedule %s', schedule_id)
-        await self.client.send(MessageType.Ack, {'schedule': schedule_id})
+        await self.client.send(MessageType.Ack, {'schedule_id': schedule_id, 'status': 'success'})
         logger.info('submitting report with %s item(s)', len(report.items))
         await self.report_queue.put(report)
 

@@ -27,7 +27,8 @@ class TestClient():
             assert headers['X-Connection-ID'] == server.connections[0][1]['X-Connection-ID']
             assert headers['X-Env'] == 'provider'
             assert headers['X-Message-Format'] == 'json'
-            assert headers['X-Message-Num'] == '0'
+            assert headers['X-Message-Num-Client'] == '-1'
+            assert headers['X-Message-Num-Server'] == '-1'
         assert warn_messages(caplog) == []
 
     @pytest.mark.skip
@@ -87,7 +88,7 @@ class TestClient():
     @pytest.mark.asyncio
     async def test_reconnect(self, caplog):
         async with Context() as (client, server, subscriber):
-            await client.send(MessageType.Suite, 'some-payload')
+            await server.send(MessageType.Envs, 'some-payload')
             while len(server.connections) == 0:
                 await asyncio.sleep(0.01)
             await server.restart()
@@ -96,7 +97,8 @@ class TestClient():
             (path, headers) = server.connections[1]
             assert path == '/?fallback'  # different URL
             assert headers['X-Connection-Attempt'] == '2'
-            assert headers['X-Message-Num'] == '1'
+            assert headers['X-Message-Num-Client'] == '0'  # 1 client message for ack'ing the server message
+            assert headers['X-Message-Num-Server'] == '0'  # 1 server message was acked
         assert warn_messages(caplog) == []
 
     @pytest.mark.asyncio
@@ -111,9 +113,9 @@ class TestClient():
     @pytest.mark.asyncio
     async def test_receive_message_successfully(self, caplog):
         async with Context() as (client, server, subscriber):
-            await server.send(MessageType.Suite, 'some-payload')
+            await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(subscriber, [
-                (MessageType.Suite.value, 'some-payload'),
+                (MessageType.Envs.value, 'some-payload'),
             ])
         assert warn_messages(caplog) == []
 
@@ -123,25 +125,36 @@ class TestClient():
     @pytest.mark.asyncio
     async def test_ack_message(self):
         async with Context() as (client, server, subscriber):
-            await server.send(MessageType.Suite, 'some-payload')
+            await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message': 0}),
+                (MessageType.Ack.value, {'message_num': 0, 'status': 'success'}),
             ])
 
     @pytest.mark.asyncio
     async def test_dedup_message(self):
         async with Context() as (client, server, subscriber):
-            await server.send(MessageType.Suite, 'some-payload')
+            await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message': 0}),
+                (MessageType.Ack.value, {'message_num': 0, 'status': 'success'}),
             ])
 
             server.message_num = 0      # reset numbering to replicate duplicated message
             client.subscribers = None   # invalidate subscribers to make sure they aren't called
 
-            await server.send(MessageType.Suite, 'some-payload')
+            await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message': 0}),
+                (MessageType.Ack.value, {'message_num': 0, 'status': 'duplicate'}),
+            ])
+
+    @pytest.mark.asyncio
+    async def test_out_of_order_message(self):
+        async with Context() as (client, server, subscriber):
+            server.message_num = 10     # pretend we're far ahead
+            client.subscribers = None   # invalidate subscribers to make sure they aren't called
+
+            await server.send(MessageType.Envs, 'some-payload')
+            await assert_received_eventually(server, [
+                (MessageType.Ack.value, {'message_num': 10, 'status': 'out-of-order'}),
             ])
 
 
