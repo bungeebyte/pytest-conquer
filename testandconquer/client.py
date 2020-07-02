@@ -104,7 +104,8 @@ class Client():
                         message = Client.decode(raw_message)
 
                         # if a message got lost, don't proceed
-                        if message['num'] - self.last_acked_message_num > 1:
+                        ignore_message_num = message['type'].lower() == MessageType.Error.value
+                        if not ignore_message_num and message['num'] - self.last_acked_message_num > 1:
                             await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'out-of-order'})
                             logger.warn('not processing message %s since previous one(s) never arrived', message['num'])
                             continue
