@@ -127,7 +127,7 @@ class TestClient():
         async with Context() as (client, server, subscriber):
             await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message': 0}),
+                (MessageType.Ack.value, {'message_num': 0}),
             ])
 
     @pytest.mark.asyncio
@@ -135,7 +135,7 @@ class TestClient():
         async with Context() as (client, server, subscriber):
             await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message': 0}),
+                (MessageType.Ack.value, {'message_num': 0}),
             ])
 
             server.message_num = 0      # reset numbering to replicate duplicated message
@@ -143,7 +143,7 @@ class TestClient():
 
             await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message': 0}),
+                (MessageType.Ack.value, {'message_num': 0}),
             ])
 
 

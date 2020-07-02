@@ -101,7 +101,7 @@ class Client():
                         message = Client.decode(raw_message)
 
                         # ack the message so the server knows not to send it again
-                        await self.send(MessageType.Ack, {'message': message['num']})
+                        await self.send(MessageType.Ack, {'message_num': message['num']})
 
                         # if we've seen the message before, skip it
                         if self.last_acked_message_num >= message['num']:
