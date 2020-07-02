@@ -31,7 +31,7 @@ class Client():
         self.connected = False
         self.subscribers = []
         self.handle_task = None
-        self.message_num = 0
+        self.message_num = -1
         self.last_acked_message_num = -1
         self.producer_task = None
         self.consumer_task = None
@@ -141,7 +141,8 @@ class Client():
                     ('X-Client-Version', str(self.client_version)),
                     ('X-Connection-Attempt', str(self.connection_attempt)),
                     ('X-Connection-ID', str(self.id)),
-                    ('X-Message-Num', str(self.message_num)),
+                    ('X-Message-Num-Client', str(self.message_num)),
+                    ('X-Message-Num-Server', str(self.last_acked_message_num)),
                     ('X-Message-Format', 'json'),
                 ]
 

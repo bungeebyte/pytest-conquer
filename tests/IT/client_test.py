@@ -27,7 +27,8 @@ class TestClient():
             assert headers['X-Connection-ID'] == server.connections[0][1]['X-Connection-ID']
             assert headers['X-Env'] == 'provider'
             assert headers['X-Message-Format'] == 'json'
-            assert headers['X-Message-Num'] == '0'
+            assert headers['X-Message-Num-Client'] == '-1'
+            assert headers['X-Message-Num-Server'] == '-1'
         assert warn_messages(caplog) == []
 
     @pytest.mark.skip
@@ -96,7 +97,7 @@ class TestClient():
             (path, headers) = server.connections[1]
             assert path == '/?fallback'  # different URL
             assert headers['X-Connection-Attempt'] == '2'
-            assert headers['X-Message-Num'] == '1'
+            assert headers['X-Message-Num-Client'] == '0'
         assert warn_messages(caplog) == []
 
     @pytest.mark.asyncio
