@@ -161,7 +161,6 @@ class TestClient():
     async def test_never_skip_out_of_order_error_message(self):
         async with Context() as (client, server, subscriber):
             server.message_num = 10     # pretend we're out of order
-
             await server.send(MessageType.Error, 'some-payload')
             await assert_received_eventually(server, [
                 (MessageType.Ack.value, {'message_num': 10, 'status': 'success'}),
