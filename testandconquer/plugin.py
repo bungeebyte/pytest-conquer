@@ -146,15 +146,20 @@ class Worker(threading.Thread):
 
         # work through test items
         next_tests = []
+        report_items_by_worker[self.name] = []
         while not scheduler.done:
             pending_at = datetime.utcnow()
-            next_schedule = await scheduler.next()
+            schedule = await scheduler.next()
+            if schedule is None:
+                break  # happens when we are done
             started_at = datetime.utcnow()
-            next_files = [item.file for item in next_schedule.items]
-            next_tests.extend(list(itertools.chain(*[tests_by_file[f] for f in next_files])))
-            logger.info('waited for schedule: ' + str(started_at - pending_at))
+            schedule_files = [item.file for item in schedule.items]
+            schedule_tests = itertools.chain(*[tests_by_file[f] for f in schedule_files])
+            for test in schedule_tests:
+                test.__schedule_id__ = schedule.id
+                next_tests.append(test)
+            logger.info('preparing schedule took %sms', str(started_at - pending_at))
 
-            report_items_by_worker[self.name] = []
             while next_tests:
                 if len(next_tests) < 2 and not scheduler.done:
                     logger.info('requiring next schedule')
@@ -162,9 +167,10 @@ class Worker(threading.Thread):
                 test = next_tests.pop(0)
                 next_test = next_tests[0] if next_tests else None
                 test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
-
-            finished_at = datetime.utcnow()
-            await scheduler.report(Report(report_items_by_worker[self.name], pending_at, started_at, finished_at))
+                if next_test is None or test.__schedule_id__ != next_test.__schedule_id__:
+                    report = Report(report_items_by_worker[self.name], pending_at, started_at, datetime.utcnow())
+                    await scheduler.report(test.__schedule_id__, report)
+                    report_items_by_worker[self.name] = []
 
         # wrap things up
         await scheduler.stop()

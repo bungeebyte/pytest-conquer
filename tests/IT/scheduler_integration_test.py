@@ -108,6 +108,7 @@ async def test_successful_server_communication(config, mock_server):
     # (8) SERVER SENDS SCHEDULE #1
 
     await mock_server.send(MessageType.Schedules, [{
+        'id': '0',
         'items': [
             {'file': 'tests/IT/stub/stub_A.py'},
             {'file': 'tests/IT/stub/stub_B.py'},
@@ -118,19 +119,21 @@ async def test_successful_server_communication(config, mock_server):
         (MessageType.Ack.value, {'message': 3}),
     ])
 
-    assert await scheduler.next() == Schedule([
+    assert await scheduler.next() == Schedule('0', [
         ScheduleItem('tests/IT/stub/stub_A.py'),
         ScheduleItem('tests/IT/stub/stub_B.py'),
     ])
 
     # (9) CLIENT SENDS REPORT #1
 
-    await scheduler.report(Report([
+    await scheduler.report('0', Report([
         ReportItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', 3), 'failed',
                    Failure('AssertionError', 'assert 1 + 1 == 4'), time, time),
+        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B', 1), 'passed', None, time, time),
     ], time, time, time))
 
     await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'schedule': '0'}),
         (MessageType.Report.value, {
             'items': [{
                 'type': 'test',
@@ -139,38 +142,7 @@ async def test_successful_server_communication(config, mock_server):
                 'started_at': '2000-01-01T00:00:00.000Z',
                 'finished_at': '2000-01-01T00:00:00.000Z',
                 'error': {'type': 'AssertionError', 'message': 'assert 1 + 1 == 4'},
-            }],
-            'pending_at': '2000-01-01T00:00:00.000Z',
-            'started_at': '2000-01-01T00:00:00.000Z',
-            'finished_at': '2000-01-01T00:00:00.000Z',
-        }),
-    ])
-
-    # (10) SERVER SENDS SCHEDULE #2
-
-    await mock_server.send(MessageType.Schedules, [{
-        'items': [
-            {'file': 'tests/IT/stub/stub_C.py'},
-        ],
-    }])
-
-    await assert_received_eventually(mock_server, [
-        (MessageType.Ack.value, {'message': 4}),
-    ])
-
-    assert await scheduler.next() == Schedule([
-        ScheduleItem('tests/IT/stub/stub_C.py'),
-    ])
-
-    # (11) CLIENT SENDS REPORT #2
-
-    await scheduler.report(Report([
-        ReportItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B', 1), 'passed', None, time, time),
-    ], time, time, time))
-
-    await assert_received_eventually(mock_server, [
-        (MessageType.Report.value, {
-            'items': [{
+            }, {
                 'type': 'test',
                 'location': {'file': 'tests/IT/stub/stub_B.py', 'func': 'test_B', 'module': 'stub_B', 'class': 'TestClass', 'line': 1},
                 'status': 'passed',
@@ -183,13 +155,31 @@ async def test_successful_server_communication(config, mock_server):
         }),
     ])
 
-    # (12) CLIENT SENDS REPORT #3
+    # (10) SERVER SENDS SCHEDULE #2
 
-    await scheduler.report(Report([
+    await mock_server.send(MessageType.Schedules, [{
+        'id': '1',
+        'items': [
+            {'file': 'tests/IT/stub/stub_C.py'},
+        ],
+    }])
+
+    await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'message': 4}),
+    ])
+
+    assert await scheduler.next() == Schedule('1', [
+        ScheduleItem('tests/IT/stub/stub_C.py'),
+    ])
+
+    # (12) CLIENT SENDS REPORT #2
+
+    await scheduler.report('2', Report([
         ReportItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 1), 'passed', None, time, time),
     ], time, time, time))
 
     await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'schedule': '2'}),
         (MessageType.Report.value, {
             'items': [{
                 'type': 'test',

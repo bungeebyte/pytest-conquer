@@ -3,7 +3,6 @@ from contextlib import suppress
 
 from testandconquer import logger
 from testandconquer.client import MessageType
-from testandconquer.model import Schedule
 from testandconquer.serializer import Serializer
 from testandconquer.util import system_exit
 
@@ -25,7 +24,9 @@ class Scheduler:
     async def next(self):
         return await self.schedule_queue.get()
 
-    async def report(self, report):
+    async def report(self, schedule_id, report):
+        logger.info('acking schedule %s', schedule_id)
+        await self.client.send(MessageType.Ack, {'schedule': schedule_id})
         logger.info('submitting report with %s item(s)', len(report.items))
         await self.report_queue.put(report)
 
@@ -51,7 +52,7 @@ class Scheduler:
                 await self.schedule_queue.put(schedule)
         elif message_type == MessageType.Done.value:
             self.more = False
-            await self.schedule_queue.put(Schedule([]))  # so we unblock 'next'
+            await self.schedule_queue.put(None)  # so we unblock 'next'
         elif message_type == MessageType.Error.value:
             system_exit(payload['title'], payload['body'], payload['meta'])
 
