@@ -138,6 +138,6 @@ async def test_report():
     await scheduler.stop()  # flushes reports
 
     assert client.received == [
-        (MessageType.Ack, {'schedule': 'ID'}),
+        (MessageType.Ack, {'schedule_id': 'ID', 'status': 'success'}),
         (MessageType.Report, report),
     ]

@@ -127,7 +127,7 @@ class TestClient():
         async with Context() as (client, server, subscriber):
             await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message_num': 0}),
+                (MessageType.Ack.value, {'message_num': 0, 'status': 'success'}),
             ])
 
     @pytest.mark.asyncio
@@ -135,7 +135,7 @@ class TestClient():
         async with Context() as (client, server, subscriber):
             await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message_num': 0}),
+                (MessageType.Ack.value, {'message_num': 0, 'status': 'success'}),
             ])
 
             server.message_num = 0      # reset numbering to replicate duplicated message
@@ -143,7 +143,18 @@ class TestClient():
 
             await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
-                (MessageType.Ack.value, {'message_num': 0}),
+                (MessageType.Ack.value, {'message_num': 0, 'status': 'duplicate'}),
+            ])
+
+    @pytest.mark.asyncio
+    async def test_out_of_order_message(self):
+        async with Context() as (client, server, subscriber):
+            server.message_num = 10     # pretend we're far ahead
+            client.subscribers = None   # invalidate subscribers to make sure they aren't called
+
+            await server.send(MessageType.Envs, 'some-payload')
+            await assert_received_eventually(server, [
+                (MessageType.Ack.value, {'message_num': 10, 'status': 'out-of-order'}),
             ])
 
 

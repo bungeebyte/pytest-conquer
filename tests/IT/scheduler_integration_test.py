@@ -61,8 +61,8 @@ async def test_successful_server_communication(config, mock_server):
     # (3) CLIENT REPLIES WITH ENV
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Ack.value, {'message_num': 0}),
         (MessageType.Envs.value, 'CI'),
+        (MessageType.Ack.value, {'message_num': 0, 'status': 'success'}),
     ])
 
     # (4) SERVER REQUESTS CONFIG
@@ -72,7 +72,6 @@ async def test_successful_server_communication(config, mock_server):
     # (5) CLIENT REPLIES WITH CONFIG
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Ack.value, {'message_num': 1}),
         (MessageType.Config.value, {
             'build': {'dir': '/app', 'id': config['build']['id'], 'job': 'job', 'node': 'random-uuid', 'pool': 0, 'project': None, 'url': None},
             'client': {
@@ -85,6 +84,7 @@ async def test_successful_server_communication(config, mock_server):
             'system': {'context': {}, 'cpus': 3, 'os': 'Linux', 'os_version': '1.42', 'provider': 'CI', 'ram': 17179869184},
             'vcs': {'branch': 'master', 'pr': None, 'repo': 'github.com/myrepo', 'revision': 'asd43da', 'revision_message': 'my commit', 'tag': None, 'type': 'git'},
         }),
+        (MessageType.Ack.value, {'message_num': 1, 'status': 'success'}),
     ])
 
     # (6) SERVER REQUESTS SUITE
@@ -94,7 +94,6 @@ async def test_successful_server_communication(config, mock_server):
     # (7) CLIENT SENDS SUITE
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Ack.value, {'message_num': 2}),
         (MessageType.Suite.value, {
             'items': [
                 {'type': 'test', 'location': {'file': 'tests/IT/stub/stub_A.py', 'func': 'test_A', 'module': 'stub_A', 'class': 'TestClass', 'line': 1}},
@@ -103,6 +102,7 @@ async def test_successful_server_communication(config, mock_server):
                     'deps': [{'type': 'fixture', 'location': {'file': 'tests/IT/stub/stub_fixture.py', 'func': 'test_C', 'module': 'fixtures', 'class': 'FixtureClass'}}]},
             ],
         }),
+        (MessageType.Ack.value, {'message_num': 2, 'status': 'success'}),
     ])
 
     # (8) SERVER SENDS SCHEDULE #1
@@ -116,7 +116,7 @@ async def test_successful_server_communication(config, mock_server):
     }])
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Ack.value, {'message_num': 3}),
+        (MessageType.Ack.value, {'message_num': 3, 'status': 'success'}),
     ])
 
     assert await scheduler.next() == Schedule('0', [
@@ -133,7 +133,7 @@ async def test_successful_server_communication(config, mock_server):
     ], time, time, time))
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Ack.value, {'schedule': '0'}),
+        (MessageType.Ack.value, {'schedule_id': '0', 'status': 'success'}),
         (MessageType.Report.value, {
             'items': [{
                 'type': 'test',
@@ -165,7 +165,7 @@ async def test_successful_server_communication(config, mock_server):
     }])
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Ack.value, {'message_num': 4}),
+        (MessageType.Ack.value, {'message_num': 4, 'status': 'success'}),
     ])
 
     assert await scheduler.next() == Schedule('1', [
@@ -179,7 +179,7 @@ async def test_successful_server_communication(config, mock_server):
     ], time, time, time))
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Ack.value, {'schedule': '2'}),
+        (MessageType.Ack.value, {'schedule_id': '2', 'status': 'success'}),
         (MessageType.Report.value, {
             'items': [{
                 'type': 'test',

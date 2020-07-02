@@ -73,10 +73,13 @@ class Client():
 
     async def stop(self):
         logger.info('client: shutting down')
+
         # quiescent the client
         self.stopping = True
+
         # wait for message queue to empty first
         await asyncio.wait_for(self.outgoing.join(), timeout=10)
+
         # now cancel all pending tasks
         if (self.consumer_task):
             self.consumer_task.cancel()
@@ -100,11 +103,15 @@ class Client():
                     async for raw_message in ws:
                         message = Client.decode(raw_message)
 
-                        # ack the message so the server knows not to send it again
-                        await self.send(MessageType.Ack, {'message_num': message['num']})
+                        # if a message got lost, don't proceed
+                        if message['num'] - self.last_acked_message_num > 1:
+                            await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'out-of-order'})
+                            logger.warn('not processing message %s since previous one(s) never arrived', message['num'])
+                            continue
 
                         # if we've seen the message before, skip it
                         if self.last_acked_message_num >= message['num']:
+                            await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'duplicate'})
                             logger.info('deduping message: %s', message['num'])
                             continue
 
@@ -114,6 +121,9 @@ class Client():
                             if resp is not None:
                                 message_type, payload = resp
                                 await self.send(message_type, payload)
+
+                        # ack the message so the server knows it arrived
+                        await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'success'})
 
                         # mark message as processed
                         self.last_acked_message_num = message['num']
