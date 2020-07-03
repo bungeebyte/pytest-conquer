@@ -30,7 +30,7 @@ class MockScheduler():
                 self.done = True
             return Schedule(uuid.uuid1(), items)
 
-    async def report(self, schedule_id, report):
+    async def report(self, report):
         with synchronization['lock']:
             self._report_items.extend(report.items)
 

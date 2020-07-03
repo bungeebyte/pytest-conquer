@@ -9,7 +9,7 @@ ReportItem = \
 ReportItem.__new__.__defaults__ = (None,) * len(ReportItem._fields)
 
 Report = \
-    namedtuple('Report', ['items', 'pending_at', 'started_at', 'finished_at'])
+    namedtuple('Report', ['schedule_id', 'items', 'pending_at', 'started_at', 'finished_at'])
 
 Schedule = \
     namedtuple('Schedule', ['id', 'items'])

@@ -132,8 +132,8 @@ async def test_report():
     client = MockClient(settings)
     scheduler = Scheduler(settings, client, [], 'my_worker_id', MockSerializer)
 
-    report = Report('<items>', None, None, None)
-    await scheduler.report('ID', report)
+    report = Report('ID', '<items>', None, None, None)
+    await scheduler.report(report)
 
     await scheduler.stop()  # flushes reports
 
