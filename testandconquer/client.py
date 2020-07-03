@@ -67,18 +67,19 @@ class Client():
     def subscribe(self, subscriber):
         self.subscribers.append(subscriber)
 
-    async def start(self):
-        logger.info('client: starting')
+    def start(self):
+        # loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(loop)
         self.handle_task = asyncio.ensure_future(self._handle())
 
-    async def stop(self):
+    def stop(self):
         logger.info('client: shutting down')
 
         # quiescent the client
         self.stopping = True
 
         # wait for message queue to empty first
-        await asyncio.wait_for(self.outgoing.join(), timeout=10)
+        # await asyncio.wait_for(self.outgoing.join(), timeout=10)
 
         # now cancel all pending tasks
         if (self.consumer_task):
@@ -88,13 +89,13 @@ class Client():
         if (self.handle_task):
             self.handle_task.cancel()
 
-    async def send(self, message_type, payload):
+    def send(self, message_type, payload):
         if self.stopping:
             logger.info('client: not sending %s since shutting down'. message_type)
             return
         self.message_num += 1
         message = Client.encode(self.message_num, message_type, payload)
-        await self.outgoing.put(message)
+        self.outgoing.put_nowait(message)
 
     async def _handle(self):
         try:
@@ -106,25 +107,25 @@ class Client():
                         # if a message got lost, don't proceed
                         ignore_message_num = message['type'].lower() == MessageType.Error.value
                         if not ignore_message_num and message['num'] - self.last_acked_message_num > 1:
-                            await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'out-of-order'})
+                            self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'out-of-order'})
                             logger.warn('not processing message %s since previous one(s) never arrived', message['num'])
                             continue
 
                         # if we've seen the message before, skip it
                         if self.last_acked_message_num >= message['num']:
-                            await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'duplicate'})
+                            self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'duplicate'})
                             logger.info('deduping message: %s', message['num'])
                             continue
 
                         # let subscribers send a reply to the message
                         for subscriber in self.subscribers:
-                            resp = await subscriber.on_server_message(message['type'].lower(), message['payload'])
+                            resp = subscriber.on_server_message(message['type'].lower(), message['payload'])
                             if resp is not None:
                                 message_type, payload = resp
-                                await self.send(message_type, payload)
+                                self.send(message_type, payload)
 
                         # ack the message so the server knows it arrived
-                        await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'success'})
+                        self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'success'})
 
                         # mark message as processed
                         self.last_acked_message_num = message['num']
@@ -140,7 +141,7 @@ class Client():
                 except asyncio.CancelledError:
                     pass  # we are shutting down
 
-            wait_before_reconnect = 0
+            self.wait_before_reconnect = 0
             self.connection_attempt = 1
 
             while not self.stopping:
@@ -160,12 +161,12 @@ class Client():
                 if self.system_provider:
                     headers.append(('X-Env', str(self.system_provider)))
 
-                if wait_before_reconnect > 0:
-                    logger.info('retrying in %ss', wait_before_reconnect)
-                    await asyncio.sleep(min(self.api_wait_limit, wait_before_reconnect))
+                if self.wait_before_reconnect > 0:
+                    logger.info('retrying in %ss', self.wait_before_reconnect)
+                    await asyncio.sleep(min(self.api_wait_limit, self.wait_before_reconnect))
 
                 try:
-                    start = time.time()
+                    self.connection_start = time.time()
                     async with websockets.connect(
                         url,
                         ping_interval=None,     # don't send ping, that's the server's responsibility
@@ -192,37 +193,39 @@ class Client():
                         for task in pending:
                             task.cancel()
                 except websockets.exceptions.InvalidStatusCode as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('server error [code: %s], will try to re-connect' % err.status_code)
                 except websockets.exceptions.ConnectionClosed as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('connection closed, will try to re-connect')
                 except socket.gaierror as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('lost socket connection, will try to re-connect')
                 except ConnectionRefusedError as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('connection refused, will try to re-connect')
                 except OSError as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('connection error, will try to re-connect')
-                finally:
-                    self.connected = False
-                    if self.connection_attempt > self.api_retry_limit:
-                        self._abort()
-                    self.connection_attempt += 1
-                    wait_before_reconnect = 2 ** self.connection_attempt - (time.time() - start)
-                    self.api_urls.reverse()  # we'll try the other URL next
         except asyncio.CancelledError:
             pass
         except Exception as err:
             logger.exception(err)
 
+    def _handle_err(self, err):
+        logger.info(err)
+        self.connected = False
+        if self.connection_attempt > self.api_retry_limit:
+            self._abort()
+        self.connection_attempt += 1
+        self.wait_before_reconnect = 2 ** self.connection_attempt - (time.time() - self.connection_start)
+        self.api_urls.reverse()  # we'll try the other URL next
+
     def _abort(self):
         system_exit(
             'COULD NOT CONNECT:',
             'Unable to connect to server, giving up.\n'
-            + 'Please try again and contact support if the error persists.',
+            + 'Please try again and contact us at support@testandconquer.com if the error persists.',
             {
                 'Client-Name': self.client_name,
                 'Client-Version': self.client_version,

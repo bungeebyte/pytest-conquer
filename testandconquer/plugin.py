@@ -1,11 +1,8 @@
-import asyncio
 import functools
 import os.path
 import os
 import inspect
 import sys
-import threading
-import uuid
 import itertools
 from collections import defaultdict
 from datetime import datetime
@@ -13,7 +10,6 @@ from datetime import datetime
 import pytest
 from _pytest import main
 
-from testandconquer.client import Client
 from testandconquer.model import Failure, Location, SuiteItem, Report, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
 from testandconquer.settings import Settings
@@ -22,15 +18,13 @@ from testandconquer import logger
 
 
 fatal_error = None
-report_items_by_worker = {}
-schedulers = []
+report_items = []
+scheduler = None
 settings = None
 suite_items = []
 suite_item_locations = set()
 suite_item_file_size_by_file = {}
-reporter = None
 tests_by_file = defaultdict(list)
-worker_id = None
 
 
 # ======================================================================================
@@ -50,7 +44,7 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl(trylast=True)
 def pytest_configure(config):
-    global reporter, settings, fatal_error
+    global settings, fatal_error
 
     settings = create_settings(config)
 
@@ -85,7 +79,7 @@ def create_settings(config):
 
 
 def pytest_runtestloop(session):
-    global fatal_error
+    global report_items, scheduler, suite_items
 
     if not settings.enabled:
         logger.info('conquer not enabled')
@@ -100,81 +94,43 @@ def pytest_runtestloop(session):
     if session.config.option.collectonly:
         return True
 
-    print('conquer starting')
+    print('conquer plugin is starting')
 
-    threads = []
-    no_of_workers = settings.client_workers
-    for i in range(no_of_workers):
-        t = Worker(args=[session, settings])
-        threads.append(t)
-        t.start()
-    for t in threads:
-        t.join()
+    scheduler = Scheduler(settings, suite_items)
+    scheduler.start()
+
+    # work through test items schedule by schedule
+    next_tests = []
+    report_items = []
+    while not scheduler.done:
+        pending_at = datetime.utcnow()
+        schedule = scheduler.next()
+        if schedule is None:
+            break  # happens when we are done
+        started_at = datetime.utcnow()
+        schedule_files = [item.file for item in schedule.items]
+        schedule_tests = itertools.chain(*[tests_by_file[f] for f in schedule_files])
+        for test in schedule_tests:
+            test.__schedule_id__ = schedule.id
+            next_tests.append(test)
+        logger.info('preparing schedule took %sms', str(started_at - pending_at))
+
+        while next_tests:
+            if len(next_tests) < 2 and not scheduler.done:
+                logger.info('requiring next schedule')
+                break  # we don't know the next test yet
+            test = next_tests.pop(0)
+            next_test = next_tests[0] if next_tests else None
+            test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
+            if next_test is None or test.__schedule_id__ != next_test.__schedule_id__:
+                report = Report(test.__schedule_id__, report_items, pending_at, started_at, datetime.utcnow())
+                scheduler.report(report)
+                report_items = []
+
+    # wrap things up
+    scheduler.join()
 
     return True
-
-
-class Worker(threading.Thread):
-    def __init__(self, *args, **kwargs):
-        threading.Thread.__init__(self, name=str(uuid.uuid4()), *args, **kwargs)
-        self.session = kwargs['args'][0]
-        self.settings = kwargs['args'][1]
-
-    def run(self):
-        global fatal_error
-        try:
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(self.run_task())
-            loop.close()
-        except:  # noqa: E722
-            fatal_error = True
-            raise
-
-    async def run_task(self):
-        global suite_items, schedulers, report_items_by_worker
-
-        # init client
-        client = Client(settings)
-        client.subscribe(self.settings)
-
-        # init scheduler
-        scheduler = Scheduler(self.settings, client, suite_items, self.name)
-        schedulers.append(scheduler)
-
-        # connect to server
-        await client.start()
-
-        # work through test items
-        next_tests = []
-        report_items_by_worker[self.name] = []
-        while not scheduler.done:
-            pending_at = datetime.utcnow()
-            schedule = await scheduler.next()
-            if schedule is None:
-                break  # happens when we are done
-            started_at = datetime.utcnow()
-            schedule_files = [item.file for item in schedule.items]
-            schedule_tests = itertools.chain(*[tests_by_file[f] for f in schedule_files])
-            for test in schedule_tests:
-                test.__schedule_id__ = schedule.id
-                next_tests.append(test)
-            logger.info('preparing schedule took %sms', str(started_at - pending_at))
-
-            while next_tests:
-                if len(next_tests) < 2 and not scheduler.done:
-                    logger.info('requiring next schedule')
-                    break  # we don't know the next test yet
-                test = next_tests.pop(0)
-                next_test = next_tests[0] if next_tests else None
-                test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
-                if next_test is None or test.__schedule_id__ != next_test.__schedule_id__:
-                    report = Report(test.__schedule_id__, report_items_by_worker[self.name], pending_at, started_at, datetime.utcnow())
-                    await scheduler.report(report)
-                    report_items_by_worker[self.name] = []
-
-        # wrap things up
-        await scheduler.stop()
-        await client.stop()
 
 
 # report internal error properly
@@ -391,8 +347,8 @@ def collect_item(item):
 
 
 def report_item(type, location, status, start, end, failure):
-    worker_id = threading.current_thread().name
-    report_items_by_worker[worker_id].append(ReportItem(type, location, status, failure, start, end))
+    global report_items
+    report_items.append(ReportItem(type, location, status, failure, start, end))
 
 
 def node_to_location(node):

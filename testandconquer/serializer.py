@@ -34,7 +34,7 @@ class Serializer:
 class ConfigSerializer:
 
     @staticmethod
-    def serialize(settings, worker_id):
+    def serialize(settings):
         return {
             'build': {
                 'dir': Serializer.truncate(settings.build_dir, 1024),
@@ -50,8 +50,6 @@ class ConfigSerializer:
                 'messages': [t.value for t in MessageType],
                 'name': Serializer.truncate(settings.client_name, 64),
                 'version': Serializer.truncate(settings.client_version, 32),
-                'workers': settings.client_workers,
-                'worker_id': worker_id,
             },
             'platform': {
                 'name': Serializer.truncate(settings.platform_name, 64),

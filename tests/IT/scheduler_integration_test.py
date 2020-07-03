@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 import psutil
 import pytest
 
-from testandconquer.client import Client, MessageType
+from testandconquer.client import MessageType
 from testandconquer.scheduler import Scheduler
 from testandconquer.model import Failure, Location, Report, ReportItem, ScheduleItem, Schedule, SuiteItem, Tag
 
@@ -39,8 +39,6 @@ async def test_successful_server_communication(config, mock_server):
         'vcs_revision': 'asd43da',
         'vcs_revision_message': 'my commit',
     })
-    client = Client(settings)
-    client.subscribe(settings)
     suite_items = [
         SuiteItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', 1)),
         SuiteItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B', 1), tags=[Tag('my_group', False)]),
@@ -48,11 +46,11 @@ async def test_successful_server_communication(config, mock_server):
             SuiteItem('fixture', Location('tests/IT/stub/stub_fixture.py', 'fixtures', 'FixtureClass', 'test_C', 0)),
         ]),
     ]
-    scheduler = Scheduler(settings, client, suite_items, 'my_worker_id')
+    scheduler = Scheduler(settings, suite_items)
 
-    # (1) CONNECT
+    # (1) START
 
-    await client.start()
+    scheduler.start()
 
     # (2) SERVER REQUESTS ENV
 
@@ -204,8 +202,8 @@ async def test_successful_server_communication(config, mock_server):
 
     # (14) SHUTDOWN
 
-    await scheduler.stop()
-    await client.stop()
+    scheduler.stop()
+    scheduler.join()
 
 
 @pytest.fixture

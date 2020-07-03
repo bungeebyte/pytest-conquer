@@ -9,7 +9,7 @@ synchronization = dict(manager=manager)
 
 
 class MockScheduler():
-    def __init__(self, settings, client, suite_items, worker_id):
+    def __init__(self, settings, suite_items):
         self.done = False
         self.settings = settings
         self._suite_items = suite_items
@@ -18,10 +18,13 @@ class MockScheduler():
         self.suite_files = list(set([i.location.file for i in suite_items]))
         synchronization['lock'] = manager.Lock()
 
-    async def stop(self):
+    def start(self):
         pass
 
-    async def next(self):
+    def join(self):
+        pass
+
+    def next(self):
         with synchronization['lock']:
             items = []
             if self.suite_files:
@@ -30,7 +33,7 @@ class MockScheduler():
                 self.done = True
             return Schedule(uuid.uuid1(), items)
 
-    async def report(self, report):
+    def report(self, report):
         with synchronization['lock']:
             self._report_items.extend(report.items)
 

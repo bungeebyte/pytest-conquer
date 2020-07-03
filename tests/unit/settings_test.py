@@ -83,17 +83,6 @@ class TestSettings():
         settings = Settings({})
         assert settings.client_version == '1.0'
 
-    def test_client_workers(self, mocker):
-        cpu_count = mocker.patch('multiprocessing.cpu_count')
-        cpu_count.return_value = 8
-
-        settings = Settings({'workers': 'max'})
-        assert settings.client_workers == 8
-
-    def test_client_workers_default(self, mocker):
-        settings = Settings({})
-        assert settings.client_workers == 1
-
     def test_debug(self):
         settings = Settings({'debug': True})
         assert settings.debug is True
@@ -192,14 +181,14 @@ class TestSettingsInit():
 
         # when provider matches
         envs = [{'name': 'mapping-provider', 'conditions': ['ci_NAME'], 'mapping': {'build_NODE': 'ENV_NODE', 'system_context': ['ENV_HOST']}}]
-        assert await settings.on_server_message(MessageType.Envs.value, envs) == (MessageType.Envs, 'mapping-provider')
+        assert settings.on_server_message(MessageType.Envs.value, envs) == (MessageType.Envs, 'mapping-provider')
         assert settings.system_provider == 'mapping-provider'
         assert settings.build_node == 'NODE'
         assert settings.system_context == {'ENV_HOST': 'HOST'}
 
         # when provider doesn't match
         envs = []
-        assert await settings.on_server_message(MessageType.Envs.value, envs) == (MessageType.Envs, 'unknown')
+        assert settings.on_server_message(MessageType.Envs.value, envs) == (MessageType.Envs, 'unknown')
         assert settings.system_provider == 'unknown'
         assert settings.build_node != 'NODE'
 

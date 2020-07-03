@@ -54,8 +54,8 @@ class TestClient():
 
         with pytest.raises(SystemExit):
             datetime_mock.utcnow = mock.Mock(return_value=datetime(2000, 1, 1))
-            event_loop.run_until_complete(self.client.start())
-            event_loop.run_until_complete(asyncio.sleep(1))
+            self.client.start()
+            event_loop.run_until_complete(asyncio.sleep(5))
 
         assert warn_messages(caplog) == [
             'lost socket connection, will try to re-connect',
@@ -99,12 +99,12 @@ class TestClient():
             assert headers['X-Connection-Attempt'] == '2'
             assert headers['X-Message-Num-Client'] == '0'  # 1 client message for ack'ing the server message
             assert headers['X-Message-Num-Server'] == '0'  # 1 server message was acked
-        assert warn_messages(caplog) == []
+        assert warn_messages(caplog) == ['connection refused, will try to re-connect']
 
     @pytest.mark.asyncio
     async def test_send_message_successfully(self, caplog):
         async with Context() as (client, server, subscriber):
-            await client.send(MessageType.Suite, 'some-payload')
+            client.send(MessageType.Suite, 'some-payload')
             await assert_received_eventually(server, [
                 (MessageType.Suite.value, 'some-payload'),
             ])
@@ -171,7 +171,7 @@ class Subscriber():
     def __init__(self):
         self.received = []
 
-    async def on_server_message(self, message_type, payload):
+    def on_server_message(self, message_type, payload):
         self.received.append((message_type, payload))
 
 
@@ -188,7 +188,7 @@ class Context():
         self.settings['api_domain'] = self.server.url + '?primary'
         self.settings['api_domain_fallback'] = self.server.url + '?fallback'
         self.client = Client(MockSettings(self.settings))
-        await self.client.start()
+        self.client.start()
 
         # set up subscriber
         self.subscriber = Subscriber()
@@ -198,7 +198,7 @@ class Context():
 
     async def __aexit__(self, _type, _value, _traceback):
         try:
-            await self.client.stop()
+            self.client.stop()
         except Exception as err:
             print(err)
 

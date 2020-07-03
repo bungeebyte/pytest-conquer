@@ -1,5 +1,4 @@
 import configparser
-import multiprocessing
 import os
 import platform
 import uuid
@@ -50,7 +49,7 @@ class Settings():
         if self.debug is True:
             debug_logger()
 
-    async def on_server_message(self, message_type, payload):
+    def on_server_message(self, message_type, payload):
         if message_type == MessageType.Envs.value:
             self._init_mapping(payload)
             return (MessageType.Envs, self.args['system_provider'])
@@ -71,13 +70,6 @@ class Settings():
         else:
             self.mapping = {}
             self.args['system_provider'] = 'unknown'
-
-    @property
-    def client_workers(self):
-        val = self.__getattr__('workers')
-        if val == 'max':
-            return multiprocessing.cpu_count()
-        return val
 
     def __getattr__(self, name):
         default_val = None
