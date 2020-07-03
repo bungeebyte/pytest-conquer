@@ -168,8 +168,8 @@ class Worker(threading.Thread):
                 next_test = next_tests[0] if next_tests else None
                 test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
                 if next_test is None or test.__schedule_id__ != next_test.__schedule_id__:
-                    report = Report(report_items_by_worker[self.name], pending_at, started_at, datetime.utcnow())
-                    await scheduler.report(test.__schedule_id__, report)
+                    report = Report(test.__schedule_id__, report_items_by_worker[self.name], pending_at, started_at, datetime.utcnow())
+                    await scheduler.report(report)
                     report_items_by_worker[self.name] = []
 
         # wrap things up

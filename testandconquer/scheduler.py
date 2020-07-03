@@ -24,9 +24,9 @@ class Scheduler:
     async def next(self):
         return await self.schedule_queue.get()
 
-    async def report(self, schedule_id, report):
-        logger.info('acking schedule %s', schedule_id)
-        await self.client.send(MessageType.Ack, {'schedule_id': schedule_id, 'status': 'success'})
+    async def report(self, report):
+        logger.info('acking schedule %s', report.schedule_id)
+        await self.client.send(MessageType.Ack, {'schedule_id': report.schedule_id, 'status': 'success'})
         logger.info('submitting report with %s item(s)', len(report.items))
         await self.report_queue.put(report)
 

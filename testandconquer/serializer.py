@@ -131,6 +131,7 @@ class ReportSerializer:
     @staticmethod
     def serialize(report):
         return {
+            'schedule_id': report.schedule_id,
             'items': [ReportSerializer.serialize_item(i) for i in report.items],
             'pending_at': report.pending_at.strftime(Serializer.date_format),
             'started_at': report.started_at.strftime(Serializer.date_format),
