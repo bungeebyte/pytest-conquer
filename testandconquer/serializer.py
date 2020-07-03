@@ -50,6 +50,8 @@ class ConfigSerializer:
                 'messages': [t.value for t in MessageType],
                 'name': Serializer.truncate(settings.client_name, 64),
                 'version': Serializer.truncate(settings.client_version, 32),
+                'workers': 1,
+                'worker_id': 'default',
             },
             'platform': {
                 'name': Serializer.truncate(settings.platform_name, 64),

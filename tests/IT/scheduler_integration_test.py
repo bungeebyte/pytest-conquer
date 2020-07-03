@@ -75,7 +75,7 @@ async def test_successful_server_communication(config, mock_server):
             'client': {
                 'capabilities': ['fixtures', 'lifecycle_timings', 'split_by_file'],
                 'messages': ['ack', 'config', 'done', 'envs', 'error', 'report', 'schedules', 'suite'],
-                'name': 'pytest-conquer', 'version': '1.0', 'workers': 1, 'worker_id': 'my_worker_id',
+                'name': 'pytest-conquer', 'version': '1.0', 'workers': 1, 'worker_id': 'default',
             },
             'platform': {'name': 'python', 'version': '3.6'},
             'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},
@@ -117,14 +117,14 @@ async def test_successful_server_communication(config, mock_server):
         (MessageType.Ack.value, {'message_num': 3, 'status': 'success'}),
     ])
 
-    assert await scheduler.next() == Schedule('0', [
+    assert scheduler.next() == Schedule('0', [
         ScheduleItem('tests/IT/stub/stub_A.py'),
         ScheduleItem('tests/IT/stub/stub_B.py'),
     ])
 
     # (9) CLIENT SENDS REPORT #1
 
-    await scheduler.report(Report('0', [
+    scheduler.report(Report('0', [
         ReportItem('test', Location('tests/IT/stub/stub_A.py', 'stub_A', 'TestClass', 'test_A', 3), 'failed',
                    Failure('AssertionError', 'assert 1 + 1 == 4'), time, time),
         ReportItem('test', Location('tests/IT/stub/stub_B.py', 'stub_B', 'TestClass', 'test_B', 1), 'passed', None, time, time),
@@ -167,13 +167,13 @@ async def test_successful_server_communication(config, mock_server):
         (MessageType.Ack.value, {'message_num': 4, 'status': 'success'}),
     ])
 
-    assert await scheduler.next() == Schedule('1', [
+    assert scheduler.next() == Schedule('1', [
         ScheduleItem('tests/IT/stub/stub_C.py'),
     ])
 
     # (12) CLIENT SENDS REPORT #2
 
-    await scheduler.report(Report('1', [
+    scheduler.report(Report('1', [
         ReportItem('test', Location('tests/IT/stub/stub_C.py', 'stub_C', 'TestClass', 'test_C', 1), 'passed', None, time, time),
     ], time, time, time))
 
@@ -220,7 +220,7 @@ def config(mocker):
     return {
         'build': {'dir': '/app', 'id': build_id, 'job': 'job', 'pool': 0, 'project': None, 'url': None, 'node': 'random-uuid'},
         'client': {'capabilities': ['heartbeat', 'fixtures', 'isolated_process', 'lifecycle_timings', 'split_by_file'],
-                   'name': 'pytest-conquer', 'version': '1.0', 'workers': 1, 'worker_id': 'my_worker_id'},
+                   'name': 'pytest-conquer', 'version': '1.0', 'workers': 1, 'worker_id': 'default'},
         'platform': {'name': 'python', 'version': '3.6'},
         'runner': {'args': ['arg1'], 'name': None, 'plugins': [], 'root': None, 'version': None},
         'system': {'context': {}, 'provider': 'custom', 'os': 'Linux', 'os_version': '1.42', 'cpus': 3, 'ram': 17179869184},

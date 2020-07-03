@@ -36,7 +36,6 @@ class Client():
         self.producer_task = None
         self.consumer_task = None
         self.connection_attempt = 0
-        self.outgoing = asyncio.Queue()
         self.update_settings(settings)
 
     def update_settings(self, settings):
@@ -68,9 +67,10 @@ class Client():
         self.subscribers.append(subscriber)
 
     def start(self):
-        # loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(loop)
-        self.handle_task = asyncio.ensure_future(self._handle())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        self.outgoing = asyncio.Queue()
+        self.handle_task = loop.run_until_complete(self._handle())
 
     def stop(self):
         logger.info('client: shutting down')
@@ -88,6 +88,8 @@ class Client():
             self.producer_task.cancel()
         if (self.handle_task):
             self.handle_task.cancel()
+
+        asyncio.get_event_loop().close()
 
     def send(self, message_type, payload):
         if self.stopping:
@@ -186,7 +188,6 @@ class Client():
                         for task in done:
                             err = task.exception()
                             if err:
-                                logger.info(err)
                                 raise err
 
                         # one of them finished, let's cancel the other
