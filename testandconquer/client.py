@@ -1,5 +1,5 @@
-import json
 import asyncio
+import json
 import socket
 import uuid
 import time
@@ -8,6 +8,7 @@ from enum import Enum
 
 from testandconquer.util import system_exit
 from testandconquer.vendor import websockets
+from testandconquer.vendor.janus import Queue
 from testandconquer import logger
 
 
@@ -67,10 +68,8 @@ class Client():
         self.subscribers.append(subscriber)
 
     def start(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        self.outgoing = asyncio.Queue()
-        self.handle_task = loop.run_until_complete(self._handle())
+        self.outgoing = Queue()
+        self.handle_task = asyncio.get_event_loop().run_until_complete(self._handle())
 
     def stop(self):
         logger.info('client: shutting down')
@@ -79,7 +78,7 @@ class Client():
         self.stopping = True
 
         # wait for message queue to empty first
-        # await asyncio.wait_for(self.outgoing.join(), timeout=10)
+        self.outgoing.sync_q.join(timeout=10)
 
         # now cancel all pending tasks
         if (self.consumer_task):
@@ -89,15 +88,13 @@ class Client():
         if (self.handle_task):
             self.handle_task.cancel()
 
-        asyncio.get_event_loop().close()
-
     def send(self, message_type, payload):
         if self.stopping:
             logger.info('client: not sending %s since shutting down'. message_type)
             return
         self.message_num += 1
         message = Client.encode(self.message_num, message_type, payload)
-        self.outgoing.put_nowait(message)
+        self.outgoing.sync_q.put(message)
 
     async def _handle(self):
         try:
@@ -121,7 +118,7 @@ class Client():
 
                         # let subscribers send a reply to the message
                         for subscriber in self.subscribers:
-                            resp = subscriber.on_server_message(message['type'].lower(), message['payload'])
+                            resp = await subscriber.on_server_message(message['type'].lower(), message['payload'])
                             if resp is not None:
                                 message_type, payload = resp
                                 self.send(message_type, payload)
@@ -137,9 +134,9 @@ class Client():
             async def producer_handler(ws):
                 try:
                     while True:
-                        message = await self.outgoing.get()  # blocks forever until something is available
+                        message = await self.outgoing.async_q.get()  # blocks forever until something is available
                         await ws.send(message)
-                        self.outgoing.task_done()
+                        self.outgoing.async_q.task_done()
                 except asyncio.CancelledError:
                     pass  # we are shutting down
 

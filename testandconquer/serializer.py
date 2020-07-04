@@ -1,4 +1,3 @@
-from testandconquer import logger
 from testandconquer.client import MessageType
 from testandconquer.model import Schedule, ScheduleItem
 from testandconquer.settings import Capability
@@ -163,7 +162,6 @@ class ScheduleSerializer:
     @staticmethod
     def deserialize(data):
         items = [ScheduleItem(item['file']) for item in data['items']]
-        logger.info('received schedule with %s items', len(items))
         return Schedule(data['id'], items)
 
 

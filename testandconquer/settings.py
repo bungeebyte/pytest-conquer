@@ -49,7 +49,7 @@ class Settings():
         if self.debug is True:
             debug_logger()
 
-    def on_server_message(self, message_type, payload):
+    async def on_server_message(self, message_type, payload):
         if message_type == MessageType.Envs.value:
             self._init_mapping(payload)
             return (MessageType.Envs, self.args['system_provider'])
