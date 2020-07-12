@@ -23,6 +23,7 @@ class Scheduler(Thread):
         self.more = True
 
     def run(self):
+        logger.info('starting up')
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         try:
@@ -31,12 +32,19 @@ class Scheduler(Thread):
             self.receive_task = asyncio.ensure_future(self._receive_task())
             self.loop.run_forever()
         finally:
+            logger.info('closing event loop')
             self.loop.close()
-        print('scheduler: run end')
+        logger.info('thread finished')
 
     def prepare(self, suite_items):
-        self.suite_items = suite_items  # thread-safe
+        self.suite_items = suite_items  # thread-safe, in case you were wondering
+
+        # try to send the suite
         self._send_suite()
+
+        # wait for thread to be fully started
+        logger.info('waiting for thread to be ready')
+        self.ready.wait()
 
     def next(self):
         return self.schedule_queue.sync_q.get()
@@ -45,18 +53,14 @@ class Scheduler(Thread):
         self.report_queue.sync_q.put(report)
 
     def stop(self):
-        print('scheduler.stop')
+        logger.info('shutting down')
 
-        # TODO
-        stop_task = asyncio.run_coroutine_threadsafe(self._stop_task(), loop=self.loop)
-        print('wait future.result')
-        stop_task.result()
+        # schedule task to gracefully stop everything
+        asyncio.run_coroutine_threadsafe(self._stop_task(), loop=self.loop)
 
-        self.loop.stop()
-        print('future.result')
-
-        # wrap up thread
-        # self.join()
+        # wait till everything is shutdown
+        logger.info('waiting for thread to finish')
+        self.join()
 
     async def _submit_task(self):
         self.report_queue = Queue()
@@ -74,7 +78,7 @@ class Scheduler(Thread):
                 report_data = self.serializer.serialize_report(report)
                 self.client.send(MessageType.Report, report_data)
         except asyncio.CancelledError:
-            print('submit task shutdown')
+            logger.info('submitter cancelled')
             pass  # we are shutting down
 
     async def _receive_task(self):
@@ -105,6 +109,7 @@ class Scheduler(Thread):
                 elif message_type == MessageType.Error.value:
                     system_exit(payload['title'], payload['body'], payload['meta'])
         except asyncio.CancelledError:
+            logger.info('receiver cancelled')
             pass  # we are shutting down
 
     def _send_suite(self):
@@ -114,23 +119,21 @@ class Scheduler(Thread):
             self.client.send(MessageType.Suite, suite_data)
 
     async def _stop_task(self):
-        print('stop_task')
-
-        print(self.report_queue.async_q.qsize())
-
         # we have to wait until all reports have been enqueued
-        # await self.report_queue.async_q.join()
-
-        print('queue cleared')
+        reports_left = self.report_queue.async_q.qsize()
+        if reports_left > 0:
+            logger.info('waiting for last %s reports to send', reports_left)
+            await self.report_queue.async_q.join()
 
         # now we can safely stop the client
         await self.client.stop()
 
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        logger.info('cancelling remaining %s tasks', len(tasks))
         await cancel_tasks_safely(tasks)
-        print('_stop_task end')
 
         # now the loop can be safely stopped
+        logger.info('stopping event loop')
         self.loop.stop()
 
     @property

@@ -102,7 +102,6 @@ def pytest_runtestloop(session):
 
     # make sure the scheduler is ready
     scheduler.prepare(suite_items)
-    scheduler.ready.block()
 
     # work through test items schedule by schedule
     next_tests = []

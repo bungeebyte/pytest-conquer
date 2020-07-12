@@ -29,4 +29,7 @@ def system_exit(title, body, args, exit_fn=lambda: exec('raise SystemExit')):
 
 async def cancel_tasks_safely(tasks):
     [task.cancel() for task in tasks]
-    await asyncio.gather(*tasks)
+    try:
+        await asyncio.gather(*tasks, return_exceptions=True)
+    except asyncio.CancelledError:
+        pass

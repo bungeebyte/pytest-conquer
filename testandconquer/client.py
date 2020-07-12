@@ -68,24 +68,27 @@ class Client():
         return self.handle_task
 
     async def stop(self):
-        logger.info('client: shutting down')
+        logger.info('shutting down')
 
         # soft shutdown
         self.stopping = True
 
-        print('client: waiting for queue')
-        print(self.outgoing.async_q.qsize())
-
         # wait for queue to empty first
-        await self.outgoing.async_q.join()
+        messages_left = self.outgoing.async_q.qsize()
+        if messages_left > 0:
+            logger.info('waiting for last %s messages to send', messages_left)
+            await self.outgoing.async_q.join()
 
-        # now cancel all tasks
-        await cancel_tasks_safely([self.consumer_task, self.producer_task, self.handle_task])
-        print('client: stop end')
+        # now cancel the tasks one by one
+        await cancel_tasks_safely([self.consumer_task])
+        while not self.producer_task.cancelled() and not self.producer_task.done():
+            await asyncio.sleep(0)
+        logger.info('closing websocket')
+        await cancel_tasks_safely([self.handle_task])
 
     def send(self, message_type, payload):
         if self.stopping:
-            logger.info('client: not sending %s since shutting down', message_type)
+            logger.info('not sending %s since shutting down', message_type)
             return
         self.message_num += 1
         message = Client.encode(self.message_num, message_type, payload)
@@ -123,23 +126,24 @@ class Client():
                         # mark message as processed
                         self.last_acked_message_num = message['num']
                 except asyncio.CancelledError:
-                    print('cancel consumer handler')
+                    logger.info('consumer cancelled')
                     pass  # we are shutting down
 
             async def producer_handler(ws):
                 try:
                     while True:
                         message = await self.outgoing.async_q.get()  # blocks forever until something is available
-                        print('client: send')
                         await ws.send(message)
                         self.outgoing.async_q.task_done()
                 except asyncio.CancelledError:
+                    logger.info('producer cancelled')
                     pass  # we are shutting down
 
             self.wait_before_reconnect = 0
             self.connection_attempt = 1
 
             while not self.stopping or not self.outgoing.async_q.empty():
+                print(self.stopping, self.outgoing.async_q.empty())
                 url = self.api_urls[0]
                 logger.info('connecting to %s', url)
                 headers = [
@@ -164,6 +168,7 @@ class Client():
                     self.connection_start = time.time()
                     async with websockets.connect(
                         url,
+                        close_timeout=5,
                         ping_interval=None,     # don't send ping, that's the server's responsibility
                         max_size=None,          # accept any message size
                         max_queue=None,         # never drop a message
@@ -177,7 +182,7 @@ class Client():
                         self.producer_task = asyncio.ensure_future(producer_handler(ws))
                         tasks = [self.producer_task, self.consumer_task]
                         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-                        print('after asyncio.wait')
+                        logger.info('consumer/producer finished')
 
                         # re-raise any exceptions
                         for task in done:
@@ -185,18 +190,8 @@ class Client():
                             if err:
                                 raise err
 
-                        print('after raise')
-
                         # one of them finished, let's cancel the other
                         await cancel_tasks_safely(pending)
-
-                        print('after cancel pending')
-
-                        # close the webserver connection
-                        await ws.close()
-                        await ws.wait_closed()
-
-                        print('after ws closed')
                 except websockets.exceptions.InvalidStatusCode as err:
                     self._handle_err(err)
                     logger.warning('server error [code: %s], will try to re-connect' % err.status_code)
@@ -212,8 +207,11 @@ class Client():
                 except OSError as err:
                     self._handle_err(err)
                     logger.warning('connection error, will try to re-connect')
+                except Exception as err:
+                    self._handle_err(err)
+                    logger.exception(err)
         except asyncio.CancelledError:
-            print('client: cancel')
+            logger.info('handler cancelled')
             pass
         except Exception as err:
             logger.exception(err)

@@ -9,13 +9,11 @@ synchronization = dict(manager=manager)
 
 
 class MockScheduler():
-    def __init__(self, settings, suite_items):
+    def __init__(self, settings):
         self.done = False
         self.settings = settings
-        self._suite_items = suite_items
         self.suite_files = manager.list()
         self._report_items = manager.list()
-        self.suite_files = list(set([i.location.file for i in suite_items]))
         synchronization['lock'] = manager.Lock()
 
     def start(self):
@@ -24,8 +22,9 @@ class MockScheduler():
     def stop(self):
         pass
 
-    def join(self):
-        pass
+    def prepare(self, suite_items):
+        self._suite_items = suite_items
+        self.suite_files = list(set([i.location.file for i in suite_items]))
 
     def next(self):
         with synchronization['lock']:

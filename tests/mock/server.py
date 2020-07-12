@@ -57,7 +57,6 @@ class MockServer():
             self.consumer_task = asyncio.ensure_future(consumer_handler())
             self.producer_task = asyncio.ensure_future(producer_handler())
             done, pending = await asyncio.wait([self.consumer_task, self.producer_task], return_when=asyncio.FIRST_COMPLETED)
-
             for task in pending:
                 task.cancel()
 
