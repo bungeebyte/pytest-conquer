@@ -5,7 +5,6 @@ class MockClient(Client):
 
     def __init__(self, settings):
         super().__init__(settings)
-        self.received = []
 
     def start(self):
         pass

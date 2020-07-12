@@ -8,7 +8,6 @@ import psutil
 from enum import Enum
 
 from testandconquer import __version__, debug_logger
-from testandconquer.client import MessageType
 from testandconquer.git import Git
 
 
@@ -49,12 +48,7 @@ class Settings():
         if self.debug is True:
             debug_logger()
 
-    async def on_server_message(self, message_type, payload):
-        if message_type == MessageType.Envs.value:
-            self._init_mapping(payload)
-            return (MessageType.Envs, self.args['system_provider'])
-
-    def _init_mapping(self, envs):
+    def init_from_mapping(self, envs):
         is_match = False
         for env in envs:
             for condition in env['conditions']:

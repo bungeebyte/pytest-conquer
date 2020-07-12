@@ -44,18 +44,22 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl(trylast=True)
 def pytest_configure(config):
-    global settings, fatal_error
+    global settings, scheduler, fatal_error
 
     settings = create_settings(config)
+    if not settings.enabled:
+        return
 
-    if settings.enabled:
-        if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
-            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0.', {}, exit_fn=lambda: None)
-            fatal_error = True
+    if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
+        system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0.', {}, exit_fn=lambda: None)
+        fatal_error = True
 
-        if sys.version_info < (3, 6, 0):
-            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0.', {}, exit_fn=lambda: None)
-            fatal_error = True
+    if sys.version_info < (3, 6, 0):
+        system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0.', {}, exit_fn=lambda: None)
+        fatal_error = True
+
+    scheduler = Scheduler(settings)
+    scheduler.start()
 
 
 def create_settings(config):
@@ -96,8 +100,9 @@ def pytest_runtestloop(session):
 
     print('conquer plugin is starting')
 
-    scheduler = Scheduler(settings, suite_items)
-    scheduler.start()
+    # make sure the scheduler is ready
+    scheduler.prepare(suite_items)
+    scheduler.ready.block()
 
     # work through test items schedule by schedule
     next_tests = []
@@ -128,7 +133,7 @@ def pytest_runtestloop(session):
                 report_items = []
 
     # wrap things up
-    scheduler.join()
+    scheduler.stop()
 
     return True
 

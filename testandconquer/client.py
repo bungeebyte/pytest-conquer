@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 from enum import Enum
 
-from testandconquer.util import system_exit
+from testandconquer.util import system_exit, cancel_tasks_safely
 from testandconquer.vendor import websockets
 from testandconquer.vendor.janus import Queue
 from testandconquer import logger
@@ -30,7 +30,6 @@ class Client():
         self.daemon = True
         self.stopping = False
         self.connected = False
-        self.subscribers = []
         self.handle_task = None
         self.message_num = -1
         self.last_acked_message_num = -1
@@ -64,39 +63,38 @@ class Client():
     def decode(raw_message):
         return json.loads(raw_message)
 
-    def subscribe(self, subscriber):
-        self.subscribers.append(subscriber)
-
     def start(self):
-        self.outgoing = Queue()
-        self.handle_task = asyncio.get_event_loop().run_until_complete(self._handle())
+        self.handle_task = asyncio.ensure_future(self._handle())
+        return self.handle_task
 
-    def stop(self):
+    async def stop(self):
         logger.info('client: shutting down')
 
-        # quiescent the client
+        # soft shutdown
         self.stopping = True
 
-        # wait for message queue to empty first
-        self.outgoing.sync_q.join(timeout=10)
+        print('client: waiting for queue')
+        print(self.outgoing.async_q.qsize())
 
-        # now cancel all pending tasks
-        if (self.consumer_task):
-            self.consumer_task.cancel()
-        if (self.producer_task):
-            self.producer_task.cancel()
-        if (self.handle_task):
-            self.handle_task.cancel()
+        # wait for queue to empty first
+        await self.outgoing.async_q.join()
+
+        # now cancel all tasks
+        await cancel_tasks_safely([self.consumer_task, self.producer_task, self.handle_task])
+        print('client: stop end')
 
     def send(self, message_type, payload):
         if self.stopping:
-            logger.info('client: not sending %s since shutting down'. message_type)
+            logger.info('client: not sending %s since shutting down', message_type)
             return
         self.message_num += 1
         message = Client.encode(self.message_num, message_type, payload)
         self.outgoing.sync_q.put(message)
 
     async def _handle(self):
+        self.outgoing = Queue()
+        self.incoming = Queue()
+
         try:
             async def consumer_handler(ws):
                 try:
@@ -107,7 +105,7 @@ class Client():
                         ignore_message_num = message['type'].lower() == MessageType.Error.value
                         if not ignore_message_num and message['num'] - self.last_acked_message_num > 1:
                             self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'out-of-order'})
-                            logger.warn('not processing message %s since previous one(s) never arrived', message['num'])
+                            logger.warning('not processing message %s since previous one(s) never arrived', message['num'])
                             continue
 
                         # if we've seen the message before, skip it
@@ -116,12 +114,8 @@ class Client():
                             logger.info('deduping message: %s', message['num'])
                             continue
 
-                        # let subscribers send a reply to the message
-                        for subscriber in self.subscribers:
-                            resp = await subscriber.on_server_message(message['type'].lower(), message['payload'])
-                            if resp is not None:
-                                message_type, payload = resp
-                                self.send(message_type, payload)
+                        # put message onto queue
+                        await self.incoming.async_q.put((message['type'].lower(), message['payload']))
 
                         # ack the message so the server knows it arrived
                         self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'success'})
@@ -129,12 +123,14 @@ class Client():
                         # mark message as processed
                         self.last_acked_message_num = message['num']
                 except asyncio.CancelledError:
+                    print('cancel consumer handler')
                     pass  # we are shutting down
 
             async def producer_handler(ws):
                 try:
                     while True:
                         message = await self.outgoing.async_q.get()  # blocks forever until something is available
+                        print('client: send')
                         await ws.send(message)
                         self.outgoing.async_q.task_done()
                 except asyncio.CancelledError:
@@ -143,7 +139,7 @@ class Client():
             self.wait_before_reconnect = 0
             self.connection_attempt = 1
 
-            while not self.stopping:
+            while not self.stopping or not self.outgoing.async_q.empty():
                 url = self.api_urls[0]
                 logger.info('connecting to %s', url)
                 headers = [
@@ -179,7 +175,9 @@ class Client():
                         # run consumer and producer in parallel
                         self.consumer_task = asyncio.ensure_future(consumer_handler(ws))
                         self.producer_task = asyncio.ensure_future(producer_handler(ws))
-                        done, pending = await asyncio.wait([self.producer_task, self.consumer_task], return_when=asyncio.FIRST_COMPLETED)
+                        tasks = [self.producer_task, self.consumer_task]
+                        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                        print('after asyncio.wait')
 
                         # re-raise any exceptions
                         for task in done:
@@ -187,9 +185,18 @@ class Client():
                             if err:
                                 raise err
 
+                        print('after raise')
+
                         # one of them finished, let's cancel the other
-                        for task in pending:
-                            task.cancel()
+                        await cancel_tasks_safely(pending)
+
+                        print('after cancel pending')
+
+                        # close the webserver connection
+                        await ws.close()
+                        await ws.wait_closed()
+
+                        print('after ws closed')
                 except websockets.exceptions.InvalidStatusCode as err:
                     self._handle_err(err)
                     logger.warning('server error [code: %s], will try to re-connect' % err.status_code)
@@ -206,6 +213,7 @@ class Client():
                     self._handle_err(err)
                     logger.warning('connection error, will try to re-connect')
         except asyncio.CancelledError:
+            print('client: cancel')
             pass
         except Exception as err:
             logger.exception(err)

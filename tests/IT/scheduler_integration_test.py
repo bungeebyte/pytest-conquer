@@ -22,6 +22,7 @@ from tests import assert_received_eventually
 time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
+@pytest.mark.wip()
 @pytest.mark.asyncio()
 async def test_successful_server_communication(config, mock_server):
     os.environ['MY_CI'] = 'true'
@@ -46,11 +47,13 @@ async def test_successful_server_communication(config, mock_server):
             SuiteItem('fixture', Location('tests/IT/stub/stub_fixture.py', 'fixtures', 'FixtureClass', 'test_C', 0)),
         ]),
     ]
-    scheduler = Scheduler(settings, suite_items)
 
     # (1) START
 
+    scheduler = Scheduler(settings)
     scheduler.start()
+    scheduler.prepare(suite_items)
+    scheduler.ready.wait()
 
     # (2) SERVER REQUESTS ENV
 
@@ -59,8 +62,8 @@ async def test_successful_server_communication(config, mock_server):
     # (3) CLIENT REPLIES WITH ENV
 
     await assert_received_eventually(mock_server, [
-        (MessageType.Envs.value, 'CI'),
         (MessageType.Ack.value, {'message_num': 0, 'status': 'success'}),
+        (MessageType.Envs.value, 'CI'),
     ])
 
     # (4) SERVER REQUESTS CONFIG
@@ -70,6 +73,7 @@ async def test_successful_server_communication(config, mock_server):
     # (5) CLIENT REPLIES WITH CONFIG
 
     await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'message_num': 1, 'status': 'success'}),
         (MessageType.Config.value, {
             'build': {'dir': '/app', 'id': config['build']['id'], 'job': 'job', 'node': 'random-uuid', 'pool': 0, 'project': None, 'url': None},
             'client': {
@@ -82,7 +86,6 @@ async def test_successful_server_communication(config, mock_server):
             'system': {'context': {}, 'cpus': 3, 'os': 'Linux', 'os_version': '1.42', 'provider': 'CI', 'ram': 17179869184},
             'vcs': {'branch': 'master', 'pr': None, 'repo': 'github.com/myrepo', 'revision': 'asd43da', 'revision_message': 'my commit', 'tag': None, 'type': 'git'},
         }),
-        (MessageType.Ack.value, {'message_num': 1, 'status': 'success'}),
     ])
 
     # (6) SERVER REQUESTS SUITE
@@ -92,6 +95,7 @@ async def test_successful_server_communication(config, mock_server):
     # (7) CLIENT SENDS SUITE
 
     await assert_received_eventually(mock_server, [
+        (MessageType.Ack.value, {'message_num': 2, 'status': 'success'}),
         (MessageType.Suite.value, {
             'items': [
                 {'type': 'test', 'location': {'file': 'tests/IT/stub/stub_A.py', 'func': 'test_A', 'module': 'stub_A', 'class': 'TestClass', 'line': 1}},
@@ -100,7 +104,6 @@ async def test_successful_server_communication(config, mock_server):
                     'deps': [{'type': 'fixture', 'location': {'file': 'tests/IT/stub/stub_fixture.py', 'func': 'test_C', 'module': 'fixtures', 'class': 'FixtureClass'}}]},
             ],
         }),
-        (MessageType.Ack.value, {'message_num': 2, 'status': 'success'}),
     ])
 
     # (8) SERVER SENDS SCHEDULE #1
@@ -203,7 +206,67 @@ async def test_successful_server_communication(config, mock_server):
     # (14) SHUTDOWN
 
     scheduler.stop()
-    scheduler.join()
+    print('scheduler.stop')
+
+# @mock.patch('testandconquer.util.datetime')
+# def test_reply_to_error_message(datetime_mock, caplog, event_loop):
+#     settings = MockSettings({})
+#     client = MockClient(settings)
+#     scheduler = Scheduler(settings, client=client)
+
+#     with pytest.raises(SystemExit):
+#         datetime_mock.utcnow = mock.Mock(return_value=datetime(2000, 1, 1))
+#         event_loop.run_until_complete(scheduler.on_server_message(MessageType.Error.value, {
+#             'title': 'title',
+#             'body': 'body',
+#             'meta': {
+#                 'Name': 'Value',
+#             },
+#         }))
+
+#     assert error_messages(caplog) == [
+#         '\n'
+#         '\n'
+#         '    '
+#         '================================================================================\n'
+#         '\n'
+#         '    [ERROR] [CONQUER] title\n'
+#         '\n'
+#         '    body\n'
+#         '\n'
+#         '    [Name = Value]\n'
+#         '    [Timestamp = 2000-01-01T00:00:00]\n'
+#         '\n'
+#         '    '
+#         '================================================================================\n'
+#         '\n',
+#     ]
+
+
+@pytest.mark.asyncio()
+async def test_flush_reports_on_shutdown(mock_server):
+    settings = MockSettings({
+        'api_domain': mock_server.url,
+        'api_retry_limit': '1',
+        'api_wait_limit': '0',
+    })
+    scheduler = Scheduler(settings)
+
+    scheduler.start()
+    scheduler.ready.wait()
+
+    report1 = Report('ID1', [], datetime.utcnow(), datetime.utcnow(), datetime.utcnow())
+    report2 = Report('ID2', [], datetime.utcnow(), datetime.utcnow(), datetime.utcnow())
+    scheduler.report(report1)
+    scheduler.report(report2)
+
+    scheduler.stop()
+
+    await assert_received_eventually(mock_server, [
+        (MessageType.Ack, {'schedule_id': 'ID', 'status': 'success'}),
+        (MessageType.Report, report1),
+        (MessageType.Report, report2),
+    ])
 
 
 @pytest.fixture

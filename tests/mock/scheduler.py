@@ -21,6 +21,9 @@ class MockScheduler():
     def start(self):
         pass
 
+    def stop(self):
+        pass
+
     def join(self):
         pass
 
