@@ -80,11 +80,7 @@ class Client():
             await self.outgoing.async_q.join()
 
         # now cancel the tasks one by one
-        await cancel_tasks_safely([self.consumer_task])
-        while not self.producer_task.cancelled() and not self.producer_task.done():
-            await asyncio.sleep(0)
-        logger.info('closing websocket')
-        await cancel_tasks_safely([self.handle_task])
+        await cancel_tasks_safely([self.consumer_task, self.producer_task, self.handle_task])
 
     def send(self, message_type, payload):
         if self.stopping:
@@ -143,7 +139,6 @@ class Client():
             self.connection_attempt = 1
 
             while not self.stopping or not self.outgoing.async_q.empty():
-                print(self.stopping, self.outgoing.async_q.empty())
                 url = self.api_urls[0]
                 logger.info('connecting to %s', url)
                 headers = [
@@ -188,6 +183,7 @@ class Client():
                         for task in done:
                             err = task.exception()
                             if err:
+                                logger.exception(err)
                                 raise err
 
                         # one of them finished, let's cancel the other
@@ -207,9 +203,6 @@ class Client():
                 except OSError as err:
                     self._handle_err(err)
                     logger.warning('connection error, will try to re-connect')
-                except Exception as err:
-                    self._handle_err(err)
-                    logger.exception(err)
         except asyncio.CancelledError:
             logger.info('handler cancelled')
             pass

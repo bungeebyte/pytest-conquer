@@ -35,43 +35,43 @@ tests_by_file = defaultdict(list)
 def pytest_addoption(parser):
     group = parser.getgroup('pytest-conquer')
 
-    conquer_help = 'Divide and conquer tests.'
+    conquer_help = 'Enable the conquer plugin.'
     group.addoption('--conquer', action='store_true', default=None, dest='enabled', help=conquer_help)
-
-    workers_help = "Set the number of workers. Default is 1, to use all CPU cores set to 'max'."
-    group.addoption('--w', '--workers', action='store', default=None, dest='workers', help=workers_help)
 
 
 @pytest.hookimpl(trylast=True)
 def pytest_configure(config):
     global settings, scheduler, fatal_error
 
+    if config.option.collectonly:
+        return
+
     settings = create_settings(config)
     if not settings.enabled:
         return
 
+    # make sure the plugin is running in a supported environment
     if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
         system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0.', {}, exit_fn=lambda: None)
         fatal_error = True
-
     if sys.version_info < (3, 6, 0):
         system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0.', {}, exit_fn=lambda: None)
         fatal_error = True
 
-    scheduler = Scheduler(settings)
+    # starting the scheduler in the background while the tests are collected
+    scheduler = (getattr(config, '__Scheduler', None) or Scheduler)(settings)
     scheduler.start()
 
 
 def create_settings(config):
     plugins = config.pluginmanager.list_plugin_distinfo()
     plugins.sort(key=lambda item: item[1].project_name)
-    settings = Settings({
+    settings = (getattr(config, '__Settings', None) or Settings)({
         'enabled': config.option.enabled,
         'runner_name': 'pytest',
         'runner_plugins': [(dist.project_name, dist.version) for plugin, dist in plugins],
         'runner_root': str(config.rootdir),
         'runner_version': pytest.__version__,
-        'workers': config.option.workers,
     })
     settings.init_from_file('pytest.ini')
     return settings
@@ -85,6 +85,9 @@ def create_settings(config):
 def pytest_runtestloop(session):
     global report_items, scheduler, suite_items
 
+    if session.config.option.collectonly:
+        return True
+
     if not settings.enabled:
         logger.info('conquer not enabled')
         return main.pytest_runtestloop(session)
@@ -94,9 +97,6 @@ def pytest_runtestloop(session):
 
     if session.testsfailed and not session.config.option.continue_on_collection_errors:
         raise session.Interrupted('{} errors during collection'.format(session.testsfailed))
-
-    if session.config.option.collectonly:
-        return True
 
     print('conquer plugin is starting')
 
@@ -152,6 +152,9 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.hookimpl(tryfirst=True)  # has to be first or the introspection doesn't work
 def pytest_make_collect_report(collector):
+    if collector.config.option.collectonly:
+        return
+
     if not settings.enabled:
         return
 
@@ -173,6 +176,9 @@ def pytest_make_collect_report(collector):
 @pytest.hookimpl(hookwrapper=True)
 def pytest_collection_modifyitems(session, config, items):
     yield  # let other plugins go first
+
+    if config.option.collectonly:
+        return
 
     if not settings.enabled:
         return

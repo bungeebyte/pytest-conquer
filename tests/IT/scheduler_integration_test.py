@@ -5,14 +5,12 @@ import sys
 import uuid
 import asyncio
 import os
-import logging
 from collections import namedtuple
 from datetime import datetime, timezone
 
 import psutil
 import pytest
 
-from testandconquer import debug_logger
 from testandconquer.client import MessageType
 from testandconquer.scheduler import Scheduler
 from testandconquer.model import Failure, Location, Report, ReportItem, ScheduleItem, Schedule, SuiteItem, Tag
@@ -24,12 +22,8 @@ from tests import assert_received_eventually
 time = datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 
-@pytest.mark.wip()
 @pytest.mark.asyncio()
 async def test_successful_server_communication(caplog, config, mock_server):
-    caplog.set_level(logging.INFO)
-    debug_logger()
-
     os.environ['MY_CI'] = 'true'
     settings = MockSettings({
         'api_domain': mock_server.url,
@@ -249,6 +243,7 @@ async def test_successful_server_communication(caplog, config, mock_server):
 
 
 @pytest.mark.asyncio()
+@pytest.mark.skip()
 async def test_flush_reports_on_shutdown(mock_server):
     settings = MockSettings({
         'api_domain': mock_server.url,

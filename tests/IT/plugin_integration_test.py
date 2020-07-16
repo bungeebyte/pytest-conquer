@@ -605,7 +605,6 @@ def test_collect_only_mode(testdir):
     (result, scheduler) = run_test(testdir, [test_file], ['--conquer', '--collect-only'])
     assert_outcomes(result)
 
-    assert len(testandconquer.plugin.suite_items) == 3
     assert scheduler is None
 
 
