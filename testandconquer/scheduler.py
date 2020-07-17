@@ -138,4 +138,4 @@ class Scheduler(Thread):
 
     @property
     def done(self):
-        return getattr(self, 'schedule_queue', Queue()).sync_q.empty() and not self.more
+        return getattr(self, 'schedule_queue').sync_q.empty() and not self.more
