@@ -1,4 +1,5 @@
 import configparser
+import functools
 import os
 import platform
 import uuid
@@ -65,6 +66,9 @@ class Settings():
             self.mapping = {}
             self.args['system_provider'] = 'unknown'
 
+        self.__getattr__.cache_clear()  # reset its cache to reflect these new values
+
+    @functools.lru_cache(maxsize=None)  # some lookups - like the config file - are expensive
     def __getattr__(self, name):
         default_val = None
         default_method = getattr(self.default_settings, name, None)

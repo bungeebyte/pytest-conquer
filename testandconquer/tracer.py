@@ -6,6 +6,7 @@ from testandconquer import logger
 
 
 total_time_by_function = OrderedDict()
+total_calls_by_function = OrderedDict()
 
 
 def trace(wrapped):
@@ -20,12 +21,14 @@ def trace(wrapped):
         func_name = wrapped.__name__
         duration = time.time() - start_time
         if func_name in total_time_by_function:
+            total_calls_by_function[func_name] += 1
             total_time_by_function[func_name] += duration
         else:
+            total_calls_by_function[func_name] = 1
             total_time_by_function[func_name] = duration
 
         if duration > 0.1:
-            logger.info('⬆ %s took %s seconds', wrapped.__name__, duration)
+            logger.info('⬆ %s took %.3f seconds', wrapped.__name__, duration)
 
         return ret
 
@@ -35,4 +38,4 @@ def trace(wrapped):
 def print_summary():
     logger.info('Tracer Summary:')
     for k, v in total_time_by_function.items():
-        logger.info('∑ func %s: %s', k, v)
+        logger.info('∑ func %s called: %s, time: %.3f', k, total_calls_by_function[k], v)
