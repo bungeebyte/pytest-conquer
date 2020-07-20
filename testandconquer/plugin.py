@@ -13,6 +13,7 @@ from _pytest import main
 from testandconquer.model import Failure, Location, SuiteItem, Report, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
 from testandconquer.settings import Settings
+from testandconquer.tracer import trace, print_summary
 from testandconquer.util import system_exit
 from testandconquer import logger
 
@@ -134,6 +135,8 @@ def pytest_runtestloop(session):
     # wrap things up
     scheduler.stop()
 
+    print_summary()
+
     return True
 
 
@@ -187,6 +190,7 @@ def pytest_collection_modifyitems(session, config, items):
         collect_test(node)
 
 
+@trace
 def collect_test(node):
     location = node_to_location(node)
     fixtures = collect_fixtures(node)
@@ -194,6 +198,7 @@ def collect_test(node):
     tests_by_file[location.file].append(node)
 
 
+@trace
 def collect_fixtures(node):
     fixtures = []
     if hasattr(node, '_fixtureinfo'):
@@ -206,6 +211,7 @@ def collect_fixtures(node):
     return fixtures
 
 
+@trace
 def collect_class(obj):
     location = func_to_location(None, obj)
     collect_item(SuiteItem('class', location, tags=parse_tags(obj)))
@@ -216,6 +222,7 @@ def collect_class(obj):
     add_introspection(obj, ['teardown_method'], 'teardown', 'method')
 
 
+@trace
 def collect_module(obj):
     add_introspection(obj, ['setup_function'], 'setup', 'function')
     add_introspection(obj, ['setUpModule', 'setup_module'], 'setup', 'module')
@@ -223,6 +230,7 @@ def collect_module(obj):
     add_introspection(obj, ['tearDownModule', 'teardown_module'], 'teardown', 'module')
 
 
+@trace
 def add_introspection(obj, names, type, scope):
     for name in names:
         if not hasattr(obj, name):
@@ -317,6 +325,7 @@ def pytest_fixture_post_finalizer(fixturedef):
     report_fixture_step('teardown', start, fixturedef, result)
 
 
+@trace
 def report_fixture_step(type, started_at, fixturedef, result):
     if not settings.enabled:
         return

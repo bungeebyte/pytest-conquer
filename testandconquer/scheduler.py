@@ -6,6 +6,7 @@ from testandconquer.client import Client, MessageType
 from testandconquer.serializer import Serializer
 from testandconquer.util import system_exit, cancel_tasks_safely
 from testandconquer.vendor.janus import Queue
+from testandconquer.tracer import trace
 
 
 class Scheduler(Thread):
@@ -36,6 +37,7 @@ class Scheduler(Thread):
             self.loop.close()
         logger.info('thread finished')
 
+    @trace
     def prepare(self, suite_items):
         self.suite_items = suite_items  # thread-safe, in case you were wondering
 
@@ -46,12 +48,15 @@ class Scheduler(Thread):
         logger.info('waiting for thread to be ready')
         self.ready.wait()
 
+    @trace
     def next(self):
         return self.schedule_queue.sync_q.get()
 
+    @trace
     def report(self, report):
         self.report_queue.sync_q.put(report)
 
+    @trace
     def stop(self):
         logger.info('shutting down')
 

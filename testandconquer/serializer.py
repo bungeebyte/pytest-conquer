@@ -1,6 +1,7 @@
 from testandconquer.client import MessageType
 from testandconquer.model import Schedule, ScheduleItem
 from testandconquer.settings import Capability
+from testandconquer.tracer import trace
 
 
 class Serializer:
@@ -8,18 +9,22 @@ class Serializer:
     date_format = '%Y-%m-%dT%H:%M:%S.000Z'
 
     @staticmethod
+    @trace
     def serialize_config(*args, **kwargs):
         return ConfigSerializer.serialize(*args, **kwargs)
 
     @staticmethod
+    @trace
     def serialize_suite(*args, **kwargs):
         return SuiteSerializer.serialize(*args, **kwargs)
 
     @staticmethod
+    @trace
     def serialize_report(*args, **kwargs):
         return ReportSerializer.serialize(*args, **kwargs)
 
     @staticmethod
+    @trace
     def deserialize_schedule(*args, **kwargs):
         return ScheduleSerializer.deserialize(*args, **kwargs)
 
