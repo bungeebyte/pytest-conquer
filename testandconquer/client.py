@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import Enum
 
 from testandconquer.util import system_exit, cancel_tasks_safely
+from testandconquer.tracer import trace
 from testandconquer.vendor import websockets
 from testandconquer.vendor.janus import Queue
 from testandconquer import logger
@@ -51,6 +52,7 @@ class Client():
         self.system_provider = settings.system_provider
 
     @staticmethod
+    @trace
     def encode(message_num, message_type, payload):
         return json.dumps({
             'num': message_num,
@@ -60,6 +62,7 @@ class Client():
         })
 
     @staticmethod
+    @trace
     def decode(raw_message):
         return json.loads(raw_message)
 
@@ -67,6 +70,7 @@ class Client():
         self.handle_task = asyncio.ensure_future(self._handle())
         return self.handle_task
 
+    @trace
     async def stop(self):
         logger.info('shutting down')
 
@@ -82,6 +86,7 @@ class Client():
         # now cancel the tasks one by one
         await cancel_tasks_safely([self.consumer_task, self.producer_task, self.handle_task])
 
+    @trace
     def send(self, message_type, payload):
         if self.stopping:
             logger.info('not sending %s since shutting down', message_type)
