@@ -1,5 +1,5 @@
 import configparser
-import multiprocessing
+import functools
 import os
 import platform
 import uuid
@@ -9,7 +9,6 @@ import psutil
 from enum import Enum
 
 from testandconquer import __version__, debug_logger
-from testandconquer.client import MessageType
 from testandconquer.git import Git
 
 
@@ -50,12 +49,7 @@ class Settings():
         if self.debug is True:
             debug_logger()
 
-    async def on_server_message(self, message_type, payload):
-        if message_type == MessageType.Envs.value:
-            self._init_mapping(payload)
-            return (MessageType.Envs, self.args['system_provider'])
-
-    def _init_mapping(self, envs):
+    def init_from_mapping(self, envs):
         is_match = False
         for env in envs:
             for condition in env['conditions']:
@@ -72,13 +66,9 @@ class Settings():
             self.mapping = {}
             self.args['system_provider'] = 'unknown'
 
-    @property
-    def client_workers(self):
-        val = self.__getattr__('workers')
-        if val == 'max':
-            return multiprocessing.cpu_count()
-        return val
+        self.__getattr__.cache_clear()  # reset its cache to reflect these new values
 
+    @functools.lru_cache(maxsize=None)  # some lookups - like the config file - are expensive
     def __getattr__(self, name):
         default_val = None
         default_method = getattr(self.default_settings, name, None)

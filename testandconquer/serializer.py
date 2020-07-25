@@ -1,7 +1,7 @@
-from testandconquer import logger
 from testandconquer.client import MessageType
 from testandconquer.model import Schedule, ScheduleItem
 from testandconquer.settings import Capability
+from testandconquer.tracer import trace
 
 
 class Serializer:
@@ -9,18 +9,22 @@ class Serializer:
     date_format = '%Y-%m-%dT%H:%M:%S.000Z'
 
     @staticmethod
+    @trace
     def serialize_config(*args, **kwargs):
         return ConfigSerializer.serialize(*args, **kwargs)
 
     @staticmethod
+    @trace
     def serialize_suite(*args, **kwargs):
         return SuiteSerializer.serialize(*args, **kwargs)
 
     @staticmethod
+    @trace
     def serialize_report(*args, **kwargs):
         return ReportSerializer.serialize(*args, **kwargs)
 
     @staticmethod
+    @trace
     def deserialize_schedule(*args, **kwargs):
         return ScheduleSerializer.deserialize(*args, **kwargs)
 
@@ -34,7 +38,7 @@ class Serializer:
 class ConfigSerializer:
 
     @staticmethod
-    def serialize(settings, worker_id):
+    def serialize(settings):
         return {
             'build': {
                 'dir': Serializer.truncate(settings.build_dir, 1024),
@@ -50,8 +54,8 @@ class ConfigSerializer:
                 'messages': [t.value for t in MessageType],
                 'name': Serializer.truncate(settings.client_name, 64),
                 'version': Serializer.truncate(settings.client_version, 32),
-                'workers': settings.client_workers,
-                'worker_id': worker_id,
+                'workers': 1,
+                'worker_id': 'default',
             },
             'platform': {
                 'name': Serializer.truncate(settings.platform_name, 64),
@@ -163,7 +167,6 @@ class ScheduleSerializer:
     @staticmethod
     def deserialize(data):
         items = [ScheduleItem(item['file']) for item in data['items']]
-        logger.info('received schedule with %s items', len(items))
         return Schedule(data['id'], items)
 
 

@@ -14,7 +14,7 @@ def run_test(pyt, files, args=['--conquer']):
             source_by_name[file] = f.readlines()
     pyt.makepyfile(**source_by_name)
     test_result = pyt.runpytest('-s', *args)
-    return (test_result, (testandconquer.plugin.schedulers or [None])[0])
+    return (test_result, testandconquer.plugin.scheduler or None)
 
 
 def assert_outcomes(result, passed=0, skipped=0, failed=0, error=0):

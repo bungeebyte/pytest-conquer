@@ -1,3 +1,4 @@
+import asyncio
 import textwrap
 from datetime import datetime
 
@@ -24,3 +25,11 @@ def system_exit(title, body, args, exit_fn=lambda: exec('raise SystemExit')):
     text = textwrap.indent(text, '    ')
     logger.error(text)
     exit_fn()
+
+
+async def cancel_tasks_safely(tasks):
+    [task.cancel() for task in tasks]
+    try:
+        await asyncio.gather(*tasks, return_exceptions=True)
+    except asyncio.CancelledError:
+        pass

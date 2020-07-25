@@ -1,13 +1,15 @@
-import json
 import asyncio
+import json
 import socket
 import uuid
 import time
 from datetime import datetime
 from enum import Enum
 
-from testandconquer.util import system_exit
+from testandconquer.util import system_exit, cancel_tasks_safely
+from testandconquer.tracer import trace
 from testandconquer.vendor import websockets
+from testandconquer.vendor.janus import Queue
 from testandconquer import logger
 
 
@@ -29,14 +31,12 @@ class Client():
         self.daemon = True
         self.stopping = False
         self.connected = False
-        self.subscribers = []
         self.handle_task = None
         self.message_num = -1
         self.last_acked_message_num = -1
         self.producer_task = None
         self.consumer_task = None
         self.connection_attempt = 0
-        self.outgoing = asyncio.Queue()
         self.update_settings(settings)
 
     def update_settings(self, settings):
@@ -52,6 +52,7 @@ class Client():
         self.system_provider = settings.system_provider
 
     @staticmethod
+    @trace
     def encode(message_num, message_type, payload):
         return json.dumps({
             'num': message_num,
@@ -61,42 +62,43 @@ class Client():
         })
 
     @staticmethod
+    @trace
     def decode(raw_message):
         return json.loads(raw_message)
 
-    def subscribe(self, subscriber):
-        self.subscribers.append(subscriber)
-
-    async def start(self):
-        logger.info('client: starting')
+    def start(self):
         self.handle_task = asyncio.ensure_future(self._handle())
+        return self.handle_task
 
+    @trace
     async def stop(self):
-        logger.info('client: shutting down')
+        logger.info('shutting down')
 
-        # quiescent the client
+        # soft shutdown
         self.stopping = True
 
-        # wait for message queue to empty first
-        await asyncio.wait_for(self.outgoing.join(), timeout=10)
+        # wait for queue to empty first
+        messages_left = self.outgoing.async_q.qsize()
+        if messages_left > 0:
+            logger.info('waiting for last %s messages to send', messages_left)
+            await self.outgoing.async_q.join()
 
-        # now cancel all pending tasks
-        if (self.consumer_task):
-            self.consumer_task.cancel()
-        if (self.producer_task):
-            self.producer_task.cancel()
-        if (self.handle_task):
-            self.handle_task.cancel()
+        # now cancel the tasks one by one
+        await cancel_tasks_safely([self.consumer_task, self.producer_task, self.handle_task])
 
-    async def send(self, message_type, payload):
+    @trace
+    def send(self, message_type, payload):
         if self.stopping:
-            logger.info('client: not sending %s since shutting down'. message_type)
+            logger.info('not sending %s since shutting down', message_type)
             return
         self.message_num += 1
         message = Client.encode(self.message_num, message_type, payload)
-        await self.outgoing.put(message)
+        self.outgoing.sync_q.put(message)
 
     async def _handle(self):
+        self.outgoing = Queue()
+        self.incoming = Queue()
+
         try:
             async def consumer_handler(ws):
                 try:
@@ -106,44 +108,42 @@ class Client():
                         # if a message got lost, don't proceed
                         ignore_message_num = message['type'].lower() == MessageType.Error.value
                         if not ignore_message_num and message['num'] - self.last_acked_message_num > 1:
-                            await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'out-of-order'})
-                            logger.warn('not processing message %s since previous one(s) never arrived', message['num'])
+                            self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'out-of-order'})
+                            logger.warning('not processing message %s since previous one(s) never arrived', message['num'])
                             continue
 
                         # if we've seen the message before, skip it
                         if self.last_acked_message_num >= message['num']:
-                            await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'duplicate'})
+                            self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'duplicate'})
                             logger.info('deduping message: %s', message['num'])
                             continue
 
-                        # let subscribers send a reply to the message
-                        for subscriber in self.subscribers:
-                            resp = await subscriber.on_server_message(message['type'].lower(), message['payload'])
-                            if resp is not None:
-                                message_type, payload = resp
-                                await self.send(message_type, payload)
+                        # put message onto queue
+                        await self.incoming.async_q.put((message['type'].lower(), message['payload']))
 
                         # ack the message so the server knows it arrived
-                        await self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'success'})
+                        self.send(MessageType.Ack, {'message_num': message['num'], 'status': 'success'})
 
                         # mark message as processed
                         self.last_acked_message_num = message['num']
                 except asyncio.CancelledError:
+                    logger.info('consumer cancelled')
                     pass  # we are shutting down
 
             async def producer_handler(ws):
                 try:
                     while True:
-                        message = await self.outgoing.get()  # blocks forever until something is available
+                        message = await self.outgoing.async_q.get()  # blocks forever until something is available
                         await ws.send(message)
-                        self.outgoing.task_done()
+                        self.outgoing.async_q.task_done()
                 except asyncio.CancelledError:
+                    logger.info('producer cancelled')
                     pass  # we are shutting down
 
-            wait_before_reconnect = 0
+            self.wait_before_reconnect = 0
             self.connection_attempt = 1
 
-            while not self.stopping:
+            while not self.stopping or not self.outgoing.async_q.empty():
                 url = self.api_urls[0]
                 logger.info('connecting to %s', url)
                 headers = [
@@ -160,14 +160,15 @@ class Client():
                 if self.system_provider:
                     headers.append(('X-Env', str(self.system_provider)))
 
-                if wait_before_reconnect > 0:
-                    logger.info('retrying in %ss', wait_before_reconnect)
-                    await asyncio.sleep(min(self.api_wait_limit, wait_before_reconnect))
+                if self.wait_before_reconnect > 0:
+                    logger.info('retrying in %ss', self.wait_before_reconnect)
+                    await asyncio.sleep(min(self.api_wait_limit, self.wait_before_reconnect))
 
                 try:
-                    start = time.time()
+                    self.connection_start = time.time()
                     async with websockets.connect(
                         url,
+                        close_timeout=5,
                         ping_interval=None,     # don't send ping, that's the server's responsibility
                         max_size=None,          # accept any message size
                         max_queue=None,         # never drop a message
@@ -179,50 +180,54 @@ class Client():
                         # run consumer and producer in parallel
                         self.consumer_task = asyncio.ensure_future(consumer_handler(ws))
                         self.producer_task = asyncio.ensure_future(producer_handler(ws))
-                        done, pending = await asyncio.wait([self.producer_task, self.consumer_task], return_when=asyncio.FIRST_COMPLETED)
+                        tasks = [self.producer_task, self.consumer_task]
+                        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                        logger.info('consumer/producer finished')
 
                         # re-raise any exceptions
                         for task in done:
                             err = task.exception()
                             if err:
-                                logger.info(err)
+                                logger.exception(err)
                                 raise err
 
                         # one of them finished, let's cancel the other
-                        for task in pending:
-                            task.cancel()
+                        await cancel_tasks_safely(pending)
                 except websockets.exceptions.InvalidStatusCode as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('server error [code: %s], will try to re-connect' % err.status_code)
                 except websockets.exceptions.ConnectionClosed as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('connection closed, will try to re-connect')
                 except socket.gaierror as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('lost socket connection, will try to re-connect')
                 except ConnectionRefusedError as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('connection refused, will try to re-connect')
                 except OSError as err:
-                    logger.info(err)
+                    self._handle_err(err)
                     logger.warning('connection error, will try to re-connect')
-                finally:
-                    self.connected = False
-                    if self.connection_attempt > self.api_retry_limit:
-                        self._abort()
-                    self.connection_attempt += 1
-                    wait_before_reconnect = 2 ** self.connection_attempt - (time.time() - start)
-                    self.api_urls.reverse()  # we'll try the other URL next
         except asyncio.CancelledError:
+            logger.info('handler cancelled')
             pass
         except Exception as err:
             logger.exception(err)
+
+    def _handle_err(self, err):
+        logger.info(err)
+        self.connected = False
+        if self.connection_attempt > self.api_retry_limit:
+            self._abort()
+        self.connection_attempt += 1
+        self.wait_before_reconnect = 2 ** self.connection_attempt - (time.time() - self.connection_start)
+        self.api_urls.reverse()  # we'll try the other URL next
 
     def _abort(self):
         system_exit(
             'COULD NOT CONNECT:',
             'Unable to connect to server, giving up.\n'
-            + 'Please try again and contact support if the error persists.',
+            + 'Please try again and contact us at support@testandconquer.com if the error persists.',
             {
                 'Client-Name': self.client_name,
                 'Client-Version': self.client_version,

@@ -15,7 +15,7 @@ class TestClient():
 
     @pytest.mark.asyncio
     async def test_connection(self, caplog):
-        async with Context() as (client, server, subscriber):
+        async with Context() as (client, server):
             while len(server.connections) == 0:
                 await asyncio.sleep(0.01)
             (path, headers) = server.connections[0]
@@ -31,16 +31,16 @@ class TestClient():
             assert headers['X-Message-Num-Server'] == '-1'
         assert warn_messages(caplog) == []
 
-    @pytest.mark.skip
     @pytest.mark.asyncio
     async def test_connection_when_server_shuts_down(self, caplog):
-        async with Context() as (client, server, subscriber):
+        async with Context() as (client, server):
             await server.stop()
-            assert client.connected is False
+            while client.connected is True:
+                await asyncio.sleep(0.01)
             await server.start()
             while client.connected is False:
                 await asyncio.sleep(0.01)
-        assert warn_messages(caplog) == ['server error [code: 503], will try to re-connect']
+        assert warn_messages(caplog) == ['connection refused, will try to re-connect']
 
     @mock.patch('testandconquer.util.datetime')
     def test_connection_when_server_not_reachable(self, datetime_mock, caplog, event_loop):
@@ -53,12 +53,12 @@ class TestClient():
         self.client = Client(MockSettings(settings))
 
         with pytest.raises(SystemExit):
+            asyncio.set_event_loop(event_loop)
             datetime_mock.utcnow = mock.Mock(return_value=datetime(2000, 1, 1))
-            event_loop.run_until_complete(self.client.start())
-            event_loop.run_until_complete(asyncio.sleep(1))
+            client_task = self.client.start()
+            event_loop.run_until_complete(asyncio.wait([client_task, asyncio.sleep(5)], return_when=asyncio.FIRST_COMPLETED))
 
         assert warn_messages(caplog) == [
-            'lost socket connection, will try to re-connect',
             'lost socket connection, will try to re-connect',
             'lost socket connection, will try to re-connect',
             'lost socket connection, will try to re-connect',
@@ -72,7 +72,7 @@ class TestClient():
             '    [ERROR] [CONQUER] COULD NOT CONNECT:\n'
             '\n'
             '    Unable to connect to server, giving up.\n'
-            '    Please try again and contact support if the error persists.\n'
+            '    Please try again and contact us at support@testandconquer.com if the error persists.\n'
             '\n'
             '    [Client-Name = pytest-conquer]\n'
             '    [Client-Version = 1.0]\n'
@@ -87,7 +87,7 @@ class TestClient():
 
     @pytest.mark.asyncio
     async def test_reconnect(self, caplog):
-        async with Context() as (client, server, subscriber):
+        async with Context() as (client, server):
             await server.send(MessageType.Envs, 'some-payload')
             while len(server.connections) == 0:
                 await asyncio.sleep(0.01)
@@ -99,12 +99,12 @@ class TestClient():
             assert headers['X-Connection-Attempt'] == '2'
             assert headers['X-Message-Num-Client'] == '0'  # 1 client message for ack'ing the server message
             assert headers['X-Message-Num-Server'] == '0'  # 1 server message was acked
-        assert warn_messages(caplog) == []
+        assert warn_messages(caplog) == ['connection refused, will try to re-connect']
 
     @pytest.mark.asyncio
     async def test_send_message_successfully(self, caplog):
-        async with Context() as (client, server, subscriber):
-            await client.send(MessageType.Suite, 'some-payload')
+        async with Context() as (client, server):
+            client.send(MessageType.Suite, 'some-payload')
             await assert_received_eventually(server, [
                 (MessageType.Suite.value, 'some-payload'),
             ])
@@ -112,11 +112,10 @@ class TestClient():
 
     @pytest.mark.asyncio
     async def test_receive_message_successfully(self, caplog):
-        async with Context() as (client, server, subscriber):
+        async with Context() as (client, server):
             await server.send(MessageType.Envs, 'some-payload')
-            await assert_received_eventually(subscriber, [
-                (MessageType.Envs.value, 'some-payload'),
-            ])
+            received = await client.incoming.async_q.get()
+            assert (MessageType.Envs.value, 'some-payload') == received
         assert warn_messages(caplog) == []
 
     def test_build_url(self):
@@ -124,7 +123,7 @@ class TestClient():
 
     @pytest.mark.asyncio
     async def test_ack_message(self):
-        async with Context() as (client, server, subscriber):
+        async with Context() as (client, server):
             await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
                 (MessageType.Ack.value, {'message_num': 0, 'status': 'success'}),
@@ -132,7 +131,7 @@ class TestClient():
 
     @pytest.mark.asyncio
     async def test_dedup_message(self):
-        async with Context() as (client, server, subscriber):
+        async with Context() as (client, server):
             await server.send(MessageType.Envs, 'some-payload')
             await assert_received_eventually(server, [
                 (MessageType.Ack.value, {'message_num': 0, 'status': 'success'}),
@@ -148,7 +147,7 @@ class TestClient():
 
     @pytest.mark.asyncio
     async def test_out_of_order_message(self):
-        async with Context() as (client, server, subscriber):
+        async with Context() as (client, server):
             server.message_num = 10     # pretend we're out of order
             client.subscribers = None   # invalidate subscribers to make sure they aren't called
 
@@ -159,8 +158,9 @@ class TestClient():
 
     @pytest.mark.asyncio
     async def test_never_skip_out_of_order_error_message(self):
-        async with Context() as (client, server, subscriber):
+        async with Context() as (client, server):
             server.message_num = 10     # pretend we're out of order
+
             await server.send(MessageType.Error, 'some-payload')
             await assert_received_eventually(server, [
                 (MessageType.Ack.value, {'message_num': 10, 'status': 'success'}),
@@ -171,7 +171,7 @@ class Subscriber():
     def __init__(self):
         self.received = []
 
-    async def on_server_message(self, message_type, payload):
+    def on_server_message(self, message_type, payload):
         self.received.append((message_type, payload))
 
 
@@ -188,24 +188,15 @@ class Context():
         self.settings['api_domain'] = self.server.url + '?primary'
         self.settings['api_domain_fallback'] = self.server.url + '?fallback'
         self.client = Client(MockSettings(self.settings))
-        await self.client.start()
+        self.client.start()
+        while not self.client.connected:
+            await asyncio.sleep(0)
 
-        # set up subscriber
-        self.subscriber = Subscriber()
-        self.client.subscribe(self.subscriber)
-
-        return self.client, self.server, self.subscriber
+        return self.client, self.server
 
     async def __aexit__(self, _type, _value, _traceback):
-        try:
-            await self.client.stop()
-        except Exception as err:
-            print(err)
-
-        try:
-            await self.server.stop()
-        except Exception as err:
-            print(err)
+        await self.client.stop()
+        await self.server.stop()
 
 
 @pytest.fixture

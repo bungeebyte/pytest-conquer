@@ -1,11 +1,8 @@
-import asyncio
 import functools
 import os.path
 import os
 import inspect
 import sys
-import threading
-import uuid
 import itertools
 from collections import defaultdict
 from datetime import datetime
@@ -13,24 +10,22 @@ from datetime import datetime
 import pytest
 from _pytest import main
 
-from testandconquer.client import Client
 from testandconquer.model import Failure, Location, SuiteItem, Report, ReportItem, Tag
 from testandconquer.scheduler import Scheduler
 from testandconquer.settings import Settings
+from testandconquer.tracer import trace, print_summary
 from testandconquer.util import system_exit
 from testandconquer import logger
 
 
 fatal_error = None
-report_items_by_worker = {}
-schedulers = []
+report_items = []
+scheduler = None
 settings = None
 suite_items = []
 suite_item_locations = set()
 suite_item_file_size_by_file = {}
-reporter = None
 tests_by_file = defaultdict(list)
-worker_id = None
 
 
 # ======================================================================================
@@ -41,39 +36,43 @@ worker_id = None
 def pytest_addoption(parser):
     group = parser.getgroup('pytest-conquer')
 
-    conquer_help = 'Divide and conquer tests.'
+    conquer_help = 'Enable the conquer plugin.'
     group.addoption('--conquer', action='store_true', default=None, dest='enabled', help=conquer_help)
-
-    workers_help = "Set the number of workers. Default is 1, to use all CPU cores set to 'max'."
-    group.addoption('--w', '--workers', action='store', default=None, dest='workers', help=workers_help)
 
 
 @pytest.hookimpl(trylast=True)
 def pytest_configure(config):
-    global reporter, settings, fatal_error
+    global settings, scheduler, fatal_error
+
+    if config.option.collectonly:
+        return
 
     settings = create_settings(config)
+    if not settings.enabled:
+        return
 
-    if settings.enabled:
-        if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
-            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0.', {}, exit_fn=lambda: None)
-            fatal_error = True
+    # make sure the plugin is running in a supported environment
+    if tuple(map(int, (pytest.__version__.split('.')))) < (3, 6, 0):
+        system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least pytest 3.6.0.', {}, exit_fn=lambda: None)
+        fatal_error = True
+    if sys.version_info < (3, 6, 0):
+        system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0.', {}, exit_fn=lambda: None)
+        fatal_error = True
 
-        if sys.version_info < (3, 6, 0):
-            system_exit('COULD NOT START', 'Sorry, pytest-conquer requires at least Python 3.6.0.', {}, exit_fn=lambda: None)
-            fatal_error = True
+    # starting the scheduler in the background while the tests are collected
+    scheduler = (getattr(config, '__Scheduler', None) or Scheduler)(settings)
+    scheduler.start()
 
 
 def create_settings(config):
     plugins = config.pluginmanager.list_plugin_distinfo()
     plugins.sort(key=lambda item: item[1].project_name)
-    settings = Settings({
+    settings = (getattr(config, '__Settings', None) or Settings)({
         'enabled': config.option.enabled,
         'runner_name': 'pytest',
         'runner_plugins': [(dist.project_name, dist.version) for plugin, dist in plugins],
         'runner_root': str(config.rootdir),
         'runner_version': pytest.__version__,
-        'workers': config.option.workers,
     })
     settings.init_from_file('pytest.ini')
     return settings
@@ -85,7 +84,10 @@ def create_settings(config):
 
 
 def pytest_runtestloop(session):
-    global fatal_error
+    global report_items, scheduler, suite_items
+
+    if session.config.option.collectonly:
+        return True
 
     if not settings.enabled:
         logger.info('conquer not enabled')
@@ -97,84 +99,45 @@ def pytest_runtestloop(session):
     if session.testsfailed and not session.config.option.continue_on_collection_errors:
         raise session.Interrupted('{} errors during collection'.format(session.testsfailed))
 
-    if session.config.option.collectonly:
-        return True
+    print('conquer plugin is starting')
 
-    print('conquer starting')
+    # make sure the scheduler is ready
+    scheduler.prepare(suite_items)
 
-    threads = []
-    no_of_workers = settings.client_workers
-    for i in range(no_of_workers):
-        t = Worker(args=[session, settings])
-        threads.append(t)
-        t.start()
-    for t in threads:
-        t.join()
+    # work through test items schedule by schedule
+    next_tests = []
+    report_items = []
+    while not scheduler.done:
+        pending_at = datetime.utcnow()
+        schedule = scheduler.next()
+        if schedule is None:
+            break  # happens when we are done
+        started_at = datetime.utcnow()
+        schedule_files = [item.file for item in schedule.items]
+        schedule_tests = itertools.chain(*[tests_by_file[f] for f in schedule_files])
+        for test in schedule_tests:
+            test.__schedule_id__ = schedule.id
+            next_tests.append(test)
+        logger.info('preparing schedule took %sms', str(started_at - pending_at))
+
+        while next_tests:
+            if len(next_tests) < 2 and not scheduler.done:
+                logger.info('requiring next schedule')
+                break  # we don't know the next test yet
+            test = next_tests.pop(0)
+            next_test = next_tests[0] if next_tests else None
+            test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
+            if next_test is None or test.__schedule_id__ != next_test.__schedule_id__:
+                report = Report(test.__schedule_id__, report_items, pending_at, started_at, datetime.utcnow())
+                scheduler.report(report)
+                report_items = []
+
+    # wrap things up
+    scheduler.stop()
+
+    print_summary()
 
     return True
-
-
-class Worker(threading.Thread):
-    def __init__(self, *args, **kwargs):
-        threading.Thread.__init__(self, name=str(uuid.uuid4()), *args, **kwargs)
-        self.session = kwargs['args'][0]
-        self.settings = kwargs['args'][1]
-
-    def run(self):
-        global fatal_error
-        try:
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(self.run_task())
-            loop.close()
-        except:  # noqa: E722
-            fatal_error = True
-            raise
-
-    async def run_task(self):
-        global suite_items, schedulers, report_items_by_worker
-
-        # init client
-        client = Client(settings)
-        client.subscribe(self.settings)
-
-        # init scheduler
-        scheduler = Scheduler(self.settings, client, suite_items, self.name)
-        schedulers.append(scheduler)
-
-        # connect to server
-        await client.start()
-
-        # work through test items
-        next_tests = []
-        report_items_by_worker[self.name] = []
-        while not scheduler.done:
-            pending_at = datetime.utcnow()
-            schedule = await scheduler.next()
-            if schedule is None:
-                break  # happens when we are done
-            started_at = datetime.utcnow()
-            schedule_files = [item.file for item in schedule.items]
-            schedule_tests = itertools.chain(*[tests_by_file[f] for f in schedule_files])
-            for test in schedule_tests:
-                test.__schedule_id__ = schedule.id
-                next_tests.append(test)
-            logger.info('preparing schedule took %sms', str(started_at - pending_at))
-
-            while next_tests:
-                if len(next_tests) < 2 and not scheduler.done:
-                    logger.info('requiring next schedule')
-                    break  # we don't know the next test yet
-                test = next_tests.pop(0)
-                next_test = next_tests[0] if next_tests else None
-                test.config.hook.pytest_runtest_protocol(item=test, nextitem=next_test)
-                if next_test is None or test.__schedule_id__ != next_test.__schedule_id__:
-                    report = Report(test.__schedule_id__, report_items_by_worker[self.name], pending_at, started_at, datetime.utcnow())
-                    await scheduler.report(report)
-                    report_items_by_worker[self.name] = []
-
-        # wrap things up
-        await scheduler.stop()
-        await client.stop()
 
 
 # report internal error properly
@@ -192,6 +155,9 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.hookimpl(tryfirst=True)  # has to be first or the introspection doesn't work
 def pytest_make_collect_report(collector):
+    if collector.config.option.collectonly:
+        return
+
     if not settings.enabled:
         return
 
@@ -214,6 +180,9 @@ def pytest_make_collect_report(collector):
 def pytest_collection_modifyitems(session, config, items):
     yield  # let other plugins go first
 
+    if config.option.collectonly:
+        return
+
     if not settings.enabled:
         return
 
@@ -221,6 +190,7 @@ def pytest_collection_modifyitems(session, config, items):
         collect_test(node)
 
 
+@trace
 def collect_test(node):
     location = node_to_location(node)
     fixtures = collect_fixtures(node)
@@ -228,6 +198,7 @@ def collect_test(node):
     tests_by_file[location.file].append(node)
 
 
+@trace
 def collect_fixtures(node):
     fixtures = []
     if hasattr(node, '_fixtureinfo'):
@@ -240,6 +211,7 @@ def collect_fixtures(node):
     return fixtures
 
 
+@trace
 def collect_class(obj):
     location = func_to_location(None, obj)
     collect_item(SuiteItem('class', location, tags=parse_tags(obj)))
@@ -250,6 +222,7 @@ def collect_class(obj):
     add_introspection(obj, ['teardown_method'], 'teardown', 'method')
 
 
+@trace
 def collect_module(obj):
     add_introspection(obj, ['setup_function'], 'setup', 'function')
     add_introspection(obj, ['setUpModule', 'setup_module'], 'setup', 'module')
@@ -257,6 +230,7 @@ def collect_module(obj):
     add_introspection(obj, ['tearDownModule', 'teardown_module'], 'teardown', 'module')
 
 
+@trace
 def add_introspection(obj, names, type, scope):
     for name in names:
         if not hasattr(obj, name):
@@ -351,6 +325,7 @@ def pytest_fixture_post_finalizer(fixturedef):
     report_fixture_step('teardown', start, fixturedef, result)
 
 
+@trace
 def report_fixture_step(type, started_at, fixturedef, result):
     if not settings.enabled:
         return
@@ -391,8 +366,8 @@ def collect_item(item):
 
 
 def report_item(type, location, status, start, end, failure):
-    worker_id = threading.current_thread().name
-    report_items_by_worker[worker_id].append(ReportItem(type, location, status, failure, start, end))
+    global report_items
+    report_items.append(ReportItem(type, location, status, failure, start, end))
 
 
 def node_to_location(node):

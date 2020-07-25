@@ -17,6 +17,7 @@ setup(
     packages=[
         'testandconquer',
         'testandconquer.vendor',
+        'testandconquer.vendor.janus',
         'testandconquer.vendor.websockets',
         'testandconquer.vendor.websockets.extensions',
     ],

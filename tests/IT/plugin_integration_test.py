@@ -605,7 +605,6 @@ def test_collect_only_mode(testdir):
     (result, scheduler) = run_test(testdir, [test_file], ['--conquer', '--collect-only'])
     assert_outcomes(result)
 
-    assert len(testandconquer.plugin.suite_items) == 3
     assert scheduler is None
 
 
@@ -621,9 +620,8 @@ def test_disabled_plugin(testdir):
 def test_settings(testdir):
     run_test(testdir, ['fixtures/test_class.py'])
 
-    settings = testandconquer.plugin.schedulers[0].settings
+    settings = testandconquer.plugin.scheduler.settings
 
-    assert settings.client_workers == 1
     assert settings.runner_name == 'pytest'
     assert settings.runner_plugins == [('pytest-asyncio', '0.10.0'), ('pytest-conquer', '1.0.0'), ('pytest-cov', '2.9.0'), ('pytest-mock', '1.11.2')]
     assert settings.runner_root == os.getcwd()
